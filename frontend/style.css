@@ -1,0 +1,336 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+header {
+    text-align: center;
+    color: white;
+    margin-bottom: 40px;
+}
+
+header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+}
+
+header p {
+    font-size: 1.1rem;
+    opacity: 0.9;
+}
+
+/* Upload Section */
+.upload-section {
+    background: white;
+    border-radius: 12px;
+    padding: 40px;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.upload-box {
+    border: 3px dashed #667eea;
+    border-radius: 8px;
+    padding: 60px 40px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.upload-box:hover {
+    border-color: #764ba2;
+    background: #f8f9ff;
+}
+
+.upload-box.dragover {
+    background: #f0f4ff;
+    border-color: #764ba2;
+}
+
+.upload-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+}
+
+.upload-box h3 {
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.upload-box p {
+    color: #666;
+}
+
+.btn-primary {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 15px 40px;
+    font-size: 1.1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 20px;
+    font-weight: 600;
+    transition: background 0.3s ease;
+}
+
+.btn-primary:hover {
+    background: #764ba2;
+}
+
+/* Loading */
+.loading {
+    background: white;
+    border-radius: 12px;
+    padding: 60px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.spinner {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Results Section */
+.results {
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Summary Cards */
+.summary-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+}
+
+.card-icon {
+    font-size: 2.5rem;
+    margin-bottom: 15px;
+}
+
+.card-value {
+    font-size: 2.5rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 10px;
+}
+
+.card-label {
+    color: #666;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Severity Section */
+.severity-section {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.severity-section h2 {
+    margin-bottom: 25px;
+    color: #333;
+}
+
+.severity-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.severity-bar {
+    display: grid;
+    grid-template-columns: 120px 1fr 60px;
+    align-items: center;
+    gap: 15px;
+}
+
+.severity-label {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.bar-container {
+    background: #f0f0f0;
+    border-radius: 10px;
+    height: 30px;
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.5s ease;
+}
+
+.blocker .bar-fill { background: #dc3545; }
+.critical .bar-fill { background: #fd7e14; }
+.high .bar-fill { background: #ffc107; }
+.medium .bar-fill { background: #0dcaf0; }
+.low .bar-fill { background: #198754; }
+
+.severity-count {
+    font-weight: bold;
+    font-size: 1.1rem;
+    text-align: center;
+}
+
+/* Conflicts Section */
+.conflicts-section {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.conflicts-section h2 {
+    margin-bottom: 25px;
+    color: #333;
+}
+
+.conflict-item {
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+    transition: all 0.3s ease;
+}
+
+.conflict-item:hover {
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.conflict-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.conflict-name {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.severity-badge {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.severity-badge.blocker { background: #dc3545; color: white; }
+.severity-badge.critical { background: #fd7e14; color: white; }
+.severity-badge.high { background: #ffc107; color: #333; }
+.severity-badge.medium { background: #0dcaf0; color: white; }
+.severity-badge.low { background: #198754; color: white; }
+
+.conflict-details {
+    display: grid;
+    gap: 10px;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.risk-factors {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.risk-factors h4 {
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.risk-factors ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.risk-factors li {
+    padding: 4px 0;
+    color: #666;
+}
+
+.risk-factors li:before {
+    content: "• ";
+    color: #667eea;
+    font-weight: bold;
+    margin-right: 8px;
+}
+
+/* Error */
+.error {
+    background: #dc3545;
+    color: white;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    header h1 {
+        font-size: 1.8rem;
+    }
+    
+    .summary-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .severity-bar {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+}

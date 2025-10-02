@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Copado Deployment Validator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <h1>🚀 Copado Deployment Validator</h1>
+            <p>Upload your CSV to detect conflicts and calculate deployment risks</p>
+        </header>
+
+        <!-- Upload Section -->
+        <div class="upload-section">
+            <div class="upload-box" id="uploadBox">
+                <div class="upload-icon">📁</div>
+                <h3>Drop CSV file here or click to browse</h3>
+                <p>Accepts .csv files from Copado exports</p>
+                <input type="file" id="fileInput" accept=".csv" hidden>
+            </div>
+            <button id="uploadBtn" class="btn-primary" style="display: none;">Analyze CSV</button>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Analyzing your data...</p>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results" class="results" style="display: none;">
+            <!-- Summary Cards -->
+            <div class="summary-cards">
+                <div class="card">
+                    <div class="card-icon">📊</div>
+                    <div class="card-value" id="totalRecords">-</div>
+                    <div class="card-label">Total Records</div>
+                </div>
+                <div class="card">
+                    <div class="card-icon">📝</div>
+                    <div class="card-value" id="totalStories">-</div>
+                    <div class="card-label">User Stories</div>
+                </div>
+                <div class="card">
+                    <div class="card-icon">⚠️</div>
+                    <div class="card-value" id="totalConflicts">-</div>
+                    <div class="card-label">Conflicts Found</div>
+                </div>
+                <div class="card">
+                    <div class="card-icon">📈</div>
+                    <div class="card-value" id="avgRisk">-</div>
+                    <div class="card-label">Avg Risk Score</div>
+                </div>
+            </div>
+
+            <!-- Severity Breakdown -->
+            <div class="severity-section">
+                <h2>Severity Breakdown</h2>
+                <div class="severity-bars">
+                    <div class="severity-bar blocker">
+                        <span class="severity-label">🔴 BLOCKER</span>
+                        <div class="bar-container">
+                            <div class="bar-fill" id="blockerBar"></div>
+                        </div>
+                        <span class="severity-count" id="blockerCount">0</span>
+                    </div>
+                    <div class="severity-bar critical">
+                        <span class="severity-label">🟠 CRITICAL</span>
+                        <div class="bar-container">
+                            <div class="bar-fill" id="criticalBar"></div>
+                        </div>
+                        <span class="severity-count" id="criticalCount">0</span>
+                    </div>
+                    <div class="severity-bar high">
+                        <span class="severity-label">🟡 HIGH</span>
+                        <div class="bar-container">
+                            <div class="bar-fill" id="highBar"></div>
+                        </div>
+                        <span class="severity-count" id="highCount">0</span>
+                    </div>
+                    <div class="severity-bar medium">
+                        <span class="severity-label">🔵 MEDIUM</span>
+                        <div class="bar-container">
+                            <div class="bar-fill" id="mediumBar"></div>
+                        </div>
+                        <span class="severity-count" id="mediumCount">0</span>
+                    </div>
+                    <div class="severity-bar low">
+                        <span class="severity-label">🟢 LOW</span>
+                        <div class="bar-container">
+                            <div class="bar-fill" id="lowBar"></div>
+                        </div>
+                        <span class="severity-count" id="lowCount">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conflicts Table -->
+            <div class="conflicts-section">
+                <h2>Detected Conflicts</h2>
+                <div id="conflictsTable"></div>
+            </div>
+        </div>
+
+        <!-- Error Message -->
+        <div id="error" class="error" style="display: none;"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
