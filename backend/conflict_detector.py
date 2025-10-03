@@ -130,21 +130,20 @@ class ConflictDetector:
         return conflicts
     
     def _build_component_index(self) -> Dict:
-        """
-        Build index: component_name -> {component, stories, developers}
-        
-        Returns:
-            Dictionary mapping component names to their data
-        """
+        """Build index: component_name -> {component, stories, developers}"""
         index = defaultdict(lambda: {
             'component': None,
             'stories': [],
-            'developers': set()
+            'developers': set(),
+            'all_components': []  # ADD THIS - store all component instances
         })
         
         for story in self.user_stories:
             for component in story.components:
                 data = index[component.api_name]
+                
+                # Store ALL component instances (not just first)
+                data['all_components'].append(component)  # ADD THIS
                 
                 # Store component (use first occurrence)
                 if data['component'] is None:
@@ -158,6 +157,7 @@ class ConflictDetector:
                     data['developers'].add(story.developer)
         
         return index
+    
     def _analyze_conflict(self, data: Dict) -> ConflictingComponent:
         """
         Analyze a single conflict and calculate risk
@@ -171,6 +171,12 @@ class ConflictDetector:
         component = data['component']
         stories = data['stories']
         developers = data['developers']
+        all_components = data.get('all_components', [])
+        latest_component = max(
+        all_components,
+        key=lambda c: c.last_commit_date if c.last_commit_date else datetime.min,
+        default=component
+            )
         
         risk_factors = []
         risk_score = 0
@@ -228,7 +234,7 @@ class ConflictDetector:
         severity = self._calculate_severity(risk_score)
         
         return ConflictingComponent(
-            component=component,
+            component=latest_component,
             involved_stories=stories,
             severity=severity,
             risk_factors=risk_factors,

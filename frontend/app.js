@@ -167,7 +167,9 @@ function displayConflicts(conflicts) {
         const storiesList = conflict.involved_stories
             .map((s, index) => {
                 const isLatest = index === 0;
-                const dateStr = s.commit_date ? new Date(s.commit_date).toLocaleDateString() : 'Unknown';
+                //const dateStr = s.commit_date ? new Date(s.commit_date).toLocaleDateString() : 'Unknown';
+                const dateStr = s.commit_date ? s.commit_date.split('T')[0] : 'Unknown';
+
                 const daysAgo = s.days_ago !== null ? `${s.days_ago} days ago` : '';
                 
                 return `
