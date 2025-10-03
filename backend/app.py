@@ -5,7 +5,7 @@ Endpoints:
   POST /api/analyze - Upload CSV and get conflict analysis
   GET  /api/health  - Health check
 """
-
+from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
@@ -119,17 +119,46 @@ def analyze_csv():
             'error': str(e)
         }), 500
 
-
 def format_conflict(conflict):
-    """
-    Format ConflictingComponent object for JSON response
+    """Format ConflictingComponent object for JSON response"""
     
-    Args:
-        conflict: ConflictingComponent object
-        
-    Returns:
-        Dictionary suitable for JSON serialization
-    """
+    # Format stories with commit info
+    stories_detailed = []
+    from conflict_detector import ConflictDetector
+    detector = ConflictDetector([])
+    recommendation = detector.get_recommendation(conflict)
+    
+    # Check if we have the new field
+    if hasattr(conflict, 'stories_with_commit_info') and conflict.stories_with_commit_info:
+        for item in conflict.stories_with_commit_info:
+            story = item['story']
+            commit_date = item['commit_date']
+            created_by = item['created_by']
+            
+            stories_detailed.append({
+                'id': story.id,
+                'title': story.title,
+                'developer': story.developer,
+                'jira_key': story.jira_key,
+                'component_count': len(story.components),
+                'commit_date': commit_date.isoformat() if commit_date else None,
+                'created_by': created_by,
+                'days_ago': (datetime.now(commit_date.tzinfo) - commit_date).days if commit_date else None
+            })
+    else:
+        # Fallback to old format
+        for story in conflict.involved_stories:
+            stories_detailed.append({
+                'id': story.id,
+                'title': story.title,
+                'developer': story.developer,
+                'jira_key': story.jira_key,
+                'component_count': len(story.components),
+                'commit_date': None,
+                'created_by': None,
+                'days_ago': None
+            })
+    
     return {
         'component': {
             'api_name': conflict.component.api_name,
@@ -138,17 +167,10 @@ def format_conflict(conflict):
         },
         'risk_score': conflict.risk_score,
         'severity': conflict.severity.name,
-        'involved_stories': [
-            {
-                'id': story.id,
-                'title': story.title,
-                'developer': story.developer
-            }
-            for story in conflict.involved_stories
-        ],
-        'risk_factors': conflict.risk_factors
+        'involved_stories': stories_detailed,
+        'risk_factors': conflict.risk_factors,
+        'recommendation': recommendation
     }
-
 
 if __name__ == '__main__':
     print("=" * 60)

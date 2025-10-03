@@ -153,22 +153,70 @@ function updateSeverityBar(severity, count, maxCount) {
     document.getElementById(`${severity}Count`).textContent = count;
 }
 
+
 function displayConflicts(conflicts) {
     const container = document.getElementById('conflictsTable');
     
     if (conflicts.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: #666;">No conflicts found! 🎉</p>';
+        container.innerHTML = '<p style="text-align: center; color: #666;">No conflicts found!</p>';
         return;
     }
     
     container.innerHTML = conflicts.map(conflict => {
+        // Format stories with commit info
         const storiesList = conflict.involved_stories
-            .map(s => `<div>• ${s.id}: ${s.title} (${s.developer || 'Unknown'})</div>`)
+            .map((s, index) => {
+                const isLatest = index === 0;
+                const dateStr = s.commit_date ? new Date(s.commit_date).toLocaleDateString() : 'Unknown';
+                const daysAgo = s.days_ago !== null ? `${s.days_ago} days ago` : '';
+                
+                return `
+                    <div style="margin: 5px 0; padding: 10px; background: ${isLatest ? '#e3f2fd' : '#f8f9fa'}; border-left: 4px solid ${isLatest ? '#2196f3' : '#ddd'}; border-radius: 4px;">
+                        ${isLatest ? '<strong style="color: #2196f3;">📌 LATEST COMMIT</strong><br>' : ''}
+                        <strong>${s.id}</strong>: ${s.title.substring(0, 60)}...
+                        <br><small style="color: #666;">
+                            👤 ${s.developer || 'Unknown'} | 
+                            🎫 ${s.jira_key || 'No Jira'} | 
+                            📦 ${s.component_count} components
+                        </small>
+                        <br><small style="color: #1976d2; font-weight: 600;">
+                            ✏️ Modified by: ${s.created_by || 'Unknown'} | 
+                            📅 ${dateStr} ${daysAgo ? `(${daysAgo})` : ''}
+                        </small>
+                    </div>
+                `;
+            })
             .join('');
         
-        const riskFactorsList = conflict.risk_factors
-            .map(factor => `<li>${factor}</li>`)
-            .join('');
+        const riskFactorsList = conflict.risk_factors.map(f => `<li>${f}</li>`).join('');
+        
+        // Recommendation section
+        const recommendationHtml = conflict.recommendation ? `
+            <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
+                <h4 style="margin: 0 0 10px 0; color: #856404;">
+                    📋 Recommended Action: ${conflict.recommendation.action}
+                </h4>
+                <div style="margin-bottom: 10px;">
+                    <strong>Priority:</strong> 
+                    <span style="padding: 4px 8px; background: ${
+                        conflict.recommendation.priority === 'IMMEDIATE' ? '#dc3545' :
+                        conflict.recommendation.priority === 'HIGH' ? '#fd7e14' :
+                        conflict.recommendation.priority === 'MEDIUM' ? '#ffc107' : '#28a745'
+                    }; color: white; border-radius: 4px; font-size: 0.85rem;">
+                        ${conflict.recommendation.priority}
+                    </span>
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <strong>Steps:</strong>
+                    <ol style="margin: 5px 0; padding-left: 20px;">
+                        ${conflict.recommendation.steps.map(step => `<li>${step}</li>`).join('')}
+                    </ol>
+                </div>
+                <div style="color: #856404; font-size: 0.9rem;">
+                    ⚠️ <strong>Risk:</strong> ${conflict.recommendation.risk}
+                </div>
+            </div>
+        ` : '';
         
         return `
             <div class="conflict-item">
@@ -181,17 +229,18 @@ function displayConflicts(conflicts) {
                 <div class="conflict-details">
                     <div><strong>Type:</strong> ${conflict.component.type}</div>
                     <div><strong>Status:</strong> ${conflict.component.status}</div>
-                    <div><strong>Stories Involved (${conflict.involved_stories.length}):</strong></div>
-                    <div style="margin-left: 20px; font-size: 0.85rem;">
+                    <div style="margin-top: 15px;"><strong>Stories Involved (${conflict.involved_stories.length}):</strong></div>
+                    <div style="margin-left: 10px; margin-top: 10px;">
                         ${storiesList}
                     </div>
                 </div>
                 ${riskFactorsList ? `
                     <div class="risk-factors">
-                        <h4>🎯 Risk Factors:</h4>
+                        <h4>Risk Factors:</h4>
                         <ul>${riskFactorsList}</ul>
                     </div>
                 ` : ''}
+                ${recommendationHtml}
             </div>
         `;
     }).join('');

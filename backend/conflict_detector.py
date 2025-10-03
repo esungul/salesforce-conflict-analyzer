@@ -4,7 +4,7 @@ Conflict Detection Engine
 Analyzes user stories to find components touched by multiple stories.
 Calculates risk scores and severity levels.
 """
-
+from datetime import datetime
 from typing import List, Dict
 from collections import defaultdict
 from models import (
@@ -22,7 +22,75 @@ class ConflictDetector:
         conflicts = detector.detect_conflicts()
         high_risk = [c for c in conflicts if c.severity.value >= ConflictSeverity.HIGH.value]
     """
-    
+    def get_recommendation(self, conflict: ConflictingComponent) -> dict:
+        """Generate actionable recommendation based on conflict analysis"""
+        
+        severity = conflict.severity
+        stories_count = len(conflict.involved_stories)
+        latest_story = conflict.stories_with_commit_info[0]['story'] if conflict.stories_with_commit_info else None
+        
+        if severity == ConflictSeverity.BLOCKER:
+            return {
+                'action': 'MANUAL MERGE REQUIRED',
+                'priority': 'IMMEDIATE',
+                'steps': [
+                    f'Stop: Do NOT auto-deploy this component',
+                    f'Coordinate meeting with all {stories_count} developers',
+                    f'Manual code review and merge required',
+                    f'Deploy as single coordinated release',
+                    'Extensive testing in UAT before production'
+                ],
+                'risk': 'High probability of production failure if not manually merged'
+            }
+        
+        elif severity == ConflictSeverity.CRITICAL:
+            return {
+                'action': 'DEPLOY IN SEQUENCE',
+                'priority': 'HIGH',
+                'steps': [
+                    f'Deploy stories in order (latest first: {latest_story.id if latest_story else "Unknown"})',
+                    'Test each deployment before next',
+                    f'Notify all {stories_count} developers of deployment order',
+                    'Have rollback plan ready'
+                ],
+                'risk': 'Conflicts likely - careful sequencing required'
+            }
+        
+        elif severity == ConflictSeverity.HIGH:
+            return {
+                'action': 'REVIEW BEFORE DEPLOY',
+                'priority': 'MEDIUM',
+                'steps': [
+                    'Code review of overlapping changes',
+                    'Deploy in recommended order',
+                    'Monitor for issues in lower environments first'
+                ],
+                'risk': 'Moderate risk - review recommended'
+            }
+        
+        elif severity == ConflictSeverity.MEDIUM:
+            return {
+                'action': 'STANDARD DEPLOYMENT',
+                'priority': 'LOW',
+                'steps': [
+                    'Follow normal deployment process',
+                    'Quick review of changes',
+                    'Standard testing procedures'
+                ],
+                'risk': 'Low risk - proceed with caution'
+            }
+        
+        else:  # LOW
+            return {
+                'action': 'SAFE TO DEPLOY',
+                'priority': 'NONE',
+                'steps': [
+                    'No special action needed',
+                    'Deploy normally'
+                ],
+                'risk': 'Minimal risk'
+            }
+        
     def __init__(self, user_stories: List[UserStory]):
         """
         Initialize detector with user stories
@@ -90,7 +158,6 @@ class ConflictDetector:
                     data['developers'].add(story.developer)
         
         return index
-    
     def _analyze_conflict(self, data: Dict) -> ConflictingComponent:
         """
         Analyze a single conflict and calculate risk
@@ -137,6 +204,26 @@ class ConflictDetector:
             # This would require datetime calculation - skip for now
             pass
         
+        # NEW: Get commit info for each story (sorted by date)
+        stories_with_dates = []
+        for story in stories:
+            # Find this component in the story
+            story_component = next(
+                (c for c in story.components if c.api_name == component.api_name),
+                None
+            )
+            stories_with_dates.append({
+                'story': story,
+                'commit_date': story_component.last_commit_date if story_component else None,
+                'created_by': story_component.created_by if story_component else None
+            })
+        
+        # Sort by commit date (newest first)
+        stories_with_dates.sort(
+            key=lambda x: x['commit_date'] if x['commit_date'] else datetime.min,
+            reverse=True
+        )
+        
         # Calculate severity
         severity = self._calculate_severity(risk_score)
         
@@ -145,9 +232,9 @@ class ConflictDetector:
             involved_stories=stories,
             severity=severity,
             risk_factors=risk_factors,
-            risk_score=risk_score
+            risk_score=risk_score,
+            stories_with_commit_info=stories_with_dates
         )
-    
     def _calculate_severity(self, risk_score: int) -> ConflictSeverity:
         """
         Map risk score to severity level

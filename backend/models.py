@@ -61,6 +61,7 @@ class Component:
     user_story_id: str
     unique_id: str
     last_commit_date: Optional[datetime] = None
+    created_by: Optional[str] = None 
 
 
 @dataclass
@@ -89,6 +90,7 @@ class ConflictingComponent:
     severity: ConflictSeverity
     risk_factors: List[str] = field(default_factory=list)
     risk_score: int = 0
+    stories_with_commit_info: List[dict] = field(default_factory=list)
 
 
 @dataclass

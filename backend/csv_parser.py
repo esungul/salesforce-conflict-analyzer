@@ -114,7 +114,8 @@ class CopadoCSVParser:
             status=self._map_conflict_status(row.get('copado__Status__c')),
             user_story_id=story_id,
             unique_id=str(row.get('copado__Unique_ID__c', '')),
-            last_commit_date=self._parse_date(row.get('copado__Last_Commit_Date__c'))
+            last_commit_date=self._parse_date(row.get('copado__Last_Commit_Date__c')),
+            created_by=self._get_optional_string(row, 'CreatedBy.Name') 
         )
     
     def _map_metadata_type(self, type_str) -> MetadataType:
