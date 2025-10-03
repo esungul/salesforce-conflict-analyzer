@@ -16,6 +16,8 @@ from conflict_detector import ConflictDetector
 from models import ConflictSeverity
 from pdf_generator import generate_pdf_report
 from flask import send_file
+from production_analyzer import parse_production_state, check_regression
+
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -77,53 +79,64 @@ def health_check():
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze_csv():
-    """
-    Analyze uploaded CSV file for conflicts
+    """Analyze deployment with optional production comparison"""
     
-    Request:
-        Multipart form data with 'file' field containing CSV
-        
-    Returns:
-        JSON with conflict analysis results
-    """
-    # Validate request
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file provided'}), 400
+    # Validate files
+    if 'deployment_file' not in request.files:
+        return jsonify({'error': 'No deployment file provided'}), 400
     
-    file = request.files['file']
+    deployment_file = request.files['deployment_file']
+    production_file = request.files.get('production_file')
     
-    if file.filename == '':
+    if deployment_file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
     
-    if not allowed_file(file.filename):
-        return jsonify({'error': 'Only CSV files are allowed'}), 400
-    
     try:
-        # Save uploaded file temporarily
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
+        # Save deployment file
+        deploy_filename = secure_filename(deployment_file.filename)
+        deploy_path = os.path.join(app.config['UPLOAD_FOLDER'], deploy_filename)
+        deployment_file.save(deploy_path)
         
-        # Parse CSV
+        # Parse production state if provided
+        prod_state = None
+        if production_file and production_file.filename != '':
+            prod_filename = secure_filename(production_file.filename)
+            prod_path = os.path.join(app.config['UPLOAD_FOLDER'], prod_filename)
+            production_file.save(prod_path)
+            prod_state = parse_production_state(prod_path)
+            os.remove(prod_path)
+        
+        # Parse deployment CSV
         parser = CopadoCSVParser()
-        parsed_data = parser.parse_file(filepath)
+        parsed_data = parser.parse_file(deploy_path)
+        
+        # Detect conflicts
         detector = ConflictDetector(parsed_data.user_stories)
         conflicts = detector.detect_conflicts()
-        # NEW ANALYSES - ADD HERE (inside try block)
-
+        summary = detector.get_conflict_summary(conflicts)
+        
+        # Check for regressions
+        regressions = []
+        if prod_state:
+            for story in parsed_data.user_stories:
+                for component in story.components:
+                    regression_check = check_regression(component, prod_state)
+                    if regression_check and regression_check.get('is_regression'):
+                        regressions.append({
+                            'story_id': story.id,
+                            'component': component.api_name,
+                            **regression_check
+                        })
+        
+        # Additional analyses
         story_conflicts = detector.analyze_story_to_story_conflicts()
         dev_coordination = detector.get_developer_coordination_map()
         deployment_sequence = detector.get_deployment_sequence(conflicts)
         
+        # Clean up
+        os.remove(deploy_path)
         
-        
-        # Get summary
-        summary = detector.get_conflict_summary(conflicts)
-        
-        # Clean up temp file
-        os.remove(filepath)
-        
-        # Format response
+        # Build response
         response = {
             'success': True,
             'data': {
@@ -134,21 +147,23 @@ def analyze_csv():
                     'total_conflicts': summary['total_conflicts'],
                     'affected_stories': summary['affected_stories'],
                     'avg_risk_score': round(summary['avg_risk_score'], 1),
-                    'severity_breakdown': summary['severity_breakdown']
+                    'severity_breakdown': summary['severity_breakdown'],
+                    'total_regressions': len(regressions),
+                    'production_check': prod_state is not None
                 },
-                'conflicts': [format_conflict(c) for c in conflicts[:20]],  # Top 20
-                'story_conflicts': story_conflicts[:10],  # NEW
-                'developer_coordination': dev_coordination,  # NEW
-                'deployment_sequence': deployment_sequence  # NEW
+                'conflicts': [format_conflict(c) for c in conflicts[:20]],
+                'regressions': regressions,
+                'story_conflicts': story_conflicts[:10],
+                'developer_coordination': dev_coordination,
+                'deployment_sequence': deployment_sequence
             }
         }
         
         return jsonify(response), 200
         
     except Exception as e:
-        # Clean up temp file if it exists
-        if 'filepath' in locals() and os.path.exists(filepath):
-            os.remove(filepath)
+        if 'deploy_path' in locals() and os.path.exists(deploy_path):
+            os.remove(deploy_path)
         
         return jsonify({
             'success': False,

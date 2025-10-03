@@ -1,84 +1,439 @@
 /**
  * Copado Deployment Validator - Frontend
- * Connects to Flask API and displays results
  */
 
-// API Configuration
 const API_URL = 'http://localhost:5000';
 
-// DOM Elements
-const uploadBox = document.getElementById('uploadBox');
-const fileInput = document.getElementById('fileInput');
-const uploadBtn = document.getElementById('uploadBtn');
+const deploymentUploadBox = document.getElementById('deploymentUploadBox');
+const productionUploadBox = document.getElementById('productionUploadBox');
+const deploymentFileInput = document.getElementById('deploymentFile');
+const productionFileInput = document.getElementById('productionFile');
+const analyzeBtn = document.getElementById('analyzeBtn');
 const loading = document.getElementById('loading');
 const results = document.getElementById('results');
 const error = document.getElementById('error');
 
-let selectedFile = null;
+let deploymentFile = null;
+let productionFile = null;
+let analysisData = null;
+let currentRole = null;
 
-// Initialize
 document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
 });
 
 function setupEventListeners() {
-    // Click to upload
-    uploadBox.addEventListener('click', () => {
-        fileInput.click();
+    deploymentUploadBox.addEventListener('click', () => {
+        deploymentFileInput.click();
     });
     
-    // File selected
-    fileInput.addEventListener('change', (e) => {
-        handleFileSelect(e.target.files[0]);
+    productionUploadBox.addEventListener('click', () => {
+        productionFileInput.click();
     });
     
-    // Drag and drop
-    uploadBox.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        uploadBox.classList.add('dragover');
+    deploymentFileInput.addEventListener('change', (e) => {
+        handleDeploymentFileSelect(e.target.files[0]);
     });
     
-    uploadBox.addEventListener('dragleave', () => {
-        uploadBox.classList.remove('dragover');
+    productionFileInput.addEventListener('change', (e) => {
+        handleProductionFileSelect(e.target.files[0]);
     });
     
-    uploadBox.addEventListener('drop', (e) => {
-        e.preventDefault();
-        uploadBox.classList.remove('dragover');
-        handleFileSelect(e.dataTransfer.files[0]);
-    });
-    
-    // Upload button
-    uploadBtn.addEventListener('click', () => {
-        if (selectedFile) {
-            uploadAndAnalyze(selectedFile);
-        }
-    });
+    analyzeBtn.addEventListener('click', uploadAndAnalyze);
 }
 
-function handleFileSelect(file) {
-    if (!file) return;
-    
-    // Validate file type
-    if (!file.name.endsWith('.csv')) {
+function handleDeploymentFileSelect(file) {
+    if (!file || !file.name.endsWith('.csv')) {
         showError('Please select a CSV file');
         return;
     }
     
-    selectedFile = file;
+    deploymentFile = file;
     
-    // Update UI
-    uploadBox.innerHTML = `
-        <div class="upload-icon">✅</div>
-        <h3>${file.name}</h3>
-        <p>Size: ${(file.size / 1024).toFixed(2)} KB</p>
+    const infoDiv = document.getElementById('deploymentFileInfo');
+    infoDiv.innerHTML = `
+        <div style="padding: 10px; background: #e8f5e9; border-radius: 4px; border-left: 4px solid #4caf50;">
+            ✓ ${file.name} (${(file.size / 1024).toFixed(2)} KB)
+        </div>
     `;
+    infoDiv.style.display = 'block';
+    analyzeBtn.style.display = 'block';
+}
+
+function handleProductionFileSelect(file) {
+    if (!file || !file.name.endsWith('.csv')) {
+        showError('Please select a CSV file');
+        return;
+    }
     
-    uploadBtn.style.display = 'block';
+    productionFile = file;
+    
+    const infoDiv = document.getElementById('productionFileInfo');
+    infoDiv.innerHTML = `
+        <div style="padding: 10px; background: #e3f2fd; border-radius: 4px; border-left: 4px solid #2196f3;">
+            ✓ ${file.name} (${(file.size / 1024).toFixed(2)} KB)
+            <br><small>Regression detection enabled</small>
+        </div>
+    `;
+    infoDiv.style.display = 'block';
+}
+
+async function uploadAndAnalyze() {
+    if (!deploymentFile) {
+        showError('Please upload deployment CSV first');
+        return;
+    }
+    
+    try {
+        results.style.display = 'none';
+        error.style.display = 'none';
+        loading.style.display = 'block';
+        
+        const formData = new FormData();
+        formData.append('deployment_file', deploymentFile);
+        
+        if (productionFile) {
+            formData.append('production_file', productionFile);
+        }
+        
+        const response = await fetch(`${API_URL}/api/analyze`, {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        loading.style.display = 'none';
+        
+        if (data.success) {
+            showRoleSelector(data.data);
+        } else {
+            showError(data.error || 'Analysis failed');
+        }
+        
+    } catch (err) {
+        loading.style.display = 'none';
+        showError(`Error: ${err.message}. Make sure the API server is running.`);
+    }
+}
+
+function showError(message) {
+    error.textContent = message;
+    error.style.display = 'block';
+    setTimeout(() => {
+        error.style.display = 'none';
+    }, 5000);
+}
+
+// ROLE-BASED VIEWS
+
+function showRoleSelector(data) {
+    analysisData = data;
+    document.getElementById('roleSelectorModal').style.display = 'flex';
+}
+
+function selectRole(role) {
+    currentRole = role;
+    document.getElementById('roleSelectorModal').style.display = 'none';
+    
+    if (role === 'developer') {
+        showDeveloperView();
+    } else {
+        showDevOpsView();
+    }
+}
+
+function switchView(role) {
+    selectRole(role);
+}
+
+function showDeveloperView() {
+    document.getElementById('devopsView').style.display = 'none';
+    document.getElementById('developerView').style.display = 'block';
+    
+    // Get unique developers from conflicts
+    const developers = new Set();
+    analysisData.conflicts.forEach(conflict => {
+        conflict.involved_stories.forEach(story => {
+            if (story.developer) {
+                developers.add(story.developer);
+            }
+        });
+    });
+    
+    const select = document.getElementById('developerSelect');
+    select.innerHTML = '<option value="">Select your name...</option>';
+    Array.from(developers).sort().forEach(dev => {
+        select.innerHTML += `<option value="${dev}">${dev}</option>`;
+    });
+}
+
+function filterByDeveloper() {
+    const selectedDev = document.getElementById('developerSelect').value;
+    const container = document.getElementById('developerStories');
+    
+    if (!selectedDev) {
+        container.innerHTML = '<p style="padding: 40px; text-align: center; color: #666;">Please select your name to see your stories</p>';
+        return;
+    }
+    
+    // Build story analysis
+    const myStories = buildDeveloperStories(selectedDev);
+    
+    if (myStories.length === 0) {
+        container.innerHTML = '<p style="padding: 40px; text-align: center; color: #666;">No stories found for this developer</p>';
+        return;
+    }
+    
+    container.innerHTML = myStories.map(story => `
+        <div class="dev-story-card ${story.status.toLowerCase()}">
+            <h3>${story.statusIcon} ${story.id}</h3>
+            <h4>${story.title}</h4>
+            
+            <div style="margin: 15px 0;">
+                <strong>Status: ${story.status}</strong>
+                <p style="color: #666; margin-top: 5px;">${story.reason}</p>
+            </div>
+            
+            ${story.hasRegression ? `
+                <div style="background: #fff3cd; padding: 12px; border-radius: 6px; border-left: 4px solid #dc3545; margin: 15px 0;">
+                    <strong style="color: #dc3545;">⚠️ REGRESSION DETECTED</strong>
+                    <p style="margin: 8px 0; color: #856404;">This component is older than production!</p>
+                </div>
+            ` : ''}
+            
+            <div class="action-list">
+                <strong>What you need to do:</strong>
+                <ol>
+                    ${story.actions.map(action => `<li>${action}</li>`).join('')}
+                </ol>
+            </div>
+            
+            ${story.coordination.length > 0 ? `
+                <div style="margin-top: 15px; padding: 12px; background: #e3f2fd; border-radius: 6px;">
+                    <strong>Coordinate with:</strong>
+                    <p style="margin-top: 5px;">${story.coordination.join(', ')}</p>
+                </div>
+            ` : ''}
+            
+            <details style="margin-top: 15px;">
+                <summary style="cursor: pointer; color: #667eea; font-weight: 600;">View Component Details</summary>
+                <div style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+                    ${story.components.map(c => `
+                        <div style="margin: 5px 0; padding: 8px; background: white; border-radius: 4px;">
+                            • ${c.name} (${c.type}) - ${c.severity} Risk
+                        </div>
+                    `).join('')}
+                </div>
+            </details>
+        </div>
+    `).join('');
+}
+
+function buildDeveloperStories(developerName) {
+    const { conflicts, regressions } = analysisData;
+    const storyMap = new Map();
+    
+    // Collect stories for this developer
+    conflicts.forEach(conflict => {
+        conflict.involved_stories.forEach(story => {
+            if (story.developer === developerName) {
+                if (!storyMap.has(story.id)) {
+                    storyMap.set(story.id, {
+                        id: story.id,
+                        title: story.title,
+                        components: [],
+                        maxRisk: 0,
+                        hasRegression: false,
+                        otherDevs: new Set()
+                    });
+                }
+                
+                const storyData = storyMap.get(story.id);
+                storyData.components.push({
+                    name: conflict.component.api_name,
+                    type: conflict.component.type,
+                    severity: conflict.severity,
+                    risk: conflict.risk_score
+                });
+                
+                if (conflict.risk_score > storyData.maxRisk) {
+                    storyData.maxRisk = conflict.risk_score;
+                }
+                
+                // Find other developers
+                conflict.involved_stories.forEach(s => {
+                    if (s.developer && s.developer !== developerName) {
+                        storyData.otherDevs.add(s.developer);
+                    }
+                });
+            }
+        });
+    });
+    
+    // Check regressions
+    if (regressions) {
+        regressions.forEach(reg => {
+            if (storyMap.has(reg.story_id)) {
+                storyMap.get(reg.story_id).hasRegression = true;
+            }
+        });
+    }
+    
+    // Build final story list
+    const stories = [];
+    storyMap.forEach((data, id) => {
+        let status, statusIcon, reason, actions;
+        
+        if (data.hasRegression) {
+            status = 'BLOCKED';
+            statusIcon = '❌';
+            reason = 'Component is older than production';
+            actions = [
+                'Pull latest code from production',
+                'Rebase your changes',
+                'Create new commit',
+                'Update Copado with new commit ID'
+            ];
+        } else if (data.maxRisk >= 80) {
+            status = 'BLOCKED';
+            statusIcon = '❌';
+            reason = 'High-risk conflicts detected - manual merge required';
+            actions = [
+                'Coordinate with other developers',
+                'Manual code merge needed',
+                'Deploy together as single release'
+            ];
+        } else if (data.maxRisk >= 60) {
+            status = 'WARNING';
+            statusIcon = '⚠️';
+            reason = 'Medium-risk conflicts - careful review needed';
+            actions = [
+                'Review changes with team',
+                'Deploy in coordinated sequence',
+                'Test thoroughly'
+            ];
+        } else {
+            status = 'SAFE';
+            statusIcon = '✅';
+            reason = 'No blocking issues detected';
+            actions = ['Follow standard deployment process'];
+        }
+        
+        stories.push({
+            id: data.id,
+            title: data.title,
+            status,
+            statusIcon,
+            reason,
+            actions,
+            hasRegression: data.hasRegression,
+            coordination: Array.from(data.otherDevs),
+            components: data.components
+        });
+    });
+    
+    return stories.sort((a, b) => {
+        const order = { BLOCKED: 0, WARNING: 1, SAFE: 2 };
+        return order[a.status] - order[b.status];
+    });
+}
+
+function showDevOpsView() {
+    document.getElementById('developerView').style.display = 'none';
+    document.getElementById('devopsView').style.display = 'block';
+    
+    showTab('overview');
+    buildOverviewTab();
+}
+
+function showTab(tabName) {
+    document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.style.display = 'none';
+    });
+    
+    event.target.classList.add('active');
+    document.getElementById(`tab-${tabName}`).style.display = 'block';
+    
+    if (tabName === 'overview') buildOverviewTab();
+    if (tabName === 'stories') buildStoriesTab();
+    if (tabName === 'sequence') buildSequenceTab();
+    if (tabName === 'enforcement') buildEnforcementTab();
+}
+
+function buildOverviewTab() {
+    const { summary, regressions } = analysisData;
+    
+    document.getElementById('tab-overview').innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <h2>Deployment Analysis Summary</h2>
+            
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 30px 0;">
+                <div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
+                    <div style="font-size: 32px; font-weight: bold; color: #333;">${summary.unique_stories}</div>
+                    <div style="color: #666;">Total Stories</div>
+                </div>
+                <div style="background: #fff3cd; padding: 20px; border-radius: 8px;">
+                    <div style="font-size: 32px; font-weight: bold; color: #dc3545;">${regressions ? regressions.length : 0}</div>
+                    <div style="color: #856404;">Regressions</div>
+                </div>
+                <div style="background: #f8d7da; padding: 20px; border-radius: 8px;">
+                    <div style="font-size: 32px; font-weight: bold; color: #dc3545;">${summary.severity_breakdown.blocker + summary.severity_breakdown.critical}</div>
+                    <div style="color: #721c24;">Blocked Stories</div>
+                </div>
+                <div style="background: #d1ecf1; padding: 20px; border-radius: 8px;">
+                    <div style="font-size: 32px; font-weight: bold; color: #0c5460;">${summary.total_conflicts}</div>
+                    <div style="color: #0c5460;">Total Conflicts</div>
+                </div>
+            </div>
+            
+            <h3 style="margin-top: 40px;">Next Actions:</h3>
+            <ol style="font-size: 18px; line-height: 1.8;">
+                <li>Review ${regressions ? regressions.length : 0} regression risks</li>
+                <li>Address ${summary.severity_breakdown.blocker} blocker conflicts</li>
+                <li>Coordinate developers for ${summary.severity_breakdown.critical} critical conflicts</li>
+                <li>Plan deployment sequence for safe stories</li>
+            </ol>
+        </div>
+    `;
+}
+
+function buildStoriesTab() {
+    document.getElementById('tab-stories').innerHTML = '<p style="padding: 40px; text-align: center;">Stories list view - Coming soon</p>';
+}
+
+function buildSequenceTab() {
+    document.getElementById('tab-sequence').innerHTML = '<p style="padding: 40px; text-align: center;">Deployment sequence - Coming soon</p>';
+}
+
+function buildEnforcementTab() {
+    const { regressions } = analysisData;
+    
+    let content = '<div style="background: white; padding: 30px; border-radius: 12px;"><h2>Enforcement Report</h2>';
+    
+    if (regressions && regressions.length > 0) {
+        content += `
+            <h3 style="color: #dc3545; margin-top: 30px;">Policy Violations: Regression Risks</h3>
+            <p>These stories have components older than production and must be excluded:</p>
+            ${regressions.map(reg => `
+                <div style="padding: 15px; background: #fff5f5; border-left: 4px solid #dc3545; margin: 10px 0; border-radius: 4px;">
+                    <strong>${reg.story_id}</strong> - ${reg.component}
+                    <br><small>${reg.message}</small>
+                </div>
+            `).join('')}
+        `;
+    } else {
+        content += '<p style="padding: 40px; text-align: center; color: #666;">No policy violations detected</p>';
+    }
+    
+    content += '</div>';
+    document.getElementById('tab-enforcement').innerHTML = content;
 }
 
 async function exportPDF(groupByDeveloper) {
-    if (!window.currentAnalysisData) {
+    if (!analysisData) {
         alert('No analysis data available');
         return;
     }
@@ -90,7 +445,7 @@ async function exportPDF(groupByDeveloper) {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                ...window.currentAnalysisData,
+                ...analysisData,
                 group_by_developer: groupByDeveloper
             })
         });
@@ -108,268 +463,4 @@ async function exportPDF(groupByDeveloper) {
     } catch (error) {
         alert(`Export failed: ${error.message}`);
     }
-}
-
-async function uploadAndAnalyze(file) {
-    try {
-        // Hide previous results/errors
-        results.style.display = 'none';
-        error.style.display = 'none';
-        
-        // Show loading
-        loading.style.display = 'block';
-        
-        // Create form data
-        const formData = new FormData();
-        formData.append('file', file);
-        
-        // Upload to API
-        const response = await fetch(`${API_URL}/api/analyze`, {
-            method: 'POST',
-            body: formData
-        });
-        
-        const data = await response.json();
-        
-        // Hide loading
-        loading.style.display = 'none';
-        
-        if (data.success) {
-            displayResults(data.data);
-        } else {
-            showError(data.error || 'Analysis failed');
-        }
-        
-    } catch (err) {
-        loading.style.display = 'none';
-        showError(`Error: ${err.message}. Make sure the API server is running.`);
-    }
-}
-
-function displayResults(data) {
-    const { summary, conflicts } = data;
-    const exportSection = document.createElement('div');
-    exportSection.className = 'conflicts-section';
-    exportSection.style.marginTop = '30px';
-    exportSection.innerHTML = `
-        <h2>Export Report</h2>
-        <button onclick="exportPDF(false)" class="btn-primary" style="margin-right: 10px;">
-            Export PDF (By Conflict)
-        </button>
-        <button onclick="exportPDF(true)" class="btn-primary">
-            Export PDF (By Developer)
-        </button>
-    `;
-
-    
-    // Show results section
-    results.style.display = 'block';
-    
-    // Update summary cards
-    document.getElementById('totalRecords').textContent = summary.total_records;
-    document.getElementById('totalStories').textContent = summary.unique_stories;
-    document.getElementById('totalConflicts').textContent = summary.total_conflicts;
-    document.getElementById('avgRisk').textContent = `${summary.avg_risk_score}/100`;
-    document.getElementById('results').appendChild(exportSection);
-    
-    // Update severity bars
-    const maxCount = Math.max(
-        summary.severity_breakdown.blocker,
-        summary.severity_breakdown.critical,
-        summary.severity_breakdown.high,
-        summary.severity_breakdown.medium,
-        summary.severity_breakdown.low
-    );
-    
-    updateSeverityBar('blocker', summary.severity_breakdown.blocker, maxCount);
-    updateSeverityBar('critical', summary.severity_breakdown.critical, maxCount);
-    updateSeverityBar('high', summary.severity_breakdown.high, maxCount);
-    updateSeverityBar('medium', summary.severity_breakdown.medium, maxCount);
-    updateSeverityBar('low', summary.severity_breakdown.low, maxCount);
-    window.currentAnalysisData = data;
-
-    
-    // Display conflicts
-    displayConflicts(conflicts);
-
-    //NEW: Display story-to-story conflicts
-    displayStoryConflicts(story_conflicts);
-    
-    // NEW: Display developer coordination
-    displayDeveloperCoordination(developer_coordination);
-    
-    // NEW: Display deployment sequence
-    displayDeploymentSequence(deployment_sequence);
-    
-    // Scroll to results
-    results.scrollIntoView({ behavior: 'smooth' });
-}
-
-function updateSeverityBar(severity, count, maxCount) {
-    const percentage = maxCount > 0 ? (count / maxCount) * 100 : 0;
-    document.getElementById(`${severity}Bar`).style.width = `${percentage}%`;
-    document.getElementById(`${severity}Count`).textContent = count;
-}
-
-
-function displayConflicts(conflicts) {
-    const container = document.getElementById('conflictsTable');
-    
-    if (conflicts.length === 0) {
-        container.innerHTML = '<p style="text-align: center; color: #666;">No conflicts found!</p>';
-        return;
-    }
-    
-    container.innerHTML = conflicts.map(conflict => {
-        // Format stories with commit info
-        const storiesList = conflict.involved_stories
-            .map((s, index) => {
-                const isLatest = index === 0;
-                //const dateStr = s.commit_date ? new Date(s.commit_date).toLocaleDateString() : 'Unknown';
-                const dateStr = s.commit_date ? s.commit_date.split('T')[0] : 'Unknown';
-
-                const daysAgo = s.days_ago !== null ? `${s.days_ago} days ago` : '';
-                
-                return `
-                    <div style="margin: 5px 0; padding: 10px; background: ${isLatest ? '#e3f2fd' : '#f8f9fa'}; border-left: 4px solid ${isLatest ? '#2196f3' : '#ddd'}; border-radius: 4px;">
-                        ${isLatest ? '<strong style="color: #2196f3;">📌 LATEST COMMIT</strong><br>' : ''}
-                        <strong>${s.id}</strong>: ${s.title.substring(0, 60)}...
-                        <br><small style="color: #666;">
-                            👤 ${s.developer || 'Unknown'} | 
-                            🎫 ${s.jira_key || 'No Jira'} | 
-                            📦 ${s.component_count} components
-                        </small>
-                        <br><small style="color: #1976d2; font-weight: 600;">
-                            ✏️ Modified by: ${s.created_by || 'Unknown'} | 
-                            📅 ${dateStr} ${daysAgo ? `(${daysAgo})` : ''}
-                        </small>
-                    </div>
-                `;
-            })
-            .join('');
-        
-        const riskFactorsList = conflict.risk_factors.map(f => `<li>${f}</li>`).join('');
-        
-        // Recommendation section
-        const recommendationHtml = conflict.recommendation ? `
-            <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
-                <h4 style="margin: 0 0 10px 0; color: #856404;">
-                    📋 Recommended Action: ${conflict.recommendation.action}
-                </h4>
-                <div style="margin-bottom: 10px;">
-                    <strong>Priority:</strong> 
-                    <span style="padding: 4px 8px; background: ${
-                        conflict.recommendation.priority === 'IMMEDIATE' ? '#dc3545' :
-                        conflict.recommendation.priority === 'HIGH' ? '#fd7e14' :
-                        conflict.recommendation.priority === 'MEDIUM' ? '#ffc107' : '#28a745'
-                    }; color: white; border-radius: 4px; font-size: 0.85rem;">
-                        ${conflict.recommendation.priority}
-                    </span>
-                </div>
-                <div style="margin-bottom: 10px;">
-                    <strong>Steps:</strong>
-                    <ol style="margin: 5px 0; padding-left: 20px;">
-                        ${conflict.recommendation.steps.map(step => `<li>${step}</li>`).join('')}
-                    </ol>
-                </div>
-                <div style="color: #856404; font-size: 0.9rem;">
-                    ⚠️ <strong>Risk:</strong> ${conflict.recommendation.risk}
-                </div>
-            </div>
-        ` : '';
-        
-        return `
-            <div class="conflict-item">
-                <div class="conflict-header">
-                    <div class="conflict-name">${conflict.component.api_name}</div>
-                    <span class="severity-badge ${conflict.severity.toLowerCase()}">
-                        ${conflict.severity} - ${conflict.risk_score}/100
-                    </span>
-                </div>
-                <div class="conflict-details">
-                    <div><strong>Type:</strong> ${conflict.component.type}</div>
-                    <div><strong>Status:</strong> ${conflict.component.status}</div>
-                    <div style="margin-top: 15px;"><strong>Stories Involved (${conflict.involved_stories.length}):</strong></div>
-                    <div style="margin-left: 10px; margin-top: 10px;">
-                        ${storiesList}
-                    </div>
-                </div>
-                ${riskFactorsList ? `
-                    <div class="risk-factors">
-                        <h4>Risk Factors:</h4>
-                        <ul>${riskFactorsList}</ul>
-                    </div>
-                ` : ''}
-                ${recommendationHtml}
-            </div>
-        `;
-    }).join('');
-}
-
-function showError(message) {
-    error.textContent = message;
-    error.style.display = 'block';
-    
-    // Hide after 5 seconds
-    setTimeout(() => {
-        error.style.display = 'none';
-    }, 5000);
-}
-
-function displayStoryConflicts(storyConflicts) {
-    if (!storyConflicts || storyConflicts.length === 0) return;
-    
-    const html = `
-        <div class="conflicts-section" style="margin-top: 30px;">
-            <h2>Story-to-Story Conflicts</h2>
-            <p style="color: #666; margin-bottom: 15px;">Stories that share multiple components</p>
-            ${storyConflicts.map(sc => `
-                <div style="padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; margin-bottom: 10px; border-radius: 4px;">
-                    <strong>${sc.story1_id}</strong> ↔ <strong>${sc.story2_id}</strong>
-                    <br><small>Shared components: ${sc.shared_count} | ${sc.story1_developer} ↔ ${sc.story2_developer}</small>
-                    <br><small style="color: #856404;">${sc.needs_coordination ? '⚠️ Requires developer coordination' : '✓ Same developer'}</small>
-                </div>
-            `).join('')}
-        </div>
-    `;
-    
-    document.getElementById('conflictsTable').insertAdjacentHTML('afterend', html);
-}
-
-function displayDeveloperCoordination(devMap) {
-    if (!devMap || Object.keys(devMap).length === 0) return;
-    
-    const html = `
-        <div class="conflicts-section" style="margin-top: 30px;">
-            <h2>Developer Coordination Required</h2>
-            ${Object.entries(devMap).map(([dev, data]) => `
-                <div style="padding: 15px; background: #e3f2fd; border-left: 4px solid #2196f3; margin-bottom: 10px; border-radius: 4px;">
-                    <strong>👤 ${dev}</strong>
-                    <br><small>Must coordinate with: ${data.coordinates_with.join(', ')}</small>
-                    <br><small>Shared components: ${data.shared_components}</small>
-                </div>
-            `).join('')}
-        </div>
-    `;
-    
-    document.getElementById('conflictsTable').insertAdjacentHTML('afterend', html);
-}
-
-function displayDeploymentSequence(sequence) {
-    if (!sequence || sequence.length === 0) return;
-    
-    const html = `
-        <div class="conflicts-section" style="margin-top: 30px;">
-            <h2>Recommended Deployment Sequence</h2>
-            ${sequence.map(batch => `
-                <div style="padding: 15px; background: #e8f5e9; border-left: 4px solid #4caf50; margin-bottom: 10px; border-radius: 4px;">
-                    <strong>Batch ${batch.batch_number}</strong>
-                    <br>Stories: ${batch.stories.join(', ')}
-                    <br><small style="color: #2e7d32;">${batch.note}</small>
-                </div>
-            `).join('')}
-        </div>
-    `;
-    
-    document.getElementById('conflictsTable').insertAdjacentHTML('afterend', html);
 }

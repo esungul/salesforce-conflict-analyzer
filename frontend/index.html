@@ -8,6 +8,7 @@
 </head>
 <body>
     <div class="container">
+        
         <!-- Header -->
         <header>
     <div style="display: flex; align-items: center; justify-content: center; gap: 20px;">
@@ -26,14 +27,29 @@
 
         <!-- Upload Section -->
         <div class="upload-section">
-            <div class="upload-box" id="uploadBox">
-                <div class="upload-icon">📁</div>
-                <h3>Drop CSV file here or click to browse</h3>
-                <p>Accepts .csv files from Copado exports</p>
-                <input type="file" id="fileInput" accept=".csv" hidden>
+            <h3>Step 1: Upload Deployment CSV (Required)</h3>
+            <div class="upload-box" id="deploymentUploadBox">
+                <div class="upload-icon">📦</div>
+                <h4>Deployment File</h4>
+                <p>CSV from UAT/Dev environment</p>
+                <input type="file" id="deploymentFile" accept=".csv" hidden>
             </div>
-            <button id="uploadBtn" class="btn-primary" style="display: none;">Analyze CSV</button>
+            <div id="deploymentFileInfo" style="display: none; margin-top: 10px;"></div>
+            
+            <h3 style="margin-top: 30px;">Step 2: Upload Production CSV (Optional but Recommended)</h3>
+            <div class="upload-box" id="productionUploadBox">
+                <div class="upload-icon">🏭</div>
+                <h4>Production State File</h4>
+                <p>Current production component state</p>
+                <input type="file" id="productionFile" accept=".csv" hidden>
+            </div>
+            <div id="productionFileInfo" style="display: none; margin-top: 10px;"></div>
+            
+            <button id="analyzeBtn" class="btn-primary" style="display: none; margin-top: 20px;">
+                Analyze Deployment
+            </button>
         </div>
+            
 
         <!-- Loading State -->
         <div id="loading" class="loading" style="display: none;">
@@ -118,6 +134,60 @@
 
         <!-- Error Message -->
         <div id="error" class="error" style="display: none;"></div>
+         <div id="devopsView" class="view-container" style="display: none;">
+        <div class="view-header">
+            <h2>DevOps View</h2>
+            <button onclick="switchView('developer')" class="btn-secondary">Switch to Developer View</button>
+        </div>
+        
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-button active" onclick="showTab('overview')">Overview</button>
+            <button class="tab-button" onclick="showTab('stories')">All Stories</button>
+            <button class="tab-button" onclick="showTab('sequence')">Deployment Plan</button>
+            <button class="tab-button" onclick="showTab('enforcement')">Enforcement Report</button>
+        </div>
+        
+        <div id="tab-overview" class="tab-content active"></div>
+        <div id="tab-stories" class="tab-content" style="display: none;"></div>
+        <div id="tab-sequence" class="tab-content" style="display: none;"></div>
+        <div id="tab-enforcement" class="tab-content" style="display: none;"></div>
+    </div>
+    <div id="roleSelectorModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <h2>Select Your View</h2>
+        <p>Choose how you want to see the analysis results</p>
+        <div style="display: flex; gap: 20px; justify-content: center; margin-top: 30px;">
+            <button onclick="selectRole('developer')" class="role-button">
+                <div style="font-size: 48px; margin-bottom: 10px;">👨‍💻</div>
+                <h3>I'm a Developer</h3>
+                <p>See my stories and what I need to do</p>
+            </button>
+            <button onclick="selectRole('devops')" class="role-button">
+                <div style="font-size: 48px; margin-bottom: 10px;">⚙️</div>
+                <h3>I'm DevOps</h3>
+                <p>Full deployment planning view</p>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Developer View -->
+<div id="developerView" class="view-container" style="display: none;">
+    <div class="view-header">
+        <h2>Developer View</h2>
+        <button onclick="switchView('devops')" class="btn-secondary">Switch to DevOps View</button>
+    </div>
+    
+    <div class="developer-filter">
+        <label>Your name:</label>
+        <select id="developerSelect" onchange="filterByDeveloper()">
+            <option value="">Select your name...</option>
+        </select>
+    </div>
+    
+    <div id="developerStories"></div>
+</div>
     </div>
 
     <script src="app.js"></script>
