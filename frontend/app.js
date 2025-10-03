@@ -77,6 +77,39 @@ function handleFileSelect(file) {
     uploadBtn.style.display = 'block';
 }
 
+async function exportPDF(groupByDeveloper) {
+    if (!window.currentAnalysisData) {
+        alert('No analysis data available');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_URL}/api/export-pdf`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                ...window.currentAnalysisData,
+                group_by_developer: groupByDeveloper
+            })
+        });
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `copado_analysis_${Date.now()}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+        
+    } catch (error) {
+        alert(`Export failed: ${error.message}`);
+    }
+}
+
 async function uploadAndAnalyze(file) {
     try {
         // Hide previous results/errors
@@ -115,6 +148,19 @@ async function uploadAndAnalyze(file) {
 
 function displayResults(data) {
     const { summary, conflicts } = data;
+    const exportSection = document.createElement('div');
+    exportSection.className = 'conflicts-section';
+    exportSection.style.marginTop = '30px';
+    exportSection.innerHTML = `
+        <h2>Export Report</h2>
+        <button onclick="exportPDF(false)" class="btn-primary" style="margin-right: 10px;">
+            Export PDF (By Conflict)
+        </button>
+        <button onclick="exportPDF(true)" class="btn-primary">
+            Export PDF (By Developer)
+        </button>
+    `;
+
     
     // Show results section
     results.style.display = 'block';
@@ -124,6 +170,7 @@ function displayResults(data) {
     document.getElementById('totalStories').textContent = summary.unique_stories;
     document.getElementById('totalConflicts').textContent = summary.total_conflicts;
     document.getElementById('avgRisk').textContent = `${summary.avg_risk_score}/100`;
+    document.getElementById('results').appendChild(exportSection);
     
     // Update severity bars
     const maxCount = Math.max(
@@ -139,6 +186,8 @@ function displayResults(data) {
     updateSeverityBar('high', summary.severity_breakdown.high, maxCount);
     updateSeverityBar('medium', summary.severity_breakdown.medium, maxCount);
     updateSeverityBar('low', summary.severity_breakdown.low, maxCount);
+    window.currentAnalysisData = data;
+
     
     // Display conflicts
     displayConflicts(conflicts);

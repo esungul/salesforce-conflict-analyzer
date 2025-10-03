@@ -14,6 +14,8 @@ import tempfile
 from csv_parser import CopadoCSVParser
 from conflict_detector import ConflictDetector
 from models import ConflictSeverity
+from pdf_generator import generate_pdf_report
+from flask import send_file
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -31,6 +33,32 @@ def allowed_file(filename):
     """Check if file extension is allowed"""
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+from pdf_generator import generate_pdf_report
+from flask import send_file
+
+@app.route('/api/export-pdf', methods=['POST'])
+def export_pdf():
+    """Generate and download PDF report"""
+    try:
+        # Get analysis data from request
+        data = request.get_json()
+        group_by_dev = data.get('group_by_developer', False)
+        
+        # Generate PDF
+        pdf_file = generate_pdf_report(data, group_by_developer=group_by_dev)
+        
+        # Return PDF file
+        filename = f"copado_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        
+        return send_file(
+            pdf_file,
+            mimetype='application/pdf',
+            as_attachment=True,
+            download_name=filename
+        )
+    
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
