@@ -44,17 +44,20 @@ class ConflictDetector:
             }
         
         elif severity == ConflictSeverity.CRITICAL:
+            latest_story = conflict.stories_with_commit_info[-1]['story'] if conflict.stories_with_commit_info else None  # OLDEST now
+            oldest_story = conflict.stories_with_commit_info[-1]['story'] if conflict.stories_with_commit_info else None
             return {
                 'action': 'DEPLOY IN SEQUENCE',
                 'priority': 'HIGH',
                 'steps': [
-                    f'Deploy stories in order (latest first: {latest_story.id if latest_story else "Unknown"})',
-                    'Test each deployment before next',
-                    f'Notify all {stories_count} developers of deployment order',
-                    'Have rollback plan ready'
+                    f'Deploy stories in chronological order (oldest first: {oldest_story.id if oldest_story else "Unknown"})',
+                    'Test each deployment thoroughly before proceeding',
+                    f'Coordinate with all {stories_count} developers on deployment timeline',
+                    'Have rollback plan ready for each step'
                 ],
-                'risk': 'Conflicts likely - careful sequencing required'
+                'risk': 'Conflicts likely - strict chronological sequencing required'
             }
+                    
         
         elif severity == ConflictSeverity.HIGH:
             return {
@@ -90,6 +93,96 @@ class ConflictDetector:
                 ],
                 'risk': 'Minimal risk'
             }
+    
+    def analyze_story_to_story_conflicts(self) -> List[dict]:
+        """Find which stories conflict with each other across multiple components"""
+        story_conflicts = []
+        
+        for i, story1 in enumerate(self.user_stories):
+            for story2 in self.user_stories[i+1:]:
+                # Find shared components
+                comps1 = {c.api_name for c in story1.components}
+                comps2 = {c.api_name for c in story2.components}
+                shared = comps1 & comps2
+                
+                if len(shared) > 0:
+                    story_conflicts.append({
+                        'story1_id': story1.id,
+                        'story1_developer': story1.developer,
+                        'story2_id': story2.id,
+                        'story2_developer': story2.developer,
+                        'shared_count': len(shared),
+                        'shared_components': list(shared),
+                        'needs_coordination': story1.developer != story2.developer
+                    })
+        
+        return sorted(story_conflicts, key=lambda x: x['shared_count'], reverse=True)
+
+
+    def get_developer_coordination_map(self) -> dict:
+        """Who needs to coordinate with whom"""
+        dev_map = {}
+        story_conflicts = self.analyze_story_to_story_conflicts()
+        
+        for conflict in story_conflicts:
+            dev1 = conflict['story1_developer'] or 'Unknown'
+            dev2 = conflict['story2_developer'] or 'Unknown'
+            
+            if dev1 not in dev_map:
+                dev_map[dev1] = {'coordinates_with': set(), 'shared_components': 0}
+            if dev2 not in dev_map:
+                dev_map[dev2] = {'coordinates_with': set(), 'shared_components': 0}
+            
+            if dev1 != dev2:
+                dev_map[dev1]['coordinates_with'].add(dev2)
+                dev_map[dev2]['coordinates_with'].add(dev1)
+                dev_map[dev1]['shared_components'] += conflict['shared_count']
+                dev_map[dev2]['shared_components'] += conflict['shared_count']
+        
+        # Convert sets to lists for JSON
+        return {
+            dev: {
+                'coordinates_with': list(data['coordinates_with']),
+                'shared_components': data['shared_components']
+            }
+            for dev, data in dev_map.items()
+        }
+
+
+    def get_deployment_sequence(self, conflicts: List) -> List[dict]:
+        """Recommend deployment order based on dependencies"""
+        # Group stories by their latest commit date
+        story_dates = {}
+        for conflict in conflicts:
+            if hasattr(conflict, 'stories_with_commit_info'):
+                for item in conflict.stories_with_commit_info:
+                    story_id = item['story'].id
+                    commit_date = item['commit_date']
+                    if story_id not in story_dates or (commit_date and commit_date > story_dates[story_id]):
+                        story_dates[story_id] = commit_date
+        
+        # Sort by date
+        sorted_stories = sorted(story_dates.items(), key=lambda x: x[1] if x[1] else datetime.min)
+        
+        batches = []
+        current_batch = []
+        last_date = None
+        
+        for story_id, date in sorted_stories:
+            if last_date and date and (last_date - date).days > 7:
+                # New batch if >7 days gap
+                if current_batch:
+                    batches.append(current_batch)
+                current_batch = [story_id]
+            else:
+                current_batch.append(story_id)
+            last_date = date
+        
+        if current_batch:
+            batches.append(current_batch)
+        
+        return [{'batch_number': i+1, 'stories': batch, 'note': f'Deploy batch {i+1}, wait 2 hours before next'} 
+                for i, batch in enumerate(batches)]
         
     def __init__(self, user_stories: List[UserStory]):
         """

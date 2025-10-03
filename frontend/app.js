@@ -142,6 +142,15 @@ function displayResults(data) {
     
     // Display conflicts
     displayConflicts(conflicts);
+
+    //NEW: Display story-to-story conflicts
+    displayStoryConflicts(story_conflicts);
+    
+    // NEW: Display developer coordination
+    displayDeveloperCoordination(developer_coordination);
+    
+    // NEW: Display deployment sequence
+    displayDeploymentSequence(deployment_sequence);
     
     // Scroll to results
     results.scrollIntoView({ behavior: 'smooth' });
@@ -256,4 +265,62 @@ function showError(message) {
     setTimeout(() => {
         error.style.display = 'none';
     }, 5000);
+}
+
+function displayStoryConflicts(storyConflicts) {
+    if (!storyConflicts || storyConflicts.length === 0) return;
+    
+    const html = `
+        <div class="conflicts-section" style="margin-top: 30px;">
+            <h2>Story-to-Story Conflicts</h2>
+            <p style="color: #666; margin-bottom: 15px;">Stories that share multiple components</p>
+            ${storyConflicts.map(sc => `
+                <div style="padding: 15px; background: #fff3cd; border-left: 4px solid #ffc107; margin-bottom: 10px; border-radius: 4px;">
+                    <strong>${sc.story1_id}</strong> ↔ <strong>${sc.story2_id}</strong>
+                    <br><small>Shared components: ${sc.shared_count} | ${sc.story1_developer} ↔ ${sc.story2_developer}</small>
+                    <br><small style="color: #856404;">${sc.needs_coordination ? '⚠️ Requires developer coordination' : '✓ Same developer'}</small>
+                </div>
+            `).join('')}
+        </div>
+    `;
+    
+    document.getElementById('conflictsTable').insertAdjacentHTML('afterend', html);
+}
+
+function displayDeveloperCoordination(devMap) {
+    if (!devMap || Object.keys(devMap).length === 0) return;
+    
+    const html = `
+        <div class="conflicts-section" style="margin-top: 30px;">
+            <h2>Developer Coordination Required</h2>
+            ${Object.entries(devMap).map(([dev, data]) => `
+                <div style="padding: 15px; background: #e3f2fd; border-left: 4px solid #2196f3; margin-bottom: 10px; border-radius: 4px;">
+                    <strong>👤 ${dev}</strong>
+                    <br><small>Must coordinate with: ${data.coordinates_with.join(', ')}</small>
+                    <br><small>Shared components: ${data.shared_components}</small>
+                </div>
+            `).join('')}
+        </div>
+    `;
+    
+    document.getElementById('conflictsTable').insertAdjacentHTML('afterend', html);
+}
+
+function displayDeploymentSequence(sequence) {
+    if (!sequence || sequence.length === 0) return;
+    
+    const html = `
+        <div class="conflicts-section" style="margin-top: 30px;">
+            <h2>Recommended Deployment Sequence</h2>
+            ${sequence.map(batch => `
+                <div style="padding: 15px; background: #e8f5e9; border-left: 4px solid #4caf50; margin-bottom: 10px; border-radius: 4px;">
+                    <strong>Batch ${batch.batch_number}</strong>
+                    <br>Stories: ${batch.stories.join(', ')}
+                    <br><small style="color: #2e7d32;">${batch.note}</small>
+                </div>
+            `).join('')}
+        </div>
+    `;
+    
+    document.getElementById('conflictsTable').insertAdjacentHTML('afterend', html);
 }

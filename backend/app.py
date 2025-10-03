@@ -79,10 +79,15 @@ def analyze_csv():
         # Parse CSV
         parser = CopadoCSVParser()
         parsed_data = parser.parse_file(filepath)
-        
-        # Detect conflicts
         detector = ConflictDetector(parsed_data.user_stories)
         conflicts = detector.detect_conflicts()
+        # NEW ANALYSES - ADD HERE (inside try block)
+
+        story_conflicts = detector.analyze_story_to_story_conflicts()
+        dev_coordination = detector.get_developer_coordination_map()
+        deployment_sequence = detector.get_deployment_sequence(conflicts)
+        
+        
         
         # Get summary
         summary = detector.get_conflict_summary(conflicts)
@@ -103,7 +108,10 @@ def analyze_csv():
                     'avg_risk_score': round(summary['avg_risk_score'], 1),
                     'severity_breakdown': summary['severity_breakdown']
                 },
-                'conflicts': [format_conflict(c) for c in conflicts[:20]]  # Top 20
+                'conflicts': [format_conflict(c) for c in conflicts[:20]],  # Top 20
+                'story_conflicts': story_conflicts[:10],  # NEW
+                'developer_coordination': dev_coordination,  # NEW
+                'deployment_sequence': deployment_sequence  # NEW
             }
         }
         
