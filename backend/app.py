@@ -151,6 +151,25 @@ def analyze_csv():
                     'total_regressions': len(regressions),
                     'production_check': prod_state is not None
                 },
+                'all_stories': [  # ADD THIS NEW FIELD
+                    {
+                        'id': story.id,
+                        'title': story.title,
+                        'developer': story.developer,
+                        'jira_key': story.jira_key,
+                        'component_count': len(story.components),
+                        'components': [
+                            {
+                                'api_name': c.api_name,
+                                'type': c.type.value,
+                                'status': c.status.value if hasattr(c.status, 'value') else str(c.status),
+                                'last_commit_date': c.last_commit_date.isoformat() if c.last_commit_date else None
+                            }
+                            for c in story.components
+                        ]
+                    }
+                for story in parsed_data.user_stories
+                    ],
                 'conflicts': [format_conflict(c) for c in conflicts[:20]],
                 'regressions': regressions,
                 'story_conflicts': story_conflicts[:10],
@@ -216,6 +235,24 @@ def format_conflict(conflict):
             'type': conflict.component.type.value,
             'status': conflict.component.status.value
         },
+        'involved_stories': [
+            {
+                'id': story.id,
+                'title': story.title,
+                'developer': story.developer,
+                'jira_key': story.jira_key,
+                'component_count': len(story.components),
+                'commit_date': next(  # ADD THIS
+                    (c.last_commit_date.isoformat() if c.last_commit_date else None
+                     for c in story.components 
+                     if c.api_name == conflict.component.api_name), 
+                    None
+                ),
+                'created_by': story.metadata.created_by if hasattr(story, 'metadata') else 'Unknown',
+                'days_ago': (datetime.now(conflict.component.last_commit_date.tzinfo) - conflict.component.last_commit_date).days if conflict.component.last_commit_date else 0
+            }
+            for story in conflict.involved_stories
+        ],
         'risk_score': conflict.risk_score,
         'severity': conflict.severity.name,
         'involved_stories': stories_detailed,

@@ -1,0 +1,9 @@
+copado__Metadata_API_Name__c,copado__Type__c,copado__Last_Commit_Date__c,LastModifiedBy.Name
+ApexClass.OrderTriggerHelper,ApexClass,2024-09-20T10:00:00.000+0000,Production Team
+ApexClass.PaymentProcessor,ApexClass,2024-09-15T14:30:00.000+0000,Sarah Johnson
+IntegrationProcedure.FixMultilineDiscount,IntegrationProcedure,2024-09-18T09:00:00.000+0000,Mike Chen
+DataRaptor.GetOrderDetails,DataRaptor,2024-08-25T11:20:00.000+0000,Production Team
+Flow.OrderApprovalFlow,Flow,2024-09-10T16:45:00.000+0000,Lisa Wong
+PermissionSet.SalesManager,PermissionSet,2024-07-15T08:00:00.000+0000,Admin User
+ApexClass.DiscountCalculator,ApexClass,2024-09-22T13:15:00.000+0000,Production Team
+OmniScript.OrderCreation,OmniScript,2024-08-30T10:30:00.000+0000,Dev Team

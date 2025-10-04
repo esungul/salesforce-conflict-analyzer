@@ -380,8 +380,8 @@ function buildOverviewTab() {
                     <div style="color: #856404;">Regressions</div>
                 </div>
                 <div style="background: #f8d7da; padding: 20px; border-radius: 8px;">
-                    <div style="font-size: 32px; font-weight: bold; color: #dc3545;">${summary.severity_breakdown.blocker + summary.severity_breakdown.critical}</div>
-                    <div style="color: #721c24;">Blocked Stories</div>
+                    <div style="font-size: 32px; font-weight: bold; color: #dc3545;">${buildCompleteStoryList().filter(s => s.status === 'BLOCKED').length}</div>
+                    <div style="color: #721c24;">Blocked Stories</div>  
                 </div>
                 <div style="background: #d1ecf1; padding: 20px; border-radius: 8px;">
                     <div style="font-size: 32px; font-weight: bold; color: #0c5460;">${summary.total_conflicts}</div>
@@ -392,7 +392,7 @@ function buildOverviewTab() {
             <h3 style="margin-top: 40px;">Next Actions:</h3>
             <ol style="font-size: 18px; line-height: 1.8;">
                 <li>Review ${regressions ? regressions.length : 0} regression risks</li>
-                <li>Address ${summary.severity_breakdown.blocker} blocker conflicts</li>
+                  <li>Address ${buildCompleteStoryList().filter(s => s.status === 'BLOCKED').length} blocked stories</li>
                 <li>Coordinate developers for ${summary.severity_breakdown.critical} critical conflicts</li>
                 <li>Plan deployment sequence for safe stories</li>
             </ol>
@@ -400,32 +400,393 @@ function buildOverviewTab() {
     `;
 }
 
-function buildStoriesTab() {
-    document.getElementById('tab-stories').innerHTML = '<p style="padding: 40px; text-align: center;">Stories list view - Coming soon</p>';
+
+function buildCompleteStoryList() {
+    const { conflicts, regressions, all_stories } = analysisData;
+    
+    // Start with ALL stories from deployment
+    const storyMap = new Map();
+    
+    // Initialize all stories
+    all_stories.forEach(story => {
+        storyMap.set(story.id, {
+            id: story.id,
+            title: story.title,
+            developer: story.developer || 'Unknown',
+            jira_key: story.jira_key,
+            component_count: story.component_count,
+            components: [],
+            maxRisk: 0,
+            severities: [],
+            hasRegression: false,
+            regressionDetails: [],
+            hasConflict: false
+        });
+    });
+    
+    // Add conflict data to stories that have conflicts
+    conflicts.forEach(conflict => {
+        conflict.involved_stories.forEach(story => {
+            if (storyMap.has(story.id)) {
+                const storyData = storyMap.get(story.id);
+                storyData.hasConflict = true;
+                storyData.components.push({
+                    name: conflict.component.api_name,
+                    type: conflict.component.type,
+                    severity: conflict.severity,
+                    risk: conflict.risk_score,
+                    otherStories: conflict.involved_stories.filter(s => s.id !== story.id).map(s => s.id)
+                });
+                
+                storyData.severities.push(conflict.severity);
+                if (conflict.risk_score > storyData.maxRisk) {
+                    storyData.maxRisk = conflict.risk_score;
+                }
+            }
+        });
+    });
+    
+    // Add regression info
+    if (regressions) {
+        regressions.forEach(reg => {
+            if (storyMap.has(reg.story_id)) {
+                const storyData = storyMap.get(reg.story_id);
+                storyData.hasRegression = true;
+                storyData.regressionDetails.push(reg);
+            }
+        });
+    }
+    
+    // Build final array with status for ALL stories
+    const stories = [];
+    storyMap.forEach((data, id) => {
+        let status, statusIcon;
+        
+        if (data.hasRegression) {
+            status = 'BLOCKED';
+            statusIcon = '❌';
+        } else if (data.severities.includes('BLOCKER')) {
+            status = 'BLOCKED';
+            statusIcon = '❌';
+        } else if (data.severities.includes('CRITICAL') || data.maxRisk >= 60) {
+            status = 'WARNING';
+            statusIcon = '⚠️';
+        } else if (data.hasConflict) {
+            status = 'WARNING';
+            statusIcon = '⚠️';
+        } else {
+            status = 'SAFE';
+            statusIcon = '✅';
+        }
+        
+        stories.push({
+            ...data,
+            status,
+            statusIcon
+        });
+    });
+    
+    return stories.sort((a, b) => {
+        const order = { BLOCKED: 0, WARNING: 1, SAFE: 2 };
+        const statusCompare = order[a.status] - order[b.status];
+        if (statusCompare !== 0) return statusCompare;
+        return b.maxRisk - a.maxRisk;
+    });
 }
 
+function renderStoryList(stories) {
+    if (stories.length === 0) {
+        return '<p style="padding: 40px; text-align: center; color: #666;">No stories match the filter</p>';
+    }
+    
+    return stories.map(story => `
+        <div class="devops-story-card ${story.status.toLowerCase()}" style="margin-bottom: 15px; padding: 20px; background: white; border-radius: 8px; border-left: 5px solid ${story.status === 'BLOCKED' ? '#dc3545' : story.status === 'WARNING' ? '#fd7e14' : '#198754'}; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <div style="flex: 1;">
+                    <h3 style="margin: 0 0 10px 0;">${story.statusIcon} ${story.id}</h3>
+                    <p style="color: #666; margin: 5px 0;">${story.title}</p>
+                    <div style="display: flex; gap: 20px; margin-top: 10px; font-size: 14px; color: #666;">
+                        <span>👤 ${story.developer}</span>
+                        <span>📋 ${story.jira_key || 'N/A'}</span>
+                        <span>🔧 ${story.component_count} components</span>
+                        <span>⚠️ Risk: ${story.maxRisk}/100</span>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <span style="padding: 8px 16px; background: ${story.status === 'BLOCKED' ? '#dc3545' : story.status === 'WARNING' ? '#fd7e14' : '#198754'}; color: white; border-radius: 20px; font-size: 14px; font-weight: 600;">
+                        ${story.status}
+                    </span>
+                </div>
+            </div>
+            
+            ${story.hasRegression ? `
+                <div style="margin-top: 15px; padding: 12px; background: #fff3cd; border-left: 4px solid #dc3545; border-radius: 4px;">
+                    <strong style="color: #dc3545;">⚠️ REGRESSION RISK</strong>
+                    <p style="margin: 5px 0; color: #856404;">Component(s) older than production - will cause regression if deployed</p>
+                </div>
+            ` : ''}
+            
+            <details style="margin-top: 15px;">
+    <summary style="cursor: pointer; color: #667eea; font-weight: 600; user-select: none;">View Component Details (${story.components.length})</summary>
+    <div style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+        ${story.components.map(c => {
+            // Find all stories with this component and their commit dates
+            const allStoriesWithComponent = analysisData.conflicts
+                .filter(conflict => conflict.component.api_name === c.name)
+                .flatMap(conflict => conflict.involved_stories)
+                .sort((a, b) => new Date(b.commit_date) - new Date(a.commit_date)); // Newest first
+            
+            const latestStory = allStoriesWithComponent[0];
+            const isLatest = latestStory && latestStory.id === story.id;
+            
+            return `
+                <div style="padding: 12px; margin: 8px 0; background: white; border-radius: 4px; border-left: 3px solid ${isLatest ? '#198754' : '#fd7e14'};">
+                    <strong>${c.name}</strong> (${c.type})
+                    <br><span style="color: #666;">Severity: ${c.severity} | Risk: ${c.risk}/100</span>
+                    
+                    ${c.otherStories.length > 0 ? `
+                        <div style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px;">
+                            <strong style="font-size: 13px;">Commit Comparison:</strong>
+                            <table style="width: 100%; margin-top: 8px; font-size: 12px; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="border-bottom: 1px solid #ddd;">
+                                        <th style="text-align: left; padding: 4px;">Story</th>
+                                        <th style="text-align: left; padding: 4px;">Commit Date</th>
+                                        <th style="text-align: left; padding: 4px;">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${allStoriesWithComponent.map((s, idx) => {
+                                        const date = s.commit_date ? new Date(s.commit_date).toLocaleDateString() : 'Unknown';
+                                        const isCurrentStory = s.id === story.id;
+                                        const badge = idx === 0 ? 
+                                            '<span style="background: #198754; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">LATEST</span>' :
+                                            `<span style="background: #fd7e14; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">${allStoriesWithComponent[0].days_ago - s.days_ago} days older</span>`;
+                                        
+                                        return `
+                                            <tr style="background: ${isCurrentStory ? '#e3f2fd' : 'white'};">
+                                                <td style="padding: 4px;">${s.id}${isCurrentStory ? ' (YOU)' : ''}</td>
+                                                <td style="padding: 4px;">${date}</td>
+                                                <td style="padding: 4px;">${badge}</td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                            ${!isLatest ? `
+                                <div style="margin-top: 8px; padding: 8px; background: #fff3cd; border-radius: 4px; font-size: 12px; color: #856404;">
+                                    ⚠️ <strong>${latestStory.id}</strong> has the latest version. Deploy that story last to preserve changes.
+                                </div>
+                            ` : `
+                                <div style="margin-top: 8px; padding: 8px; background: #d1f2eb; border-radius: 4px; font-size: 12px; color: #0c5460;">
+                                    ✅ You have the latest commit. Safe to deploy.
+                                </div>
+                            `}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }).join('')}
+    </div>
+</details>
+        </div>
+    `).join('');
+}
+
+function filterStories(filter) {
+    // Update button states
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById(`filter-${filter}`).classList.add('active');
+    
+    const allStories = buildCompleteStoryList();
+    let filtered;
+    
+    if (filter === 'all') {
+        filtered = allStories;
+    } else {
+        filtered = allStories.filter(s => s.status.toLowerCase() === filter);
+    }
+    
+    document.getElementById('storiesList').innerHTML = renderStoryList(filtered);
+}
+
+function buildStoriesTab() {
+    const { conflicts, regressions, summary } = analysisData;
+    
+    // Build complete story list with all details
+    const allStories = buildCompleteStoryList();
+    
+    const content = `
+        <div style="background: white; padding: 30px; border-radius: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2>All Stories (${allStories.length})</h2>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="filterStories('all')" class="filter-btn active" id="filter-all">All</button>
+                    <button onclick="filterStories('blocked')" class="filter-btn" id="filter-blocked">Blocked (${allStories.filter(s => s.status === 'BLOCKED').length})</button>
+                    <button onclick="filterStories('warning')" class="filter-btn" id="filter-warning">Warning (${allStories.filter(s => s.status === 'WARNING').length})</button>
+                    <button onclick="filterStories('safe')" class="filter-btn" id="filter-safe">Safe (${allStories.filter(s => s.status === 'SAFE').length})</button>
+                </div>
+            </div>
+            
+            <div id="storiesList">
+                ${renderStoryList(allStories)}
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('tab-stories').innerHTML = content;
+}
+
+
+
+
 function buildSequenceTab() {
-    document.getElementById('tab-sequence').innerHTML = '<p style="padding: 40px; text-align: center;">Deployment sequence - Coming soon</p>';
+    const allStories = buildCompleteStoryList();
+    
+    // Separate into batches
+    const blocked = allStories.filter(s => s.status === 'BLOCKED');
+    const warning = allStories.filter(s => s.status === 'WARNING');
+    const safe = allStories.filter(s => s.status === 'SAFE');
+    
+    const content = `
+        <div style="background: white; padding: 30px; border-radius: 12px;">
+            <h2>Recommended Deployment Sequence</h2>
+            <p style="color: #666; margin-bottom: 30px;">Deploy in the following order to minimize risk</p>
+            
+            ${safe.length > 0 ? `
+                <div style="margin-bottom: 30px;">
+                    <h3 style="color: #198754;">✅ Batch 1: Safe Stories (Deploy First)</h3>
+                    <p style="color: #666; margin-bottom: 15px;">These stories have no conflicts and can be deployed immediately</p>
+                    <div style="background: #f0fff4; padding: 20px; border-radius: 8px; border-left: 4px solid #198754;">
+                        ${safe.map(s => `
+                            <div style="padding: 10px; margin: 5px 0; background: white; border-radius: 4px;">
+                                <strong>${s.id}</strong> - ${s.developer} - ${s.title.substring(0, 60)}...
+                                <br><small style="color: #666;">${s.component_count} components | Risk: ${s.maxRisk}/100</small>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                </div>
+            ` : ''}
+            
+            ${warning.length > 0 ? `
+                <div style="margin-bottom: 30px;">
+                    <h3 style="color: #fd7e14;">⚠️ Batch 2: Review Required (Deploy After Testing)</h3>
+                    <p style="color: #666; margin-bottom: 15px;">These stories need coordination between developers before deployment</p>
+                    <div style="background: #fff8f0; padding: 20px; border-radius: 8px; border-left: 4px solid #fd7e14;">
+                        ${warning.map(s => `
+                            <div style="padding: 10px; margin: 5px 0; background: white; border-radius: 4px;">
+                                <strong>${s.id}</strong> - ${s.developer} - ${s.title.substring(0, 60)}...
+                                <br><small style="color: #666;">${s.component_count} components | Risk: ${s.maxRisk}/100</small>
+                            </div>
+                        `).join('')}
+                    </div>
+                
+                    <div style="background: #e3f2fd; padding: 15px; border-radius: 6px; margin-top: 10px;">
+                        <strong>Required Actions:</strong>
+                        <ol style="margin: 10px 0; padding-left: 20px;">
+                            <li>Schedule sync meeting with all developers involved</li>
+                            <li>Manual code review of shared components</li>
+                            <li>Deploy in sequence (oldest commit first)</li>
+                            <li>Test thoroughly in lower environment before production</li>
+                        </ol>
+                    </div>
+                </div>
+            ` : ''}
+            
+            ${blocked.length > 0 ? `
+                <div style="margin-bottom: 30px;">
+                    <h3 style="color: #dc3545;">❌ Excluded: Cannot Deploy (Fix Required)</h3>
+                    <p style="color: #666; margin-bottom: 15px;">These stories must be fixed before deployment</p>
+                    <div style="background: #fff5f5; padding: 20px; border-radius: 8px; border-left: 4px solid #dc3545;">
+                        ${blocked.map(s => `
+                            <div style="padding: 10px; margin: 5px 0; background: white; border-radius: 4px;">
+                                <strong>${s.id}</strong> - ${s.developer} - ${s.title.substring(0, 60)}...
+                                <br><small style="color: #dc3545;">
+                                    ${s.hasRegression ? '⚠️ Regression risk - older than production' : '⚠️ Blocker conflict detected'}
+                                </small>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div style="background: #fff3cd; padding: 15px; border-radius: 6px; margin-top: 10px;">
+                        <strong>Required Actions:</strong>
+                        <ol style="margin: 10px 0; padding-left: 20px;">
+                            <li>Notify developers of blocking issues</li>
+                            <li>Manual merge required for conflict resolution</li>
+                            <li>Get updated commits from production baseline</li>
+                            <li>Re-analyze after fixes are completed</li>
+                        </ol>
+                    </div>
+                </div>
+            ` : ''}
+            
+            <div style="margin-top: 40px; padding: 20px; background: #e8f5e9; border-radius: 8px;">
+                <h3>Summary</h3>
+                <ul style="line-height: 1.8;">
+                    <li><strong>${safe.length} stories</strong> ready to deploy immediately</li>
+                    <li><strong>${warning.length} stories</strong> need coordination before deployment</li>
+                    <li><strong>${blocked.length} stories</strong> must be excluded or fixed</li>
+                    <li><strong>Total stories to deploy:</strong> ${safe.length + warning.length}</li>
+
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('tab-sequence').innerHTML = content;
 }
 
 function buildEnforcementTab() {
     const { regressions } = analysisData;
+    const allStories = buildCompleteStoryList();
+    const blocked = allStories.filter(s => s.status === 'BLOCKED');
     
-    let content = '<div style="background: white; padding: 30px; border-radius: 12px;"><h2>Enforcement Report</h2>';
+    let content = `
+        <div style="background: white; padding: 30px; border-radius: 12px;">
+            <h2>Enforcement Report</h2>
+            <p style="color: #666; margin-bottom: 30px;">Policy violations and compliance issues</p>
+    `;
     
+    // Regressions
     if (regressions && regressions.length > 0) {
         content += `
-            <h3 style="color: #dc3545; margin-top: 30px;">Policy Violations: Regression Risks</h3>
-            <p>These stories have components older than production and must be excluded:</p>
-            ${regressions.map(reg => `
-                <div style="padding: 15px; background: #fff5f5; border-left: 4px solid #dc3545; margin: 10px 0; border-radius: 4px;">
-                    <strong>${reg.story_id}</strong> - ${reg.component}
-                    <br><small>${reg.message}</small>
+            <div style="margin-bottom: 30px;">
+                <h3 style="color: #dc3545;">⚠️ Policy Violation: Regression Risks (${regressions.length})</h3>
+                <p style="color: #666;">These components are older than production and violate deployment policy</p>
+                ${regressions.map(reg => `
+                    <div style="padding: 15px; margin: 10px 0; background: #fff5f5; border-left: 4px solid #dc3545; border-radius: 4px;">
+                        <strong>${reg.story_id}</strong>
+                        <br><span style="color: #666;">${reg.component}</span>
+                        <br><small style="color: #dc3545;">${reg.message}</small>
+                        <br><small style="color: #666;">Production: ${new Date(reg.prod_date).toLocaleDateString()} | Deploy: ${new Date(reg.deploy_date).toLocaleDateString()} | Behind: ${reg.days_behind} days</small>
+                    </div>
+                `).join('')}
+                <div style="margin-top: 15px; padding: 15px; background: #fff3cd; border-radius: 6px;">
+                    <strong>Action Required:</strong> All developers with regressions must update their commits from production baseline before deployment.
                 </div>
-            `).join('')}
+            </div>
         `;
-    } else {
-        content += '<p style="padding: 40px; text-align: center; color: #666;">No policy violations detected</p>';
+    }
+    
+    // Blocker conflicts
+    const blockers = blocked.filter(s => !s.hasRegression);
+    if (blockers.length > 0) {
+        content += `
+            <div style="margin-bottom: 30px;">
+                <h3 style="color: #fd7e14;">⚠️ High-Risk Conflicts (${blockers.length})</h3>
+                <p style="color: #666;">These stories require manual intervention</p>
+                ${blockers.map(story => `
+                    <div style="padding: 15px; margin: 10px 0; background: #fff8f0; border-left: 4px solid #fd7e14; border-radius: 4px;">
+                        <strong>${story.id}</strong> - ${story.developer}
+                        <br><span style="color: #666;">${story.title}</span>
+                        <br><small style="color: #fd7e14;">Risk Score: ${story.maxRisk}/100 | Components: ${story.component_count}</small>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+    
+    if (!regressions || (regressions.length === 0 && blockers.length === 0)) {
+        content += '<div style="padding: 60px; text-align: center; color: #198754;"><h3>✅ No Policy Violations Detected</h3><p>All stories comply with deployment policies</p></div>';
     }
     
     content += '</div>';
@@ -463,4 +824,23 @@ async function exportPDF(groupByDeveloper) {
     } catch (error) {
         alert(`Export failed: ${error.message}`);
     }
+}
+function findLatestCommitStory(componentName, stories) {
+    let latestStory = null;
+    let latestDate = null;
+    
+    stories.forEach(story => {
+        const comp = story.components.find(c => c.name === componentName);
+        if (comp) {
+            // Need commit date from component
+            // This requires adding commit dates to component data
+            const commitDate = comp.commit_date; // We'll add this
+            if (!latestDate || (commitDate && new Date(commitDate) > new Date(latestDate))) {
+                latestDate = commitDate;
+                latestStory = story.id;
+            }
+        }
+    });
+    
+    return latestStory;
 }
