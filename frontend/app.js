@@ -150,21 +150,28 @@ function showDeveloperView() {
     document.getElementById('devopsView').style.display = 'none';
     document.getElementById('developerView').style.display = 'block';
     
-    // Get unique developers from conflicts
+    // Get ALL developers from all stories (not just conflicts)
     const developers = new Set();
-    analysisData.conflicts.forEach(conflict => {
-        conflict.involved_stories.forEach(story => {
+    
+    if (analysisData.all_stories) {
+        analysisData.all_stories.forEach(story => {
             if (story.developer) {
                 developers.add(story.developer);
             }
         });
-    });
+    }
     
+    // Populate dropdown
     const select = document.getElementById('developerSelect');
     select.innerHTML = '<option value="">Select your name...</option>';
-    Array.from(developers).sort().forEach(dev => {
-        select.innerHTML += `<option value="${dev}">${dev}</option>`;
-    });
+    
+    if (developers.size === 0) {
+        select.innerHTML += '<option value="">No developers found</option>';
+    } else {
+        Array.from(developers).sort().forEach(dev => {
+            select.innerHTML += `<option value="${dev}">${dev}</option>`;
+        });
+    }
 }
 
 function filterByDeveloper() {
@@ -176,7 +183,6 @@ function filterByDeveloper() {
         return;
     }
     
-    // Build story analysis
     const myStories = buildDeveloperStories(selectedDev);
     
     if (myStories.length === 0) {
@@ -215,11 +221,77 @@ function filterByDeveloper() {
                 </div>
             ` : ''}
             
+            ${story.deployOrder && story.deployOrder.order !== 'independent' ? `
+                <div style="margin: 15px 0; padding: 15px; background: #e3f2fd; border-radius: 6px; border-left: 4px solid #2196f3;">
+                    <strong>📋 Deployment Order Decision</strong>
+                    <p style="margin: 8px 0; color: #0c5460;">
+                        ${story.deployOrder.reason}
+                    </p>
+                    
+                    <details style="margin-top: 10px;">
+                        <summary style="cursor: pointer; font-size: 13px; color: #667eea;">
+                            View Component Analysis (${story.deployOrder.details.totalShared} components)
+                        </summary>
+                        <div style="margin-top: 10px; font-size: 12px;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead style="background: #f8f9fa;">
+                                    <tr>
+                                        <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Component</th>
+                                        <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Severity</th>
+                                        <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Latest By</th>
+                                        <th style="padding: 8px; text-align: center; border: 1px solid #ddd;">Impact</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${story.deployOrder.details.componentBreakdown.map(comp => `
+                                        <tr style="background: ${comp.youHaveLatest ? '#d1f2eb' : '#fff3cd'};">
+                                            <td style="padding: 8px; border: 1px solid #ddd;">${comp.name}</td>
+                                            <td style="padding: 8px; border: 1px solid #ddd;">
+                                                <span style="background: ${comp.severity === 'CRITICAL' || comp.severity === 'BLOCKER' ? '#dc3545' : comp.severity === 'HIGH' ? '#fd7e14' : '#ffc107'}; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">
+                                                    ${comp.severity}
+                                                </span>
+                                            </td>
+                                            <td style="padding: 8px; border: 1px solid #ddd;">
+                                                ${comp.youHaveLatest ? 'YOU ✅' : comp.latestStory}
+                                            </td>
+                                            <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
+                                                ${comp.youHaveLatest ? '+' : '-'}${comp.weight}
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                    <tr style="background: #667eea; color: white; font-weight: bold;">
+                                        <td colspan="3" style="padding: 8px; border: 1px solid #ddd;">Weighted Score</td>
+                                        <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
+                                            ${story.deployOrder.details.weightedScore > 0 ? '+' : ''}${story.deployOrder.details.weightedScore}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </details>
+            
+            <div style="margin-top: 12px; padding: 12px; background: ${
+                    story.deployOrder.order === 'last' ? '#d1f2eb' : 
+                    story.deployOrder.order === 'first' ? '#fff3cd' : 
+                    '#ffebee'
+                }; border-radius: 4px;">
+                    <strong>${
+                        story.deployOrder.order === 'last' ? '✅' : 
+                        story.deployOrder.order === 'first' ? '⬆️' : 
+                        '⚠️'
+                    } ${story.deployOrder.recommendation}</strong>
+                    ${story.deployOrder.details.conflictingStories.length > 0 ? `
+                        <br><small style="margin-top: 5px; display: block;">Coordinate with: ${story.deployOrder.details.conflictingStories.join(', ')}</small>
+                    ` : ''}
+                </div>
+            </div>
+        ` : ''}
+            
             <details style="margin-top: 15px;">
                 <summary style="cursor: pointer; color: #667eea; font-weight: 600;">View Component Details</summary>
                 <div style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 4px;">
                     ${story.components.map(c => `
-                        <div style="margin: 5px 0; padding: 8px; background: white; border-radius: 4px;">
+                        <div style="padding: 8px; margin: 5px 0; background: white; border-radius: 4px;">
                             • ${c.name} (${c.type}) - ${c.severity} Risk
                         </div>
                     `).join('')}
@@ -227,6 +299,128 @@ function filterByDeveloper() {
             </details>
         </div>
     `).join('');
+}
+
+function getStoryDeploymentOrder(storyData, allStoriesMap) {
+    const sharedComponents = storyData.components.filter(c => c.otherStories && c.otherStories.length > 0);
+    
+    if (sharedComponents.length === 0) {
+        return { 
+            order: 'independent', 
+            reason: 'No shared components',
+            details: { totalShared: 0 }
+        };
+    }
+    
+    // Severity weights
+    const severityWeights = {
+        'BLOCKER': 5,
+        'CRITICAL': 5,
+        'HIGH': 3,
+        'MEDIUM': 2,
+        'LOW': 1
+    };
+    
+    let weightedScore = 0;
+    let latestCount = 0;
+    let olderCount = 0;
+    const componentBreakdown = [];
+    const conflictingStories = new Set();
+    
+    sharedComponents.forEach(comp => {
+        // Find all stories with this component from conflicts
+        const conflict = analysisData.conflicts.find(c => c.component.api_name === comp.name);
+        
+        if (!conflict) return;
+        
+        const storiesWithComp = conflict.involved_stories.sort((a, b) => {
+            if (!a.commit_date) return 1;
+            if (!b.commit_date) return -1;
+            return new Date(b.commit_date) - new Date(a.commit_date);
+        });
+        
+        if (storiesWithComp.length === 0) return;
+        
+        const latestStory = storiesWithComp[0];
+        const weight = severityWeights[comp.severity] || 1;
+        
+        // Track other stories
+        storiesWithComp.forEach(s => {
+            if (s.id !== storyData.id) {
+                conflictingStories.add(s.id);
+            }
+        });
+        
+        // Calculate weighted score
+        if (latestStory.id === storyData.id) {
+            weightedScore += weight;
+            latestCount++;
+            componentBreakdown.push({
+                name: comp.name,
+                severity: comp.severity,
+                youHaveLatest: true,
+                latestStory: storyData.id,
+                weight: weight
+            });
+        } else {
+            weightedScore -= weight;
+            olderCount++;
+            componentBreakdown.push({
+                name: comp.name,
+                severity: comp.severity,
+                youHaveLatest: false,
+                latestStory: latestStory.id,
+                weight: weight
+            });
+        }
+    });
+    
+    // Determine order based on weighted score
+    let order, reason, recommendation;
+    
+    if (weightedScore > 0) {
+        order = 'last';
+        const criticalLatest = componentBreakdown.filter(c => 
+            c.youHaveLatest && (c.severity === 'BLOCKER' || c.severity === 'CRITICAL')
+        );
+        if (criticalLatest.length > 0) {
+            reason = `You have latest on ${criticalLatest.length} CRITICAL component(s)`;
+            recommendation = `Deploy LAST to preserve your critical changes`;
+        } else {
+            reason = `Weighted score: +${weightedScore} (you have more important latest commits)`;
+            recommendation = `Deploy LAST`;
+        }
+    } else if (weightedScore < 0) {
+        order = 'first';
+        const criticalOlder = componentBreakdown.filter(c => 
+            !c.youHaveLatest && (c.severity === 'BLOCKER' || c.severity === 'CRITICAL')
+        );
+        if (criticalOlder.length > 0) {
+            reason = `${criticalOlder[0].latestStory} has latest on CRITICAL: ${criticalOlder[0].name}`;
+            recommendation = `Deploy FIRST, then ${criticalOlder[0].latestStory} deploys last to preserve their critical changes`;
+        } else {
+            reason = `Weighted score: ${weightedScore} (others have more important latest commits)`;
+            recommendation = `Deploy FIRST`;
+        }
+    } else {
+        order = 'coordinate';
+        reason = `Mixed versions with equal weight (score: 0)`;
+        recommendation = `Manual coordination required - discuss with team`;
+    }
+    
+    return {
+        order,
+        reason,
+        recommendation,
+        details: {
+            totalShared: sharedComponents.length,
+            youHaveLatest: latestCount,
+            othersHaveLatest: olderCount,
+            weightedScore: weightedScore,
+            componentBreakdown: componentBreakdown,
+            conflictingStories: Array.from(conflictingStories)
+        }
+    };
 }
 
 function buildDeveloperStories(developerName) {
@@ -253,7 +447,10 @@ function buildDeveloperStories(developerName) {
                     name: conflict.component.api_name,
                     type: conflict.component.type,
                     severity: conflict.severity,
-                    risk: conflict.risk_score
+                    risk: conflict.risk_score,
+                    otherStories: conflict.involved_stories
+                        .filter(s => s.id !== story.id)
+                        .map(s => s.id)
                 });
                 
                 if (conflict.risk_score > storyData.maxRisk) {
@@ -319,6 +516,11 @@ function buildDeveloperStories(developerName) {
             actions = ['Follow standard deployment process'];
         }
         
+        // ===== ADD THIS SECTION =====
+        // Calculate deployment order
+        const deployOrder = getStoryDeploymentOrder(data, storyMap);
+        // ===== END NEW SECTION =====
+        
         stories.push({
             id: data.id,
             title: data.title,
@@ -328,7 +530,8 @@ function buildDeveloperStories(developerName) {
             actions,
             hasRegression: data.hasRegression,
             coordination: Array.from(data.otherDevs),
-            components: data.components
+            components: data.components,
+            deployOrder: deployOrder  // ← ADD THIS LINE
         });
     });
     
@@ -338,6 +541,7 @@ function buildDeveloperStories(developerName) {
     });
 }
 
+
 function showDevOpsView() {
     document.getElementById('developerView').style.display = 'none';
     document.getElementById('devopsView').style.display = 'block';
@@ -345,6 +549,8 @@ function showDevOpsView() {
     showTab('overview');
     buildOverviewTab();
 }
+
+
 
 function showTab(tabName) {
     document.querySelectorAll('.tab-button').forEach(btn => {
@@ -398,6 +604,101 @@ function buildOverviewTab() {
             </ol>
         </div>
     `;
+}
+
+function buildSequenceTab() {
+    const allStories = buildCompleteStoryList();
+    
+    // Separate into batches
+    const blocked = allStories.filter(s => s.status === 'BLOCKED');
+    const warning = allStories.filter(s => s.status === 'WARNING');
+    const safe = allStories.filter(s => s.status === 'SAFE');
+    
+    const content = `
+        <div style="background: white; padding: 30px; border-radius: 12px;">
+            <h2>Recommended Deployment Sequence</h2>
+            <p style="color: #666; margin-bottom: 30px;">Deploy in the following order to minimize risk</p>
+            
+            ${safe.length > 0 ? `
+                <div style="margin-bottom: 30px;">
+                    <h3 style="color: #198754;">✅ Batch 1: Safe Stories (Deploy First)</h3>
+                    <p style="color: #666; margin-bottom: 15px;">These stories have no conflicts and can be deployed immediately</p>
+                    <div style="background: #f0fff4; padding: 20px; border-radius: 8px; border-left: 4px solid #198754;">
+                        ${safe.map(s => `
+                            <div style="padding: 10px; margin: 5px 0; background: white; border-radius: 4px;">
+                                <strong>${s.id}</strong> - ${s.developer} - ${s.title.substring(0, 60)}...
+                                <br><small style="color: #666;">${s.component_count} components | Risk: ${s.maxRisk}/100</small>
+                            </div>
+                        `).join('')}
+                    </div>
+                    
+                </div>
+            ` : ''}
+            
+            ${warning.length > 0 ? `
+                <div style="margin-bottom: 30px;">
+                    <h3 style="color: #fd7e14;">⚠️ Batch 2: Review Required (Deploy After Testing)</h3>
+                    <p style="color: #666; margin-bottom: 15px;">These stories need coordination between developers before deployment</p>
+                    <div style="background: #fff8f0; padding: 20px; border-radius: 8px; border-left: 4px solid #fd7e14;">
+                        ${warning.map(s => `
+                            <div style="padding: 10px; margin: 5px 0; background: white; border-radius: 4px;">
+                                <strong>${s.id}</strong> - ${s.developer} - ${s.title.substring(0, 60)}...
+                                <br><small style="color: #666;">${s.component_count} components | Risk: ${s.maxRisk}/100</small>
+                            </div>
+                        `).join('')}
+                    </div>
+                
+                    <div style="background: #e3f2fd; padding: 15px; border-radius: 6px; margin-top: 10px;">
+                        <strong>Required Actions:</strong>
+                        <ol style="margin: 10px 0; padding-left: 20px;">
+                            <li>Schedule sync meeting with all developers involved</li>
+                            <li>Manual code review of shared components</li>
+                            <li>Deploy in sequence (oldest commit first)</li>
+                            <li>Test thoroughly in lower environment before production</li>
+                        </ol>
+                    </div>
+                </div>
+            ` : ''}
+            
+            ${blocked.length > 0 ? `
+                <div style="margin-bottom: 30px;">
+                    <h3 style="color: #dc3545;">❌ Excluded: Cannot Deploy (Fix Required)</h3>
+                    <p style="color: #666; margin-bottom: 15px;">These stories must be fixed before deployment</p>
+                    <div style="background: #fff5f5; padding: 20px; border-radius: 8px; border-left: 4px solid #dc3545;">
+                        ${blocked.map(s => `
+                            <div style="padding: 10px; margin: 5px 0; background: white; border-radius: 4px;">
+                                <strong>${s.id}</strong> - ${s.developer} - ${s.title.substring(0, 60)}...
+                                <br><small style="color: #dc3545;">
+                                    ${s.hasRegression ? '⚠️ Regression risk - older than production' : '⚠️ Blocker conflict detected'}
+                                </small>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div style="background: #fff3cd; padding: 15px; border-radius: 6px; margin-top: 10px;">
+                        <strong>Required Actions:</strong>
+                        <ol style="margin: 10px 0; padding-left: 20px;">
+                            <li>Notify developers of blocking issues</li>
+                            <li>Manual merge required for conflict resolution</li>
+                            <li>Get updated commits from production baseline</li>
+                            <li>Re-analyze after fixes are completed</li>
+                        </ol>
+                    </div>
+                </div>
+            ` : ''}
+            
+            <div style="margin-top: 40px; padding: 20px; background: #e8f5e9; border-radius: 8px;">
+                <h3>Summary</h3>
+                <ul style="line-height: 1.8;">
+                    <li><strong>${safe.length} stories</strong> ready to deploy immediately</li>
+                    <li><strong>${warning.length} stories</strong> need coordination before deployment</li>
+                    <li><strong>${blocked.length} stories</strong> must be excluded or fixed</li>
+                    <li><strong>Total stories to deploy:</strong> ${safe.length + warning.length}</li>
+
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('tab-sequence').innerHTML = content;
 }
 
 
@@ -640,101 +941,6 @@ function buildStoriesTab() {
 
 
 
-function buildSequenceTab() {
-    const allStories = buildCompleteStoryList();
-    
-    // Separate into batches
-    const blocked = allStories.filter(s => s.status === 'BLOCKED');
-    const warning = allStories.filter(s => s.status === 'WARNING');
-    const safe = allStories.filter(s => s.status === 'SAFE');
-    
-    const content = `
-        <div style="background: white; padding: 30px; border-radius: 12px;">
-            <h2>Recommended Deployment Sequence</h2>
-            <p style="color: #666; margin-bottom: 30px;">Deploy in the following order to minimize risk</p>
-            
-            ${safe.length > 0 ? `
-                <div style="margin-bottom: 30px;">
-                    <h3 style="color: #198754;">✅ Batch 1: Safe Stories (Deploy First)</h3>
-                    <p style="color: #666; margin-bottom: 15px;">These stories have no conflicts and can be deployed immediately</p>
-                    <div style="background: #f0fff4; padding: 20px; border-radius: 8px; border-left: 4px solid #198754;">
-                        ${safe.map(s => `
-                            <div style="padding: 10px; margin: 5px 0; background: white; border-radius: 4px;">
-                                <strong>${s.id}</strong> - ${s.developer} - ${s.title.substring(0, 60)}...
-                                <br><small style="color: #666;">${s.component_count} components | Risk: ${s.maxRisk}/100</small>
-                            </div>
-                        `).join('')}
-                    </div>
-                    
-                </div>
-            ` : ''}
-            
-            ${warning.length > 0 ? `
-                <div style="margin-bottom: 30px;">
-                    <h3 style="color: #fd7e14;">⚠️ Batch 2: Review Required (Deploy After Testing)</h3>
-                    <p style="color: #666; margin-bottom: 15px;">These stories need coordination between developers before deployment</p>
-                    <div style="background: #fff8f0; padding: 20px; border-radius: 8px; border-left: 4px solid #fd7e14;">
-                        ${warning.map(s => `
-                            <div style="padding: 10px; margin: 5px 0; background: white; border-radius: 4px;">
-                                <strong>${s.id}</strong> - ${s.developer} - ${s.title.substring(0, 60)}...
-                                <br><small style="color: #666;">${s.component_count} components | Risk: ${s.maxRisk}/100</small>
-                            </div>
-                        `).join('')}
-                    </div>
-                
-                    <div style="background: #e3f2fd; padding: 15px; border-radius: 6px; margin-top: 10px;">
-                        <strong>Required Actions:</strong>
-                        <ol style="margin: 10px 0; padding-left: 20px;">
-                            <li>Schedule sync meeting with all developers involved</li>
-                            <li>Manual code review of shared components</li>
-                            <li>Deploy in sequence (oldest commit first)</li>
-                            <li>Test thoroughly in lower environment before production</li>
-                        </ol>
-                    </div>
-                </div>
-            ` : ''}
-            
-            ${blocked.length > 0 ? `
-                <div style="margin-bottom: 30px;">
-                    <h3 style="color: #dc3545;">❌ Excluded: Cannot Deploy (Fix Required)</h3>
-                    <p style="color: #666; margin-bottom: 15px;">These stories must be fixed before deployment</p>
-                    <div style="background: #fff5f5; padding: 20px; border-radius: 8px; border-left: 4px solid #dc3545;">
-                        ${blocked.map(s => `
-                            <div style="padding: 10px; margin: 5px 0; background: white; border-radius: 4px;">
-                                <strong>${s.id}</strong> - ${s.developer} - ${s.title.substring(0, 60)}...
-                                <br><small style="color: #dc3545;">
-                                    ${s.hasRegression ? '⚠️ Regression risk - older than production' : '⚠️ Blocker conflict detected'}
-                                </small>
-                            </div>
-                        `).join('')}
-                    </div>
-                    <div style="background: #fff3cd; padding: 15px; border-radius: 6px; margin-top: 10px;">
-                        <strong>Required Actions:</strong>
-                        <ol style="margin: 10px 0; padding-left: 20px;">
-                            <li>Notify developers of blocking issues</li>
-                            <li>Manual merge required for conflict resolution</li>
-                            <li>Get updated commits from production baseline</li>
-                            <li>Re-analyze after fixes are completed</li>
-                        </ol>
-                    </div>
-                </div>
-            ` : ''}
-            
-            <div style="margin-top: 40px; padding: 20px; background: #e8f5e9; border-radius: 8px;">
-                <h3>Summary</h3>
-                <ul style="line-height: 1.8;">
-                    <li><strong>${safe.length} stories</strong> ready to deploy immediately</li>
-                    <li><strong>${warning.length} stories</strong> need coordination before deployment</li>
-                    <li><strong>${blocked.length} stories</strong> must be excluded or fixed</li>
-                    <li><strong>Total stories to deploy:</strong> ${safe.length + warning.length}</li>
-
-            </div>
-        </div>
-    `;
-    
-    document.getElementById('tab-sequence').innerHTML = content;
-}
-
 function buildEnforcementTab() {
     const { regressions } = analysisData;
     const allStories = buildCompleteStoryList();
@@ -844,3 +1050,4 @@ function findLatestCommitStory(componentName, stories) {
     
     return latestStory;
 }
+
