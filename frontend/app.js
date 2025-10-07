@@ -606,100 +606,312 @@ function buildOverviewTab() {
     `;
 }
 
+function groupStoriesBySharedComponents(stories) {
+    /**
+     * Group stories that share components
+     * Returns: Array of groups with deployment order
+     */
+    const componentMap = new Map();
+    
+    // Build component index
+    stories.forEach(story => {
+        story.components.forEach(comp => {
+            if (!componentMap.has(comp.name)) {
+                componentMap.set(comp.name, []);
+            }
+            componentMap.get(comp.name).push({
+                storyId: story.id,
+                developer: story.developer,
+                severity: comp.severity,
+                risk: comp.risk
+            });
+        });
+    });
+    
+    // Find components with multiple stories
+    const groups = [];
+    componentMap.forEach((storiesInComp, componentName) => {
+        if (storiesInComp.length > 1) {
+            groups.push({
+                component: componentName,
+                stories: storiesInComp,
+                count: storiesInComp.length
+            });
+        }
+    });
+    
+    return groups;
+}
+
+function getDeploymentRiskExplanation(safe, warning, blocked) {
+    const total = safe.length + warning.length + blocked.length;
+    const safePercent = Math.round((safe.length / total) * 100);
+    
+    if (safePercent >= 70) {
+        return {
+            level: 'LOW',
+            color: '#198754',
+            message: 'Most stories are safe. Low deployment risk.',
+            confidence: 'High confidence in deployment success'
+        };
+    } else if (safePercent >= 40) {
+        return {
+            level: 'MEDIUM',
+            color: '#fd7e14',
+            message: 'Some coordination needed. Manageable risk.',
+            confidence: 'Medium confidence - follow sequence plan'
+        };
+    } else {
+        return {
+            level: 'HIGH',
+            color: '#dc3545',
+            message: 'Many conflicts detected. High risk deployment.',
+            confidence: 'Proceed with caution - extensive testing needed'
+        };
+    }
+}
+
+
 function buildSequenceTab() {
-    const allStories = buildCompleteStoryList();
-    
-    // Separate into batches
-    const blocked = allStories.filter(s => s.status === 'BLOCKED');
-    const warning = allStories.filter(s => s.status === 'WARNING');
-    const safe = allStories.filter(s => s.status === 'SAFE');
-    
-    const content = `
-        <div style="background: white; padding: 30px; border-radius: 12px;">
-            <h2>Recommended Deployment Sequence</h2>
-            <p style="color: #666; margin-bottom: 30px;">Deploy in the following order to minimize risk</p>
-            
-            ${safe.length > 0 ? `
-                <div style="margin-bottom: 30px;">
-                    <h3 style="color: #198754;">✅ Batch 1: Safe Stories (Deploy First)</h3>
-                    <p style="color: #666; margin-bottom: 15px;">These stories have no conflicts and can be deployed immediately</p>
-                    <div style="background: #f0fff4; padding: 20px; border-radius: 8px; border-left: 4px solid #198754;">
-                        ${safe.map(s => `
-                            <div style="padding: 10px; margin: 5px 0; background: white; border-radius: 4px;">
-                                <strong>${s.id}</strong> - ${s.developer} - ${s.title.substring(0, 60)}...
-                                <br><small style="color: #666;">${s.component_count} components | Risk: ${s.maxRisk}/100</small>
-                            </div>
-                        `).join('')}
+    try {
+        if (!analysisData) {
+            document.getElementById('tab-sequence').innerHTML = '<p style="padding: 40px; text-align: center;">No analysis data</p>';
+            return;
+        }
+        
+        const allStories = buildCompleteStoryList();
+        
+        if (!allStories || allStories.length === 0) {
+            document.getElementById('tab-sequence').innerHTML = '<p style="padding: 40px; text-align: center;">No stories found</p>';
+            return;
+        }
+        
+        const safe = allStories.filter(s => s.status === 'SAFE');
+        const warning = allStories.filter(s => s.status === 'WARNING');
+        const blocked = allStories.filter(s => s.status === 'BLOCKED');
+        const totalStories = allStories.length;
+        const safetyScore = Math.round((safe.length / totalStories) * 10);
+        
+        let html = `
+            <div style="background: white; padding: 30px; border-radius: 12px;">
+                <h2>🚀 Deployment Plan</h2>
+                
+                <div style="padding: 20px; background: #667eea; color: white; border-radius: 8px; margin: 20px 0;">
+                    <h3 style="color: white; margin: 0;">Safety Score: ${safetyScore}/10</h3>
+                    <p style="margin: 10px 0 0 0;">${safe.length} of ${totalStories} stories are safe to deploy</p>
+                </div>
+        `;
+        
+        // Wave 1: Safe Stories
+        if (safe.length > 0) {
+            html += `
+                <div style="margin: 30px 0; padding: 20px; background: #f8fff9; border-radius: 8px; border: 2px solid #198754;">
+                    <h3 style="color: #198754;">✅ WAVE 1: Safe to Deploy (${safe.length})</h3>
+                    
+                    <div style="background: white; padding: 15px; border-radius: 6px; margin: 15px 0;">
+                        <strong>Why these are safe:</strong>
+                        <ul style="margin: 10px 0; padding-left: 20px;">
+                            <li>No components shared with other stories</li>
+                            <li>No conflicts detected</li>
+                            <li>Can deploy in any order</li>
+                        </ul>
                     </div>
                     
-                </div>
-            ` : ''}
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px;">
+            `;
             
-            ${warning.length > 0 ? `
-                <div style="margin-bottom: 30px;">
-                    <h3 style="color: #fd7e14;">⚠️ Batch 2: Review Required (Deploy After Testing)</h3>
-                    <p style="color: #666; margin-bottom: 15px;">These stories need coordination between developers before deployment</p>
-                    <div style="background: #fff8f0; padding: 20px; border-radius: 8px; border-left: 4px solid #fd7e14;">
-                        ${warning.map(s => `
-                            <div style="padding: 10px; margin: 5px 0; background: white; border-radius: 4px;">
-                                <strong>${s.id}</strong> - ${s.developer} - ${s.title.substring(0, 60)}...
-                                <br><small style="color: #666;">${s.component_count} components | Risk: ${s.maxRisk}/100</small>
+            safe.forEach(s => {
+                html += `
+                    <div style="padding: 12px; background: white; border-left: 4px solid #198754; border-radius: 4px;">
+                        <strong>${s.id}</strong><br>
+                        <small style="color: #666;">${s.developer || 'Unknown'}</small>
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Wave 2: Warning Stories
+        if (warning.length > 0) {
+            html += `
+                <div style="margin: 30px 0; padding: 20px; background: #fffbf0; border-radius: 8px; border: 2px solid #fd7e14;">
+                    <h3 style="color: #fd7e14;">⚠️ WAVE 2: Requires Coordination (${warning.length})</h3>
+                    
+                    <div style="background: white; padding: 15px; border-radius: 6px; margin: 15px 0;">
+                        <strong style="color: #fd7e14;">⚠️ Why order matters:</strong>
+                        <p style="margin: 10px 0;">
+                            These stories modify the same components. Deploying in wrong order 
+                            will cause newer code to be overwritten by older code.
+                        </p>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; margin: 15px 0;">
+            `;
+            
+            warning.forEach(s => {
+                html += `
+                    <div style="padding: 12px; background: white; border-left: 4px solid #fd7e14; border-radius: 4px;">
+                        <strong>${s.id}</strong><br>
+                        <small style="color: #666;">${s.developer || 'Unknown'}</small><br>
+                        <small style="color: #666;">${s.component_count || 0} components</small>
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                    
+                    <!-- What goes wrong -->
+                    <div style="background: #fff3cd; padding: 15px; border-radius: 6px; margin: 15px 0; border-left: 4px solid #dc3545;">
+                        <strong style="color: #dc3545;">❌ What happens if deployed in wrong order:</strong>
+                        <div style="margin: 10px 0; padding: 10px; background: white; border-radius: 4px;">
+                            <div style="font-size: 13px; line-height: 1.8;">
+                                <div style="color: #198754;">✓ 10:00 AM: Story with newest commit deploys</div>
+                                <div style="color: #666; margin-left: 20px;">Latest code is now in production</div>
+                                <div style="color: #dc3545; margin-top: 8px;">✗ 10:30 AM: Story with older commit deploys</div>
+                                <div style="color: #dc3545; margin-left: 20px;">Old code OVERWRITES the new code</div>
+                                <div style="color: #dc3545; margin-left: 20px;">Previous changes are LOST</div>
+                                <div style="background: #ffebee; padding: 8px; margin-top: 8px; border-radius: 4px;">
+                                    <strong>Result: Production breaks! 💥</strong>
+                                </div>
                             </div>
-                        `).join('')}
+                        </div>
                     </div>
-                
-                    <div style="background: #e3f2fd; padding: 15px; border-radius: 6px; margin-top: 10px;">
-                        <strong>Required Actions:</strong>
-                        <ol style="margin: 10px 0; padding-left: 20px;">
-                            <li>Schedule sync meeting with all developers involved</li>
-                            <li>Manual code review of shared components</li>
-                            <li>Deploy in sequence (oldest commit first)</li>
-                            <li>Test thoroughly in lower environment before production</li>
-                        </ol>
-                    </div>
-                </div>
-            ` : ''}
-            
-            ${blocked.length > 0 ? `
-                <div style="margin-bottom: 30px;">
-                    <h3 style="color: #dc3545;">❌ Excluded: Cannot Deploy (Fix Required)</h3>
-                    <p style="color: #666; margin-bottom: 15px;">These stories must be fixed before deployment</p>
-                    <div style="background: #fff5f5; padding: 20px; border-radius: 8px; border-left: 4px solid #dc3545;">
-                        ${blocked.map(s => `
-                            <div style="padding: 10px; margin: 5px 0; background: white; border-radius: 4px;">
-                                <strong>${s.id}</strong> - ${s.developer} - ${s.title.substring(0, 60)}...
-                                <br><small style="color: #dc3545;">
-                                    ${s.hasRegression ? '⚠️ Regression risk - older than production' : '⚠️ Blocker conflict detected'}
-                                </small>
+                    
+                    <!-- What works -->
+                    <div style="background: #d1f2eb; padding: 15px; border-radius: 6px; margin: 15px 0;">
+                        <strong style="color: #0c5460;">✅ Why correct order works:</strong>
+                        <div style="margin: 10px 0; padding: 10px; background: white; border-radius: 4px;">
+                            <div style="font-size: 13px; line-height: 1.8;">
+                                <div style="color: #198754;">✓ 10:00 AM: Oldest commit deploys first</div>
+                                <div style="color: #666; margin-left: 20px;">Base code in production</div>
+                                <div style="color: #198754; margin-top: 8px;">✓ 10:30 AM: Middle commit deploys</div>
+                                <div style="color: #666; margin-left: 20px;">Adds changes on top</div>
+                                <div style="color: #198754; margin-top: 8px;">✓ 11:00 AM: Newest commit deploys</div>
+                                <div style="color: #666; margin-left: 20px;">Adds final changes</div>
+                                <div style="background: #d1f2eb; padding: 8px; margin-top: 8px; border-radius: 4px;">
+                                    <strong>Result: All changes preserved! ✅</strong>
+                                </div>
                             </div>
-                        `).join('')}
+                        </div>
                     </div>
-                    <div style="background: #fff3cd; padding: 15px; border-radius: 6px; margin-top: 10px;">
-                        <strong>Required Actions:</strong>
-                        <ol style="margin: 10px 0; padding-left: 20px;">
-                            <li>Notify developers of blocking issues</li>
-                            <li>Manual merge required for conflict resolution</li>
-                            <li>Get updated commits from production baseline</li>
-                            <li>Re-analyze after fixes are completed</li>
-                        </ol>
+                    
+                    <!-- Checklist -->
+                    <div style="background: linear-gradient(135deg, #fd7e14 0%, #d66912 100%); padding: 15px; border-radius: 6px; color: white; margin-top: 15px;">
+                        <strong>📋 Pre-Deployment Checklist:</strong>
+                        <div style="margin: 10px 0; opacity: 0.95; line-height: 1.6;">
+                            ☐ Schedule meeting with all developers<br>
+                            ☐ Deploy oldest → newest (check commit dates)<br>
+                            ☐ Test 30 min between each deployment<br>
+                            ☐ Stop if any deployment fails
+                        </div>
                     </div>
                 </div>
-            ` : ''}
-            
-            <div style="margin-top: 40px; padding: 20px; background: #e8f5e9; border-radius: 8px;">
-                <h3>Summary</h3>
-                <ul style="line-height: 1.8;">
-                    <li><strong>${safe.length} stories</strong> ready to deploy immediately</li>
-                    <li><strong>${warning.length} stories</strong> need coordination before deployment</li>
-                    <li><strong>${blocked.length} stories</strong> must be excluded or fixed</li>
-                    <li><strong>Total stories to deploy:</strong> ${safe.length + warning.length}</li>
+            `;
+        }
 
+        if (blocked.length > 0) {
+            html += `
+                <div style="margin: 30px 0; padding: 20px; background: #fff5f5; border-radius: 8px; border: 2px solid #dc3545;">
+                    <h3 style="color: #dc3545;">❌ EXCLUDED: Cannot Deploy (${blocked.length})</h3>
+                    
+                    <div style="background: white; padding: 15px; border-radius: 6px; margin: 15px 0;">
+                        <strong style="color: #dc3545;">Why these are blocked:</strong>
+                        <p style="margin: 10px 0;">
+                            These stories have critical issues that will cause production failures if deployed.
+                        </p>
+                    </div>
+            `;
+            
+            blocked.forEach(s => {
+                html += `
+                    <div style="padding: 15px; margin: 10px 0; background: white; border-left: 4px solid #dc3545; border-radius: 6px;">
+                        <div style="font-weight: bold; color: #dc3545; font-size: 16px; margin-bottom: 8px;">
+                            ${s.id}
+                        </div>
+                        <div style="color: #666; margin-bottom: 8px;">
+                            👤 ${s.developer || 'Unknown'}
+                        </div>
+                        
+                        <div style="background: #fff3cd; padding: 12px; border-radius: 4px; margin: 10px 0;">
+                            <strong>⚠️ Issue:</strong> ${s.reason}
+                        </div>
+                        
+                        <div style="background: #e3f2fd; padding: 12px; border-radius: 4px;">
+                            <strong>Required Actions:</strong>
+                            <ol style="margin: 8px 0; padding-left: 20px;">
+                `;
+                
+                if (s.actions && s.actions.length > 0) {
+                    s.actions.forEach(action => {
+                        html += `<li style="margin: 5px 0;">${action}</li>`;
+                    });
+                } else {
+                    html += `<li>Fix blocking issues before deployment</li>`;
+                }
+                
+                html += `
+                            </ol>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `</div>`;
+        }
+        
+        // Final Summary
+        html += `
+            <div style="margin-top: 40px; padding: 25px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; color: white; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                <h3 style="margin: 0 0 15px 0; color: white;">📊 Deployment Summary</h3>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 20px; margin-bottom: 15px;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 36px; font-weight: bold;">${safe.length}</div>
+                        <div style="opacity: 0.9;">Ready Now</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 36px; font-weight: bold;">${warning.length}</div>
+                        <div style="opacity: 0.9;">Need Sequence</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 36px; font-weight: bold;">${blocked.length}</div>
+                        <div style="opacity: 0.9;">Must Fix</div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="font-size: 36px; font-weight: bold;">${safetyScore}/10</div>
+                        <div style="opacity: 0.9;">Safety Score</div>
+                    </div>
+                </div>
+                
+                <div style="padding: 15px; background: rgba(255,255,255,0.1); border-radius: 6px; margin-top: 15px;">
+                    <strong>💡 Bottom Line:</strong>
+                    <p style="margin: 8px 0; opacity: 0.95;">
+                        Following this plan reduces deployment risk by ${Math.round((safe.length / totalStories) * 100)}% 
+                        and prevents code overwrites.
+                    </p>
+                </div>
             </div>
-        </div>
-    `;
-    
-    document.getElementById('tab-sequence').innerHTML = content;
+        `;
+        // Close main div
+        html += `</div>`;
+        
+        document.getElementById('tab-sequence').innerHTML = html;
+        
+    } catch (error) {
+        document.getElementById('tab-sequence').innerHTML = `
+            <div style="padding: 40px; color: red;">
+                <h3>Error: ${error.message}</h3>
+            </div>
+        `;
+        console.error('Error:', error);
+    }
 }
+
 
 
 function buildCompleteStoryList() {
