@@ -544,10 +544,10 @@ function buildDeveloperStories(developerName) {
 
 function showDevOpsView() {
     document.getElementById('developerView').style.display = 'none';
-    document.getElementById('devopsView').style.display = 'block';
+    document.getElementById('devopsView').style.display = 'none';  // Hide tabs
     
-    showTab('overview');
-    buildOverviewTab();
+    // Show decision dashboard instead
+    displayDecisionDashboard(analysisData);
 }
 
 
@@ -913,97 +913,177 @@ function buildSequenceTab() {
 }
 
 
-
 function buildCompleteStoryList() {
     const { conflicts, regressions, all_stories } = analysisData;
     
-    // Start with ALL stories from deployment
     const storyMap = new Map();
     
-    // Initialize all stories
-    all_stories.forEach(story => {
-        storyMap.set(story.id, {
-            id: story.id,
-            title: story.title,
-            developer: story.developer || 'Unknown',
-            jira_key: story.jira_key,
-            component_count: story.component_count,
-            components: [],
-            maxRisk: 0,
-            severities: [],
-            hasRegression: false,
-            regressionDetails: [],
-            hasConflict: false
+    // Step 1: Start with ALL stories from the deployment
+    if (all_stories && all_stories.length > 0) {
+        all_stories.forEach(story => {
+            storyMap.set(story.id, {
+                id: story.id,
+                title: story.title || 'No title',
+                developer: story.developer || null,
+                jira_key: story.jira_key || null,
+                component_count: story.component_count || 0,
+                components: [],
+                maxRisk: 0,
+                severities: [],
+                hasRegression: false,
+                regressionDetails: [],
+                hasConflict: false
+            });
         });
-    });
+    }
     
-    // Add conflict data to stories that have conflicts
-    conflicts.forEach(conflict => {
-        conflict.involved_stories.forEach(story => {
-            if (storyMap.has(story.id)) {
+    // Step 2: Add conflict information
+    if (conflicts && conflicts.length > 0) {
+        conflicts.forEach(conflict => {
+            conflict.involved_stories.forEach(story => {
+                // Create story if not exists (fallback if all_stories wasn't available)
+                if (!storyMap.has(story.id)) {
+                    storyMap.set(story.id, {
+                        id: story.id,
+                        title: story.title || 'No title',
+                        developer: story.developer || null,
+                        jira_key: story.jira_key || null,
+                        component_count: story.component_count || 0,
+                        components: [],
+                        maxRisk: 0,
+                        severities: [],
+                        hasRegression: false,
+                        regressionDetails: [],
+                        hasConflict: false
+                    });
+                }
+                
                 const storyData = storyMap.get(story.id);
                 storyData.hasConflict = true;
+                
+                // Add component details
+                const thisStoryData = conflict.involved_stories.find(s => s.id === story.id);
+                const commitDate = thisStoryData?.commit_date || conflict.component.last_commit_date || null;
+
                 storyData.components.push({
                     name: conflict.component.api_name,
                     type: conflict.component.type,
                     severity: conflict.severity,
                     risk: conflict.risk_score,
-                    otherStories: conflict.involved_stories.filter(s => s.id !== story.id).map(s => s.id)
+                    commit_date: commitDate,
+                    days_old: commitDate ? calculateDaysOld(commitDate) : null,
+                    otherStories: conflict.involved_stories
+                        .filter(s => s.id !== story.id)
+                        .map(s => ({
+                            id: s.id,
+                            commit_date: s.commit_date || null
+                        }))
                 });
+                            
+              
                 
                 storyData.severities.push(conflict.severity);
                 if (conflict.risk_score > storyData.maxRisk) {
                     storyData.maxRisk = conflict.risk_score;
                 }
-            }
+            });
         });
-    });
+    }
     
-    // Add regression info
-    if (regressions) {
+    // Step 3: Add regression information
+    if (regressions && regressions.length > 0) {
         regressions.forEach(reg => {
             if (storyMap.has(reg.story_id)) {
-                const storyData = storyMap.get(reg.story_id);
-                storyData.hasRegression = true;
-                storyData.regressionDetails.push(reg);
+                storyMap.get(reg.story_id).hasRegression = true;
+                storyMap.get(reg.story_id).regressionDetails.push(reg);
             }
         });
     }
     
-    // Build final array with status for ALL stories
+    // Step 4: Build final array with status for ALL stories
     const stories = [];
     storyMap.forEach((data, id) => {
-        let status, statusIcon;
+        let status, statusIcon, reason, actions;
         
+        // Determine status
         if (data.hasRegression) {
             status = 'BLOCKED';
             statusIcon = '❌';
+            reason = 'Component is older than production';
+            actions = [
+                'Pull latest code from production',
+                'Rebase your changes',
+                'Create new commit',
+                'Update Copado with new commit ID'
+            ];
         } else if (data.severities.includes('BLOCKER')) {
             status = 'BLOCKED';
             statusIcon = '❌';
+            reason = 'Blocker conflict detected';
+            actions = [
+                'Coordinate with other developers',
+                'Manual code merge required',
+                'Deploy together as single release'
+            ];
         } else if (data.severities.includes('CRITICAL') || data.maxRisk >= 60) {
             status = 'WARNING';
             statusIcon = '⚠️';
+            reason = 'Critical or high-risk conflicts detected';
+            actions = [
+                'Review changes with team',
+                'Deploy in coordinated sequence',
+                'Test thoroughly'
+            ];
         } else if (data.hasConflict) {
             status = 'WARNING';
             statusIcon = '⚠️';
+            reason = 'Conflicts detected - needs review';
+            actions = [
+                'Coordinate with other developers',
+                'Review shared components',
+                'Deploy in correct sequence'
+            ];
         } else {
+            // No conflicts, no regressions = SAFE
             status = 'SAFE';
             statusIcon = '✅';
+            reason = 'No conflicts or issues detected';
+            actions = ['Follow standard deployment process'];
         }
         
+        // Get coordination needs (developers to coordinate with)
+        const otherDevs = new Set();
+        data.components.forEach(comp => {
+            if (comp.otherStories) {
+                comp.otherStories.forEach(otherId => {
+                    const otherStory = Array.from(storyMap.values()).find(s => s.id === otherId);
+                    if (otherStory && otherStory.developer && otherStory.developer !== data.developer) {
+                        otherDevs.add(otherStory.developer);
+                    }
+                });
+            }
+        });
+        
         stories.push({
-            ...data,
+            id: data.id,
+            title: data.title,
+            developer: data.developer,
+            jira_key: data.jira_key,
+            component_count: data.component_count,
             status,
-            statusIcon
+            statusIcon,
+            reason,
+            actions,
+            hasRegression: data.hasRegression,
+            coordination: Array.from(otherDevs),
+            components: data.components
         });
     });
     
+    // Sort: Blocked first, then Warning, then Safe
     return stories.sort((a, b) => {
         const order = { BLOCKED: 0, WARNING: 1, SAFE: 2 };
-        const statusCompare = order[a.status] - order[b.status];
-        if (statusCompare !== 0) return statusCompare;
-        return b.maxRisk - a.maxRisk;
+        return order[a.status] - order[b.status];
     });
 }
 
@@ -1263,3 +1343,523 @@ function findLatestCommitStory(componentName, stories) {
     return latestStory;
 }
 
+// ========================================
+// DECISION DASHBOARD FUNCTIONS
+// ========================================
+
+function displayDecisionDashboard(data) {
+    const { summary, conflicts, regressions } = data;
+    console.log('📊 Analysis Data:', data);
+    
+    // Build complete story list
+    const allStories = buildCompleteStoryList();
+    console.log('📋 All Stories:', allStories);
+    
+    // Store globally for action handlers
+    window.allStories = allStories;
+    window.analysisData = data;
+    
+    // Group by status
+    const blocked = allStories.filter(s => s.status === 'BLOCKED');
+    const warning = allStories.filter(s => s.status === 'WARNING');
+    const safe = allStories.filter(s => s.status === 'SAFE');
+    
+    // Calculate safety score
+    const safetyScore = Math.round((safe.length / allStories.length) * 10);
+    
+    let html = `
+        <div class="decision-dashboard">
+            <h2>🎯 Deployment Decision Dashboard</h2>
+            <p>Review and approve stories for deployment</p>
+            
+            <!-- Quick Stats -->
+            <div class="quick-stats">
+                <div class="stat-card safe">
+                    <div class="stat-number">${safe.length}</div>
+                    <div class="stat-label">✅ Safe to Deploy</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-number">${warning.length}</div>
+                    <div class="stat-label">⚠️ Needs Review</div>
+                </div>
+                <div class="stat-card blocked">
+                    <div class="stat-number">${blocked.length}</div>
+                    <div class="stat-label">❌ Blocked</div>
+                </div>
+                <div class="stat-card score">
+                    <div class="stat-number">${safetyScore}/10</div>
+                    <div class="stat-label">📊 Safety Score</div>
+                </div>
+            </div>
+    `;
+    
+    // Blocked Section (Always Expanded)
+    if (blocked.length > 0) {
+        html += `
+            <div class="section blocked-section">
+                <h3>🔴 BLOCKED - Fix Before Deploy (${blocked.length} ${blocked.length === 1 ? 'story' : 'stories'})</h3>
+                <div class="section-content">
+                    ${blocked.map(story => renderDecisionCard(story)).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    // Review Section (Collapsed)
+    if (warning.length > 0) {
+        html += `
+            <div class="section warning-section">
+                <h3 onclick="toggleSection('warning')">
+                    🟡 NEEDS REVIEW - Coordinate with Team (${warning.length} ${warning.length === 1 ? 'story' : 'stories'})
+                    <span class="toggle-icon" id="warning-toggle">▼</span>
+                </h3>
+                <div class="section-content" id="warning-content" style="display: none;">
+                    ${warning.map(story => renderDecisionCard(story)).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    // Safe Section (Collapsed)
+    if (safe.length > 0) {
+        html += `
+            <div class="section safe-section">
+                <h3 onclick="toggleSection('safe')">
+                    🟢 SAFE TO DEPLOY - No Issues Found (${safe.length} ${safe.length === 1 ? 'story' : 'stories'})
+                    <span class="toggle-icon" id="safe-toggle">▼</span>
+                </h3>
+                <div class="section-content" id="safe-content" style="display: none;">
+                    ${safe.map(story => renderDecisionCard(story)).join('')}
+                </div>
+            </div>
+        `;
+    }
+    
+    // Action Bar
+    html += `
+            <div class="action-bar">
+                ${safe.length > 0 ? `
+                    <button onclick="approveSafeStories()" class="btn-primary">
+                        ✅ Approve ${safe.length} Safe ${safe.length === 1 ? 'Story' : 'Stories'}
+                    </button>
+                ` : ''}
+                <button onclick="exportReport()" class="btn-secondary">
+                    📧 Email Report to Team
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('results').innerHTML = html;
+    document.getElementById('results').style.display = 'block';
+}
+
+function renderDecisionCard(story) {
+    return `
+        <div class="decision-card ${story.status.toLowerCase()}">
+            <div class="card-header">
+                <h4>${story.statusIcon} ${story.id}</h4>
+                <button onclick="toggleStoryDetails('${story.id}')">View Details</button>
+            </div>
+            
+            <div class="card-body">
+                <p class="issue"><strong>Issue:</strong> ${story.reason}</p>
+                <p class="developer"><strong>Developer:</strong> ${story.developer || 'Unknown'}</p>
+                
+                <div id="details-${story.id}" class="story-details" style="display: none;">
+                    <p><strong>Title:</strong> ${story.title || 'N/A'}</p>
+                    <p><strong>Total Components:</strong> ${story.component_count || 0}</p>
+                    ${story.jira_key ? `<p><strong>Jira:</strong> ${story.jira_key}</p>` : ''}
+                    
+                    <!-- THIS IS THE IMPORTANT PART - COMPONENTS DISPLAY -->
+                    ${story.components && story.components.length > 0 ? `
+                        <div style="margin: 20px 0;">
+                            <strong>📦 Components with Conflicts:</strong>
+                            <div style="margin-top: 10px;">
+                                ${story.components.map(comp => `
+                                    <div style="background: white; padding: 15px; margin: 10px 0; border-radius: 6px; border-left: 3px solid ${getSeverityColor(comp.severity)};">
+                                        <div style="font-weight: 600; color: #2d3748; margin-bottom: 8px;">
+                                            ${comp.name}
+                                        </div>
+                                        <div style="font-size: 13px; color: #718096; margin-bottom: 8px;">
+                                            Type: ${comp.type} | Risk: ${comp.risk}/100 | Severity: ${comp.severity}
+                                        </div>
+                                        ${comp.commit_date ? `
+                                            <div style="font-size: 12px; color: #4a5568; margin: 8px 0; background: #f7fafc; padding: 8px; border-radius: 4px;">
+                                                📅 <strong>Last commit:</strong> ${formatDate(comp.commit_date)} 
+                                                <span style="color: ${comp.days_old > 30 ? '#dc3545' : comp.days_old > 7 ? '#fd7e14' : '#198754'};">
+                                                    (${formatDaysOld(comp.days_old)})
+                                                </span>
+                                            </div>
+                                        ` : ''}
+                                        ${comp.otherStories && comp.otherStories.length > 0 ? `
+                                        <div style="background: #fff3cd; padding: 10px; border-radius: 4px; font-size: 13px; margin-top: 8px;">
+                                            ⚠️ <strong>Also modified by:</strong>
+                                            <div style="margin-top: 8px;">
+                                                ${comp.otherStories.map(other => {
+                                                    if (typeof other === 'string') {
+                                                        return `<div style="margin: 4px 0;">• ${other}</div>`;
+                                                    } else {
+                                                        return `
+                                                            <div style="margin: 6px 0; padding: 6px; background: white; border-radius: 4px;">
+                                                                <strong>${other.id}</strong>
+                                                                ${other.commit_date ? `
+                                                                    <div style="font-size: 11px; color: #666; margin-top: 4px;">
+                                                                        📅 ${formatDate(other.commit_date)} 
+                                                                        <span style="color: ${calculateDaysOld(other.commit_date) > 30 ? '#dc3545' : '#198754'};">
+                                                                            (${formatDaysOld(calculateDaysOld(other.commit_date))})
+                                                                        </span>
+                                                                    </div>
+                                                                ` : ''}
+                                                            </div>
+                                                        `;
+                                                    }
+                                                }).join('')}
+                                            </div>
+                                        </div>
+                                    ` : ''}
+                                                                            
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : '<p style="color: #718096; margin: 15px 0;">No component details available</p>'}
+                    
+                    ${story.hasRegression && story.regressionDetails && story.regressionDetails.length > 0 ? `
+                        <div style="margin: 20px 0;">
+                            <strong style="color: #dc3545;">🔴 Regression Details:</strong>
+                            <div style="margin-top: 10px;">
+                                ${story.regressionDetails.map(reg => `
+                                    <div style="background: #fff5f5; padding: 15px; margin: 10px 0; border-radius: 6px; border-left: 3px solid #dc3545;">
+                                        <div style="font-weight: 600; color: #dc3545; margin-bottom: 8px;">
+                                            ${reg.component}
+                                        </div>
+                                        <div style="font-size: 13px; color: #666; line-height: 1.6;">
+                                            <div><strong>Your commit:</strong> ${formatDate(reg.deployment_commit_date)}</div>
+                                            <div><strong>Production:</strong> ${formatDate(reg.production_commit_date)}</div>
+                                            <div style="color: #dc3545; font-weight: 600; margin-top: 8px;">
+                                                ⚠️ Your code is ${reg.days_behind} days older than production!
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    <p style="margin-top: 20px;"><strong>Required Actions:</strong></p>
+                    <ul>
+                        ${story.actions.map(action => `<li>${action}</li>`).join('')}
+                    </ul>
+                    
+                    ${story.coordination && story.coordination.length > 0 ? `
+                        <div style="background: #e3f2fd; padding: 12px; border-radius: 6px; margin-top: 15px;">
+                            <strong>👥 Coordinate with:</strong> ${story.coordination.join(', ')}
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+            
+            <div class="card-actions">
+                ${story.developer ? `
+                    <button onclick="notifyDeveloper('${story.id}')" class="btn-icon">
+                        ✉️ Notify Developer
+                    </button>
+                ` : ''}
+                ${story.status === 'BLOCKED' ? `
+                    <button onclick="excludeStory('${story.id}')" class="btn-icon">
+                        🚫 Exclude from Deploy
+                    </button>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
+
+
+function toggleSection(sectionName) {
+    const content = document.getElementById(`${sectionName}-content`);
+    const toggle = document.getElementById(`${sectionName}-toggle`);
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        toggle.classList.add('open');
+    } else {
+        content.style.display = 'none';
+        toggle.classList.remove('open');
+    }
+}
+
+function toggleStoryDetails(storyId) {
+    const details = document.getElementById(`details-${storyId}`);
+    const button = event.target;
+    
+    if (details.style.display === 'none') {
+        details.style.display = 'block';
+        button.textContent = 'Hide Details';
+    } else {
+        details.style.display = 'none';
+        button.textContent = 'View Details';
+    }
+}
+
+function notifyDeveloper(storyId) {
+    const story = window.allStories.find(s => s.id === storyId);
+    
+    if (!story) {
+        alert('Story not found');
+        return;
+    }
+    
+    if (!story.developer) {
+        alert('No developer assigned to this story');
+        return;
+    }
+    
+    // Generate email content
+    const subject = `⚠️ Action Required: ${storyId} - Deployment Issue`;
+    
+    const body = `Hi ${story.developer},
+
+Your story ${storyId} has been flagged during deployment validation.
+
+Issue: ${story.reason}
+
+Required Actions:
+${story.actions.map((action, i) => `${i + 1}. ${action}`).join('\n')}
+
+${story.coordination && story.coordination.length > 0 ? `
+You need to coordinate with: ${story.coordination.join(', ')}
+` : ''}
+
+Please address these issues and notify the DevOps team when ready.
+
+View full analysis: ${window.location.href}
+
+---
+Copado Deployment Validator`;
+    
+    // Open default email client
+    const mailtoLink = `mailto:${story.developer}@company.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoLink;
+}
+
+function excludeStory(storyId) {
+    const story = window.allStories.find(s => s.id === storyId);
+    
+    if (!story) return;
+    
+    const confirmed = confirm(`Exclude ${storyId} from this deployment?
+
+Story: ${story.title || storyId}
+Developer: ${story.developer || 'Unknown'}
+Issue: ${story.reason}
+
+This story will NOT be deployed.`);
+    
+    if (confirmed) {
+        // Mark as excluded
+        story.excluded = true;
+        
+        alert(`✅ ${storyId} has been excluded from deployment.
+
+The story will be removed from the deployment package.
+Developer has been notified (if email is configured).`);
+        
+        // Optionally: notify developer
+        if (story.developer) {
+            const notifyDev = confirm('Send notification email to developer?');
+            if (notifyDev) {
+                notifyDeveloper(storyId);
+            }
+        }
+    }
+}
+
+function approveSafeStories() {
+    const safe = window.allStories.filter(s => s.status === 'SAFE');
+    
+    if (safe.length === 0) {
+        alert('No safe stories to approve');
+        return;
+    }
+    
+    const storyList = safe.map(s => `  • ${s.id} - ${s.developer || 'Unknown'}`).join('\n');
+    
+    const confirmed = confirm(`Approve ${safe.length} safe ${safe.length === 1 ? 'story' : 'stories'} for deployment?
+
+These stories have passed all validations:
+${storyList}
+
+They can be deployed immediately without risk.`);
+    
+    if (confirmed) {
+        // Mark as approved
+        safe.forEach(story => {
+            story.approved = true;
+            story.approvedAt = new Date().toISOString();
+            story.approvedBy = 'DevOps Team'; // Could get from user session
+        });
+        
+        const blocked = window.allStories.filter(s => s.status === 'BLOCKED').length;
+        const warning = window.allStories.filter(s => s.status === 'WARNING').length;
+        
+        let message = `✅ Approved ${safe.length} ${safe.length === 1 ? 'story' : 'stories'} for deployment!\n\n`;
+        
+        if (blocked > 0 || warning > 0) {
+            message += `Next Steps:\n`;
+            if (blocked > 0) {
+                message += `• Fix ${blocked} blocked ${blocked === 1 ? 'story' : 'stories'}\n`;
+            }
+            if (warning > 0) {
+                message += `• Review ${warning} warning ${warning === 1 ? 'story' : 'stories'}\n`;
+            }
+            message += `• Then proceed with deployment`;
+        } else {
+            message += `All stories approved! Ready to deploy.`;
+        }
+        
+        alert(message);
+    }
+}
+
+function exportReport() {
+    const blocked = window.allStories.filter(s => s.status === 'BLOCKED');
+    const warning = window.allStories.filter(s => s.status === 'WARNING');
+    const safe = window.allStories.filter(s => s.status === 'SAFE');
+    
+    const report = `
+═══════════════════════════════════════════════════════
+        DEPLOYMENT VALIDATION REPORT
+═══════════════════════════════════════════════════════
+
+Generated: ${new Date().toLocaleString()}
+Total Stories: ${window.allStories.length}
+
+SUMMARY:
+✅ Safe to Deploy: ${safe.length} stories
+⚠️ Needs Review: ${warning.length} stories
+❌ Blocked: ${blocked.length} stories
+📊 Safety Score: ${Math.round((safe.length / window.allStories.length) * 10)}/10
+
+═══════════════════════════════════════════════════════
+
+${blocked.length > 0 ? `
+🔴 BLOCKED STORIES - MUST FIX BEFORE DEPLOY:
+
+${blocked.map(s => `
+${s.id} - ${s.developer || 'Unknown'}
+Issue: ${s.reason}
+Actions Required:
+${s.actions.map((a, i) => `  ${i + 1}. ${a}`).join('\n')}
+`).join('\n───────────────────────────────────────\n')}
+
+═══════════════════════════════════════════════════════
+` : ''}
+
+${warning.length > 0 ? `
+🟡 REVIEW NEEDED - COORDINATE WITH TEAM:
+
+${warning.map(s => `
+${s.id} - ${s.developer || 'Unknown'}
+Issue: ${s.reason}
+${s.coordination && s.coordination.length > 0 ? `Coordinate with: ${s.coordination.join(', ')}` : ''}
+`).join('\n───────────────────────────────────────\n')}
+
+═══════════════════════════════════════════════════════
+` : ''}
+
+${safe.length > 0 ? `
+🟢 SAFE TO DEPLOY:
+
+${safe.map(s => `${s.id} - ${s.developer || 'Unknown'}`).join('\n')}
+
+═══════════════════════════════════════════════════════
+` : ''}
+
+RECOMMENDATION:
+${blocked.length > 0 ? `1. Fix ${blocked.length} blocked ${blocked.length === 1 ? 'story' : 'stories'} first\n` : ''}${warning.length > 0 ? `2. Coordinate with team on ${warning.length} warning ${warning.length === 1 ? 'story' : 'stories'}\n` : ''}${safe.length > 0 ? `3. Deploy ${safe.length} safe ${safe.length === 1 ? 'story' : 'stories'} immediately\n` : ''}
+Total Deployment Time: ${blocked.length === 0 && warning.length === 0 ? '2 hours' : '4-6 hours (including fixes)'}
+
+═══════════════════════════════════════════════════════
+Generated by Copado Deployment Validator
+    `;
+    
+    // Copy to clipboard
+    navigator.clipboard.writeText(report).then(() => {
+        alert('📋 Report copied to clipboard!\n\nYou can now:\n• Paste into email\n• Share in Slack\n• Save to file');
+    }).catch(err => {
+        // Fallback: show in textarea
+        const textarea = document.createElement('textarea');
+        textarea.value = report;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        
+        alert('📋 Report copied to clipboard!');
+    });
+}
+
+// Helper function to get severity color
+function getSeverityColor(severity) {
+    const colors = {
+        'BLOCKER': '#dc3545',
+        'CRITICAL': '#fd7e14',
+        'HIGH': '#ffc107',
+        'MEDIUM': '#0dcaf0',
+        'LOW': '#198754'
+    };
+    return colors[severity] || '#6c757d';
+}
+
+// Helper function to format dates
+function formatDate(dateString) {
+    if (!dateString) return 'Unknown';
+    
+    try {
+        const date = new Date(dateString);
+        const options = { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        };
+        return date.toLocaleDateString('en-US', options);
+    } catch (e) {
+        return dateString;
+    }
+}
+
+// Calculate days old from a date string
+function calculateDaysOld(dateString) {
+    if (!dateString) return null;
+    
+    try {
+        const commitDate = new Date(dateString);
+        const today = new Date();
+        const diffTime = today - commitDate;
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        return diffDays;
+    } catch (e) {
+        return null;
+    }
+}
+
+// Format days old into readable text
+function formatDaysOld(days) {
+    if (days === null || days === undefined) return '';
+    
+    if (days === 0) return 'Today';
+    if (days === 1) return '1 day ago';
+    if (days < 7) return `${days} days ago`;
+    if (days < 30) {
+        const weeks = Math.floor(days / 7);
+        return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
+    }
+    const months = Math.floor(days / 30);
+    return `${months} ${months === 1 ? 'month' : 'months'} ago`;
+}
