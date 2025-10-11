@@ -146,12 +146,14 @@
             <button class="tab-button" onclick="showTab('stories')">All Stories</button>
             <button class="tab-button" onclick="showTab('sequence')">Deployment Plan</button>
             <button class="tab-button" onclick="showTab('enforcement')">Enforcement Report</button>
+            <button class="tab-button" onclick="showTab('production')">🟢 Production</button>
         </div>
         
         <div id="tab-overview" class="tab-content active"></div>
         <div id="tab-stories" class="tab-content" style="display: none;"></div>
         <div id="tab-sequence" class="tab-content" style="display: none;"></div>
         <div id="tab-enforcement" class="tab-content" style="display: none;"></div>
+        <div id="tab-production" class="tab-content"></div>
     </div>
     <div id="roleSelectorModal" class="modal" style="display: none;">
     <div class="modal-content">
@@ -195,5 +197,7 @@
     <p>Copado Deployment Validator v1.0 | Built for LLA Peacock Project </p>
     <p style="font-size: 12px; margin-top: 8px;">© 2025 - Internal Tool</p>
 </footer>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/diff_match_patch/20121119/diff_match_patch.js"></script>
+
 </body>
 </html>

@@ -17,6 +17,7 @@ from models import ConflictSeverity
 from pdf_generator import generate_pdf_report
 from flask import send_file
 from production_analyzer import parse_production_state, check_regression
+from git_client import BitBucketClient 
 
 
 # Initialize Flask app
@@ -37,6 +38,74 @@ def allowed_file(filename):
 
 from pdf_generator import generate_pdf_report
 from flask import send_file
+
+@app.route('/api/component-diff-details', methods=['POST'])
+def get_component_diff_details():
+    """
+    Get detailed diff showing which files changed in a component
+    """
+    try:
+        data = request.json
+        component_name = data.get('component_name', '')
+        component_type = data.get('component_type', '')
+        branch1 = data.get('branch1', 'master')
+        branch2 = data.get('branch2', 'uatsfdc')
+        
+        if '.' in component_name:
+            component_name = component_name.split('.', 1)[1]
+        
+        git_client = BitBucketClient()
+        
+        diff_details = git_client.get_component_diff_details(
+            component_name,
+            component_type,
+            branch1,
+            branch2
+        )
+        
+        return jsonify({
+            'success': True,
+            'diff_details': diff_details
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/get-code-diff', methods=['POST'])
+def get_code_diff():
+    try:
+        data = request.json
+        component_name = data.get('component_name', '')
+        component_type = data.get('component_type', '')
+        prod_branch = data.get('prod_branch', 'master')
+        uat_branch = data.get('uat_branch', 'uatsfdc')
+        
+        if '.' in component_name:
+            component_name = component_name.split('.', 1)[1]
+        
+        git_client = BitBucketClient()
+        
+        # Use bundle diff for multi-file components
+        diff_result = git_client.get_bundle_diff(
+            component_name=component_name,
+            component_type=component_type,
+            prod_branch=prod_branch,
+            uat_branch=uat_branch
+        )
+        
+        return jsonify({
+            'success': True,
+            'data': diff_result
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/api/export-pdf', methods=['POST'])
 def export_pdf():
@@ -76,6 +145,189 @@ def health_check():
         'version': '1.0.0'
     })
 
+@app.route('/api/production-state', methods=['POST'])
+def get_production_state():
+    """
+    Get current state of components in production
+    Shows what's currently in master branch
+    """
+    try:
+        data = request.json
+        components = data.get('components', [])
+        
+        if not components:
+            return jsonify({
+                'success': False,
+                'error': 'No components provided'
+            }), 400
+        
+        git_client = BitBucketClient()
+        production_state = []
+        
+        for component in components:
+            component_name = component.get('name', '')
+            component_type = component.get('type', '')
+            
+            # Remove type prefix if present
+            if '.' in component_name:
+                component_name = component_name.split('.', 1)[1]
+            
+            # Build path
+            #file_path = git_client.build_component_path(component_name, component_type)
+            
+            # Check if file exists in production
+            #content = git_client.get_file_content(file_path, branch='master')
+            # Try to find file using smart search
+            content, actual_path = git_client.get_file_content_smart(
+                component_name, 
+                component_type, 
+                branch='master'
+            )
+
+            file_path = actual_path or git_client.build_component_path(component_name, component_type)
+            
+            # Get latest commit for this file
+            commits = git_client.get_file_commits(file_path, branch='master', limit=1)
+            latest_commit = commits[0] if commits else None
+            
+            production_state.append({
+                'component_name': component_name,
+                'component_type': component_type,
+                'file_path': file_path,
+                'exists_in_prod': content is not None,
+                'last_commit_hash': latest_commit['short_hash'] if latest_commit else None,
+                'last_commit_date': latest_commit['date'] if latest_commit else None,
+                'last_author': latest_commit['author'] if latest_commit else None,
+                'last_commit_message': latest_commit['message'] if latest_commit else None,
+                'file_size': len(content) if content else 0
+            })
+        
+        return jsonify({
+            'success': True,
+            'production_state': production_state,
+            'checked_at': datetime.now().isoformat(),
+            'branch': 'master',
+            'total_components': len(production_state),
+            'existing': len([c for c in production_state if c['exists_in_prod']]),
+            'missing': len([c for c in production_state if not c['exists_in_prod']])
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/compare-deployment', methods=['POST'])
+def compare_deployment():
+    """
+    Compare deployment components with production
+    
+    Returns which components are:
+    - Modified (exist in both, different content)
+    - New (only in deployment)
+    - Same (exist in both, identical content)
+    """
+    try:
+        data = request.json
+        components = data.get('components', [])
+        
+        if not components:
+            return jsonify({
+                'success': False,
+                'error': 'No components provided'
+            }), 400
+        
+        git_client = BitBucketClient()
+        comparison_results = []
+        
+        for component in components:
+            component_name = component.get('name', '')
+            component_type = component.get('type', '')
+            
+            # Remove type prefix if present
+            if '.' in component_name:
+                component_name = component_name.split('.', 1)[1]
+            
+            # Get production version (master branch)
+            prod_content, prod_path = git_client.get_file_content_smart(
+                component_name, 
+                component_type, 
+                branch='master'
+            )
+            
+            # Get UAT version (uat branch or master - depending on your setup)
+            # For now, we'll assume UAT = master since we don't have separate UAT branch
+            # You can change this to 'uat' if you have a UAT branch
+            uat_content, uat_path = git_client.get_file_content_smart(
+                component_name, 
+                component_type, 
+                branch='uatsfdc'  # Change to 'uat' if you have UAT branch
+            )
+            
+            print(f"\n{'='*60}")
+            print(f"Component: {component_name}")
+            print(f"Type: {component_type}")
+            print(f"Prod exists: {prod_content is not None}")
+            print(f"UAT exists: {uat_content is not None}")
+            
+            if prod_content and uat_content:
+                print(f"Prod size: {len(prod_content)} chars")
+                print(f"UAT size: {len(uat_content)} chars")
+                print(f"Are identical: {prod_content == uat_content}")
+    
+            if prod_content != uat_content:
+                # Show first difference
+                for i, (c1, c2) in enumerate(zip(prod_content, uat_content)):
+                    if c1 != c2:
+                        print(f"First diff at position {i}: '{c1}' vs '{c2}'")
+                        print(f"Context: ...{prod_content[max(0,i-20):i+20]}...")
+                        break
+            print(f"{'='*60}\n")
+
+            # Determine status
+            if prod_content is None and uat_content is None:
+                status = 'NOT_FOUND'
+            elif prod_content is None:
+                status = 'NEW'
+            elif uat_content is None:
+                status = 'REMOVED'
+            elif prod_content == uat_content:
+                status = 'IDENTICAL'
+            else:
+                status = 'MODIFIED'
+            
+            comparison_results.append({
+                'component_name': component_name,
+                'component_type': component_type,
+                'status': status,
+                'in_production': prod_content is not None,
+                'in_uat': uat_content is not None,
+                'file_path': prod_path or uat_path
+            })
+        
+        # Calculate summary
+        summary = {
+            'total': len(comparison_results),
+            'modified': len([r for r in comparison_results if r['status'] == 'MODIFIED']),
+            'new': len([r for r in comparison_results if r['status'] == 'NEW']),
+            'identical': len([r for r in comparison_results if r['status'] == 'IDENTICAL']),
+            'removed': len([r for r in comparison_results if r['status'] == 'REMOVED']),
+            'not_found': len([r for r in comparison_results if r['status'] == 'NOT_FOUND'])
+        }
+        
+        return jsonify({
+            'success': True,
+            'comparison': comparison_results,
+            'summary': summary,
+            'compared_at': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze_csv():
