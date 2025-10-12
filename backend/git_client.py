@@ -17,30 +17,46 @@ class BitBucketClient:
                     prod_branch: str = "master", uat_branch: str = "uatsfdc") -> dict:
         """
         Get diff for all files in a component bundle
+        Automatically discovers all files in the bundle
         """
         # Determine folder path
         if component_type == 'lwc':
             folder = f"lwc/{component_name}"
-            extensions = ['.js', '.html', '.css', '.js-meta.xml']
         elif component_type == 'aura':
             folder = f"aura/{component_name}"
-            extensions = ['.cmp', '.js', '.css', '.design', '.svg', '.auradoc']
-        elif component_type in ['DataRaptor', 'IntegrationProcedure', 'OmniScript']:
+        elif component_type in ['DataRaptor', 'IntegrationProcedure', 'OmniScript', 
+                                'VlocityCard', 'CalculationProcedure', 'CalculationMatrix']:
             folder = f"vlocity/{component_type}/{component_name}"
-            extensions = ['_DataPack.json', '_Extract.json', '_Transform.json', '.json']
         else:
-            # Single file component - use existing method
+            # Single file component
             return self.get_component_diff(component_name, component_type, prod_branch, uat_branch)
         
-        # Get all files in bundle
-        files_to_check = [
-            f"{folder}/{component_name}{ext}" for ext in extensions
-        ]
+        # Get list of files from BOTH branches
+        prod_files = self.list_folder_files(folder, prod_branch)
+        uat_files = self.list_folder_files(folder, uat_branch)
+        
+        # Merge file lists (all unique files from both branches)
+        all_files = list(set(prod_files + uat_files))
+        all_files.sort()  # Sort for consistent display
+        
+        print(f"📦 Found {len(all_files)} files in {folder}")
+        print(f"   Files: {all_files}")
+        
+        if not all_files:
+            return {
+                'component_name': component_name,
+                'component_type': component_type,
+                'is_bundle': True,
+                'bundle_files': [],
+                'has_changes': False,
+                'file_path': folder,
+                'error': 'No files found in bundle'
+            }
         
         bundle_files = []
         has_any_changes = False
         
-        for file_path in files_to_check:
+        for file_path in all_files:
             prod_content = self.get_file_content(file_path, prod_branch)
             uat_content = self.get_file_content(file_path, uat_branch)
             
@@ -65,9 +81,10 @@ class BitBucketClient:
             'is_bundle': True,
             'bundle_files': bundle_files,
             'has_changes': has_any_changes,
-            'file_path': folder
+            'file_path': folder,
+            'total_files': len(bundle_files)
         }
-    
+        
     def __init__(self):
         self.token = os.getenv('BITBUCKET_TOKEN')
         self.workspace = os.getenv('BITBUCKET_WORKSPACE', 'lla-dev')
@@ -199,7 +216,7 @@ class BitBucketClient:
                 f"vlocity/{component_type}/{component_name}/{component_name}_DataPack.json",
                 f"vlocity/DataRaptor/{component_name}/{component_name}_DataPack.json",
                 f"vlocity/IntegrationProcedure/{component_name}/{component_name}_DataPack.json",
-                f"vlocity/OmniScript/{component_name}/{component_name}_DataPack.json"
+                f"vlocity/OmniScript/{component_name}/{component_name}_*.json"
             ])
             
             # Try Aura
@@ -560,7 +577,44 @@ class BitBucketClient:
         except Exception as e:
             print(f"Error getting file commits: {str(e)}")
             return []
-
+    
+    def list_folder_files(self, folder_path: str, branch: str = "master") -> list:
+        """
+        List all files in a folder using BitBucket API
+        
+        Args:
+            folder_path: Path to folder (e.g., "vlocity/OmniScript/ComponentName")
+            branch: Branch name
+        
+        Returns:
+            List of file paths
+        """
+        url = f"{self.base_url}/src/{branch}/{folder_path}"
+        
+        try:
+            response = requests.get(url, headers=self._get_headers())
+            
+            if response.status_code == 200:
+                data = response.json()
+                files = []
+                
+                # BitBucket API returns directory listing
+                if 'values' in data:
+                    for item in data['values']:
+                        if item.get('type') == 'commit_file':
+                            files.append(item.get('path'))
+                
+                return files
+            elif response.status_code == 404:
+                print(f"Folder not found: {folder_path} in {branch}")
+                return []
+            else:
+                print(f"Error listing folder {folder_path}: {response.status_code}")
+                return []
+                
+        except Exception as e:
+            print(f"Exception listing folder: {str(e)}")
+            return []
 # Test function
 if __name__ == "__main__":
     print("=" * 70)
