@@ -74,6 +74,7 @@ def get_component_diff_details():
             'error': str(e)
         }), 500
 
+
 @app.route('/api/get-code-diff', methods=['POST'])
 def get_code_diff():
     try:
@@ -329,6 +330,35 @@ def compare_deployment():
             'error': str(e)
         }), 500
 
+@app.route('/api/verify-commit', methods=['POST'])
+def verify_commit():
+    """
+    Verify if commit exists in production
+    
+    Request: {
+        "commit_hash": "910e4e2",
+        "branch": "master"
+    }
+    """
+    try:
+        data = request.json
+        commit_hash = data.get('commit_hash', '')
+        branch = data.get('branch', 'master')
+        
+        git_client = BitBucketClient()
+        result = git_client.verify_commit_in_branch(commit_hash, branch)
+        
+        return jsonify({
+            'success': True,
+            'data': result
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/api/analyze', methods=['POST'])
 def analyze_csv():
     """Analyze deployment with optional production comparison"""
@@ -415,7 +445,8 @@ def analyze_csv():
                                 'api_name': c.api_name,
                                 'type': c.type.value,
                                 'status': c.status.value if hasattr(c.status, 'value') else str(c.status),
-                                'last_commit_date': c.last_commit_date.isoformat() if c.last_commit_date else None
+                                'last_commit_date': c.last_commit_date.isoformat() if c.last_commit_date else None,
+                                'commit_hash': c.commit_hash if hasattr(c, 'commit_hash') else None 
                             }
                             for c in story.components
                         ]

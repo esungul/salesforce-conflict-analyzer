@@ -62,6 +62,7 @@ class Component:
     unique_id: str
     last_commit_date: Optional[datetime] = None
     created_by: Optional[str] = None 
+    commit_hash: Optional[str] = None 
 
 
 @dataclass

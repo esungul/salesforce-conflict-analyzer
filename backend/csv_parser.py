@@ -115,7 +115,10 @@ class CopadoCSVParser:
             user_story_id=story_id,
             unique_id=str(row.get('copado__Unique_ID__c', '')),
             last_commit_date=self._parse_date(row.get('copado__Last_Commit_Date__c')),
-            created_by=self._get_optional_string(row, 'CreatedBy.Name') 
+            created_by=self._get_optional_string(row, 'CreatedBy.Name'),
+            commit_hash=row.get('copado__User_Story_Commit__c')
+
+             
         )
     
     def _map_metadata_type(self, type_str) -> MetadataType:

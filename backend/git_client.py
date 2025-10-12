@@ -12,6 +12,47 @@ load_dotenv()
 
 class BitBucketClient:
     """Client for interacting with BitBucket API v2"""
+    def verify_commit_in_branch(self, commit_hash: str, branch: str = "master") -> dict:
+        """
+        Check if a commit exists in a branch
+        """
+        url = f"{self.base_url}/commit/{commit_hash}"
+        
+        try:
+            response = requests.get(url, headers=self._get_headers())
+            
+            if response.status_code == 200:
+                commit_data = response.json()
+                
+                # Check if commit is in the branch
+                branches_url = f"{self.base_url}/commit/{commit_hash}/branches"
+                branches_response = requests.get(branches_url, headers=self._get_headers())
+                
+                in_branch = False
+                if branches_response.status_code == 200:
+                    branches = branches_response.json().get('values', [])
+                    in_branch = any(b.get('name') == branch for b in branches)
+                
+                return {
+                    'exists': True,
+                    'in_branch': in_branch,
+                    'commit_hash': commit_hash,
+                    'author': commit_data.get('author', {}).get('raw'),
+                    'date': commit_data.get('date'),
+                    'message': commit_data.get('message', '').split('\n')[0]
+                }
+            else:
+                return {
+                    'exists': False,
+                    'in_branch': False,
+                    'commit_hash': commit_hash
+                }
+                
+        except Exception as e:
+            return {
+                'exists': False,
+                'error': str(e)
+        }
     
     def get_bundle_diff(self, component_name: str, component_type: str, 
                     prod_branch: str = "master", uat_branch: str = "uatsfdc") -> dict:
