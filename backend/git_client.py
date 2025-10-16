@@ -6,12 +6,73 @@ import os
 import requests
 from typing import Optional, Dict, List
 from dotenv import load_dotenv
+import component_registry as cr
+from urllib.parse import unquote,quote
+import re
+GUID_RE = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
+from component_registry import vlocity_bundle_folder_candidates
+import logging
+
+
+
+
+
+
+
+def strip_type_prefix(name: str, component_type: str) -> str:
+    pfx = f"{component_type}."
+    return name[len(pfx):] if name.startswith(pfx) else name
+
+def slug(s: str) -> str:
+    # keep underscores (important for OID/ODD), hyphenate spaces, strip parens
+    s = s.replace("(", "").replace(")", "")
+    s = re.sub(r"\s+", "-", s.strip())
+    # collapse multiple dashes
+    s = re.sub(r"-{2,}", "-", s)
+    return s
+
+
+
 
 # Load environment variables
 load_dotenv()
 
 class BitBucketClient:
     """Client for interacting with BitBucket API v2"""
+    
+    from component_registry import vlocity_bundle_folder_candidates
+
+    def list_folder(self, branch: str, folder: str, pagelen: int = 100):
+            """
+            List files in a repository folder for a given branch/ref.
+            Returns a list of dicts (commit_file entries) or [] if empty, None on 404.
+            """
+            # Normalize folder to always end with a slash for directory listing
+            folder = folder.strip("/")
+            url = f"{self.base_url}/src/{quote(branch, safe='')}/{quote(folder, safe='/')}/"
+
+            params = {"pagelen": pagelen}
+            items = []
+
+            while True:
+                resp = requests.get(url, headers=self._get_headers(), params=params)
+                if resp.status_code == 404:
+                    return None
+                resp.raise_for_status()
+                data = resp.json()
+
+                values = data.get("values")
+                if isinstance(values, list):
+                    items.extend(values)
+
+                next_url = data.get("next")
+                if not next_url:
+                    break
+                # The 'next' field already includes its own query params
+                url, params = next_url, {}
+
+            return items
+    
     def verify_commit_in_branch(self, commit_hash: str, branch: str = "master") -> dict:
         """
         Check if a commit exists in a branch
@@ -53,6 +114,193 @@ class BitBucketClient:
                 'exists': False,
                 'error': str(e)
         }
+    
+    def get_commit_changes(self, commit_hash: str) -> dict:
+        """
+        Get what changed in a specific commit
+        
+        Returns:
+            Files changed, lines added/removed, diff content
+        """
+        url = f"{self.base_url}/commit/{commit_hash}"
+        
+        try:
+            response = requests.get(url, headers=self._get_headers())
+            
+            if response.status_code != 200:
+                return {
+                    'success': False,
+                    'error': f'Commit not found: {commit_hash}'
+                }
+            
+            commit_data = response.json()
+            
+            # Get diff for this commit
+            diff_url = f"{self.base_url}/commit/{commit_hash}/diff"
+            diff_response = requests.get(diff_url, headers=self._get_headers())
+            
+            files_changed = []
+            total_additions = 0
+            total_deletions = 0
+            
+            if diff_response.status_code == 200:
+                diff_data = diff_response.json()
+                
+                # Parse diff for each file
+                for diff in diff_data.get('values', []):
+                    file_path = diff.get('new', {}).get('path') or diff.get('old', {}).get('path')
+                    
+                    # Count additions/deletions
+                    additions = 0
+                    deletions = 0
+                    changed_lines = []
+                    
+                    # Parse hunks to find changed lines
+                    for hunk in diff.get('hunks', []):
+                        segments = hunk.get('segments', [])
+                        for segment in segments:
+                            seg_type = segment.get('type')
+                            lines = segment.get('lines', [])
+                            
+                            if seg_type == 'ADDED':
+                                additions += len(lines)
+                                # Get line numbers
+                                start_line = hunk.get('new_start', 0)
+                                changed_lines.append({
+                                    'type': 'added',
+                                    'start': start_line,
+                                    'end': start_line + len(lines)
+                                })
+                            elif seg_type == 'REMOVED':
+                                deletions += len(lines)
+                                start_line = hunk.get('old_start', 0)
+                                changed_lines.append({
+                                    'type': 'removed',
+                                    'start': start_line,
+                                    'end': start_line + len(lines)
+                                })
+                    
+                    total_additions += additions
+                    total_deletions += deletions
+                    
+                    files_changed.append({
+                        'path': file_path,
+                        'additions': additions,
+                        'deletions': deletions,
+                        'changed_lines': changed_lines
+                    })
+            
+            return {
+                'success': True,
+                'commit_hash': commit_hash,
+                'short_hash': commit_hash[:7],
+                'author': commit_data.get('author', {}).get('raw'),
+                'date': commit_data.get('date'),
+                'message': commit_data.get('message', '').split('\n')[0],
+                'files_changed': files_changed,
+                'total_files': len(files_changed),
+                'total_additions': total_additions,
+                'total_deletions': total_deletions,
+                'summary': f"+{total_additions} -{total_deletions}"
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e)
+            }
+    
+    def check_commit_ancestry(self, older_commit: str, newer_commit: str) -> dict:
+        """
+        Check if newer_commit includes older_commit changes
+        
+        Returns:
+            is_ancestor: True if newer includes older
+            relationship: Description of relationship
+        """
+        # BitBucket API to check commit parents
+        url = f"{self.base_url}/commit/{newer_commit}"
+        
+        try:
+            response = requests.get(url, headers=self._get_headers())
+            
+            if response.status_code != 200:
+                return {
+                    'success': False,
+                    'error': f'Commit not found: {newer_commit}'
+                }
+            
+            commit_data = response.json()
+            parents = commit_data.get('parents', [])
+            
+            # Check if older_commit is in the ancestry
+            # We need to walk the parent chain
+            is_ancestor = self._is_commit_ancestor(older_commit, newer_commit)
+            
+            if is_ancestor:
+                relationship = "INCLUDES"
+                message = f"✅ Commit {newer_commit[:7]} includes changes from {older_commit[:7]}"
+                safe_order = f"Safe to deploy newer commit only"
+            else:
+                relationship = "SEPARATE"
+                message = f"⚠️ Commits are on separate branches - changes will conflict"
+                safe_order = f"Deploy {older_commit[:7]} first, then {newer_commit[:7]}"
+            
+            return {
+                'success': True,
+                'is_ancestor': is_ancestor,
+                'relationship': relationship,
+                'message': message,
+                'recommended_order': safe_order,
+                'older_commit': older_commit[:7],
+                'newer_commit': newer_commit[:7]
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e)
+            }
+
+
+    def _is_commit_ancestor(self, ancestor_hash: str, descendant_hash: str, max_depth: int = 50) -> bool:
+        """
+        Check if ancestor_hash is an ancestor of descendant_hash
+        by walking parent chain
+        """
+        if ancestor_hash == descendant_hash:
+            return True
+        
+        visited = set()
+        queue = [descendant_hash]
+        depth = 0
+        
+        while queue and depth < max_depth:
+            current = queue.pop(0)
+            
+            if current in visited:
+                continue
+            visited.add(current)
+            
+            # Get commit info
+            url = f"{self.base_url}/commit/{current}"
+            try:
+                response = requests.get(url, headers=self._get_headers())
+                if response.status_code == 200:
+                    commit_data = response.json()
+                    parents = commit_data.get('parents', [])
+                    
+                    for parent in parents:
+                        parent_hash = parent.get('hash', '')
+                        if parent_hash.startswith(ancestor_hash):
+                            return True
+                        queue.append(parent_hash)
+            except:
+                pass
+            
+            depth += 1
+        
+        return False    
     
     def get_bundle_diff(self, component_name: str, component_type: str, 
                     prod_branch: str = "master", uat_branch: str = "uatsfdc") -> dict:
@@ -126,15 +374,28 @@ class BitBucketClient:
             'total_files': len(bundle_files)
         }
         
-    def __init__(self):
+    def __init__(self, logger: logging.Logger | None = None):
         self.token = os.getenv('BITBUCKET_TOKEN')
         self.workspace = os.getenv('BITBUCKET_WORKSPACE', 'lla-dev')
         self.repo = os.getenv('BITBUCKET_REPO', 'copado_lla')
         self.base_url = f"https://api.bitbucket.org/2.0/repositories/{self.workspace}/{self.repo}"
-        
+
+        # ✅ logger fix
+        if logger is None:
+            logger = logging.getLogger("git_client.BitBucketClient")
+            if not logger.handlers:
+                h = logging.StreamHandler()
+                h.setFormatter(logging.Formatter(
+                    "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+                ))
+                logger.addHandler(h)
+            logger.setLevel(os.getenv("LOG_LEVEL", "INFO").upper())
+            logger.propagate = False
+        self.logger = logger
+
         if not self.token:
             raise ValueError("BITBUCKET_TOKEN not set in .env file")
-    
+        
     def _get_headers(self) -> Dict[str, str]:
         """Get authentication headers"""
         return {
@@ -188,10 +449,19 @@ class BitBucketClient:
         Get all possible paths where component might exist
         Returns list of paths to try in order
         """
-        if '.' in component_name:
-            component_name = component_name.split('.', 1)[1]
+
+       # if '.' in component_name:
+       #  component_name = component_name.split('.', 1)[1]
         
         paths = []
+        reg = cr.candidates_for_single_file(component_name, component_type)
+        print(f"We are in reg {reg}")
+        
+        
+        if reg:
+            paths.extend(reg)
+            
+
         
         # Salesforce metadata - try multiple structures
         if component_type == 'ApexClass':
@@ -307,7 +577,7 @@ class BitBucketClient:
             return f"components/{component_name}.component"
         
         elif component_type == 'PermissionSet':
-            return f"permissionsets/{component_name}.permissionset-meta.xml"
+            return f"permissionsets/{component_name}.permissionset"
         
         elif component_type == 'Flow':
             return f"flows/{component_name}.flow-meta.xml"
@@ -339,26 +609,29 @@ class BitBucketClient:
         Returns:
             Dictionary with changed files and their status
         """
-        # Build folder path based on component type
-        if component_type == 'lwc':
-            folder_path = f"lwc/{component_name}/"
-        elif component_type == 'OmniScript':
-            folder_path = f"vlocity/OmniScript/{component_name}/"
-        elif component_type == 'IntegrationProcedure':
-            folder_path = f"vlocity/IntegrationProcedure/{component_name}/"
-        elif component_type == 'DataRaptor':
-            folder_path = f"vlocity/DataRaptor/{component_name}/"
-        else:
-            # Single file components
-            folder_path = self.build_component_path(component_name, component_type)
-        
-        # Use BitBucket commits API to compare
-        url = f"{self.base_url}/commits/{branch2}"
-        params = {
-            'path': folder_path,
-            'pagelen': 50  # Get recent commits
-        }
-        
+        if cr.is_bundle(component_type):
+            folder = cr.folder_for_bundle(component_name, component_type)
+            if folder:
+                # Build folder path based on component type
+                if component_type == 'lwc':
+                    folder_path = f"lwc/{component_name}/"
+                elif component_type == 'OmniScript':
+                    folder_path = f"vlocity/OmniScript/{component_name}/"
+                elif component_type == 'IntegrationProcedure':
+                    folder_path = f"vlocity/IntegrationProcedure/{component_name}/"
+                elif component_type == 'DataRaptor':
+                    folder_path = f"vlocity/DataRaptor/{component_name}/"
+                else:
+                    # Single file components
+                    folder_path = self.build_component_path(component_name, component_type)
+                
+                # Use BitBucket commits API to compare
+                url = f"{self.base_url}/commits/{branch2}"
+                params = {
+                    'path': folder_path,
+                    'pagelen': 50  # Get recent commits
+                }
+                
         try:
             response = requests.get(url, headers=self._get_headers(), params=params)
             
@@ -544,6 +817,36 @@ class BitBucketClient:
             print(f"Error listing bundle files: {str(e)}")
             return []
      
+   
+    def resolve_vlocity_bundle(self, branch: str, component_type: str, component_name: str):
+        self.logger.info(
+            "resolve_vlocity_bundle: branch=%s type=%s name=%s",
+            branch, component_type, component_name
+        )
+
+        candidates = list(vlocity_bundle_folder_candidates(component_type, component_name))
+
+        # ✅ FIXED: use self.logger and proper format placeholders
+        for folder in candidates:
+            self.logger.info("Trying folder candidate: %s", folder)
+            items = self.list_folder(branch, folder)
+            if items and isinstance(items, list):
+                # NEW: preview JSON files inside the bundle folder
+                files = [it for it in items if it.get("type") == "commit_file"]
+                jsons = [it.get("path", "") for it in files if it.get("path", "").endswith(".json")]
+                preview = ", ".join(p.rsplit("/", 1)[-1] for p in jsons[:5])
+                self.logger.info(
+                    "bundle listing ok at %s; json files (%d): %s%s",
+                    folder, len(jsons),
+                    preview if preview else "none",
+                    " …" if len(jsons) > 5 else ""
+                )
+                return folder, items
+
+        return None, None
+            
+
+
     def list_component_types(self, branch: str = "master") -> List[str]:
         """
         List available component types in vlocity folder

@@ -19,6 +19,11 @@ from flask import send_file
 from production_analyzer import parse_production_state, check_regression
 from git_client import BitBucketClient 
 
+import logging
+logging.basicConfig(level=logging.INFO)  # put once (e.g., in app.py main)
+logger = logging.getLogger(__name__)
+
+
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -74,6 +79,32 @@ def get_component_diff_details():
             'error': str(e)
         }), 500
 
+@app.route('/api/check-commit-relationship', methods=['POST'])
+def check_commit_relationship():
+    """
+    Check if one commit includes another's changes
+    """
+    try:
+        data = request.json
+        commit1 = data.get('commit1', '')  # Older
+        commit2 = data.get('commit2', '')  # Newer
+        
+        if not commit1 or not commit2:
+            return jsonify({
+                'success': False,
+                'error': 'Both commits required'
+            }), 400
+        
+        git_client = BitBucketClient()
+        result = git_client.check_commit_ancestry(commit1, commit2)
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/api/get-code-diff', methods=['POST'])
 def get_code_diff():
@@ -146,78 +177,131 @@ def health_check():
         'version': '1.0.0'
     })
 
+
+
 @app.route('/api/production-state', methods=['POST'])
 def get_production_state():
     """
-    Get current state of components in production
-    Shows what's currently in master branch
+    Get current state of components in a branch (defaults to 'uatsfdc').
+    - Supports folder-based Vlocity bundles (e.g., Product2).
+    - Supports single-file SF components.
     """
     try:
-        data = request.json
+        data = request.json or {}
         components = data.get('components', [])
-        
-        if not components:
-            return jsonify({
-                'success': False,
-                'error': 'No components provided'
-            }), 400
-        
-        git_client = BitBucketClient()
-        production_state = []
-        
-        for component in components:
-            component_name = component.get('name', '')
-            component_type = component.get('type', '')
-            
-            # Remove type prefix if present
-            if '.' in component_name:
-                component_name = component_name.split('.', 1)[1]
-            
-            # Build path
-            #file_path = git_client.build_component_path(component_name, component_type)
-            
-            # Check if file exists in production
-            #content = git_client.get_file_content(file_path, branch='master')
-            # Try to find file using smart search
-            content, actual_path = git_client.get_file_content_smart(
-                component_name, 
-                component_type, 
-                branch='master'
-            )
+        branch = (data.get('branch') or 'uatsfdc').strip()
 
-            file_path = actual_path or git_client.build_component_path(component_name, component_type)
-            
-            # Get latest commit for this file
-            commits = git_client.get_file_commits(file_path, branch='master', limit=1)
-            latest_commit = commits[0] if commits else None
-            
+        if not components:
+            return jsonify({'success': False, 'error': 'No components provided'}), 400
+
+        git_client = BitBucketClient()
+        app.logger.info("get_production_state 1: branch=%s components=%d", branch, len(components))
+        production_state = []
+
+        # Only strip the "<Type>." prefix (keep other dots)
+        def normalize_name(name: str, ctype: str) -> str:
+            name = (name or '').strip()
+            pfx = f"{(ctype or '').strip()}."
+            return name[len(pfx):] if name.startswith(pfx) else name
+
+        # Folder-based Vlocity bundle types
+        bundle_types = {
+                "Product2",
+                "OrchestrationItemDefinition",
+                "OrchestrationDependencyDefinition",
+                "CalculationMatrixVersion",
+                "CalculationMatrix",
+                "Catalog",
+                "PriceList",
+                "AttributeCategory",
+            }
+
+        for component in components:
+            raw_name = component.get('name', '')
+            ctype = component.get('type', '')
+
+            # Ensure these always exist for this iteration
+            latest_commit = None
+            file_size = 0
+            file_path = None
+
+            name = normalize_name(raw_name, ctype)
+            app.logger.info("component: type=%s raw=%s norm=%s", ctype, raw_name, name)
+
+            # --- Vlocity bundle path (folder-based) ---
+            if ctype in bundle_types:
+                folder_path, items = git_client.resolve_vlocity_bundle(
+                    branch=branch, component_type=ctype, component_name=raw_name
+                )
+
+                exists = folder_path is not None  # folder presence = exists in prod
+
+                # Count JSON files (optional signal)
+                json_count = 0
+                if items and isinstance(items, list):
+                    json_count = sum(
+                        1
+                        for it in items
+                        if it.get("type") == "commit_file" and str(it.get("path", "")).endswith(".json")
+                    )
+
+                # Last commit touching anything under this folder
+                if exists:
+                    commits = git_client.get_file_commits(folder_path.rstrip("/"), branch=branch, limit=1)
+                    latest_commit = commits[0] if commits else None
+
+                production_state.append({
+                    'component_name': raw_name,
+                    'component_type': ctype,
+                    'file_path': folder_path,                 # bundle folder path
+                    'exists_in_prod': exists,
+                    'last_commit_hash': latest_commit['short_hash'] if latest_commit else None,
+                    'last_commit_date': latest_commit['date'] if latest_commit else None,
+                    'last_author': latest_commit['author'] if latest_commit else None,
+                    'last_commit_message': latest_commit['message'] if latest_commit else None,
+                    'file_size': 0,                           # bundles: no single file size
+                    'has_files': json_count > 0,
+                    'file_count': json_count,
+                })
+                continue  # next component
+
+            # --- Salesforce single-file path (file-based) ---
+            content, actual_path = git_client.get_file_content_smart(name, ctype, branch=branch)
+            file_path = actual_path or git_client.build_component_path(name, ctype)
+
+            # Latest commit for this *file* on the same branch
+            if file_path:
+                commits = git_client.get_file_commits(file_path, branch=branch, limit=1)
+                latest_commit = commits[0] if commits else None
+
+            file_size = len(content) if content else 0
+
             production_state.append({
-                'component_name': component_name,
-                'component_type': component_type,
+                'component_name': raw_name,            # original name user sent
+                'component_type': ctype,
                 'file_path': file_path,
                 'exists_in_prod': content is not None,
                 'last_commit_hash': latest_commit['short_hash'] if latest_commit else None,
                 'last_commit_date': latest_commit['date'] if latest_commit else None,
                 'last_author': latest_commit['author'] if latest_commit else None,
                 'last_commit_message': latest_commit['message'] if latest_commit else None,
-                'file_size': len(content) if content else 0
+                'file_size': file_size,
             })
-        
+
         return jsonify({
             'success': True,
             'production_state': production_state,
             'checked_at': datetime.now().isoformat(),
-            'branch': 'master',
+            'branch': branch,
             'total_components': len(production_state),
-            'existing': len([c for c in production_state if c['exists_in_prod']]),
-            'missing': len([c for c in production_state if not c['exists_in_prod']])
+            'existing': sum(1 for c in production_state if c['exists_in_prod']),
+            'missing': sum(1 for c in production_state if not c['exists_in_prod']),
         })
-        
+
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
+        app.logger.exception("Error in /api/production-state")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 
 @app.route('/api/compare-deployment', methods=['POST'])
 def compare_deployment():
@@ -352,6 +436,32 @@ def verify_commit():
             'success': True,
             'data': result
         })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/get-commit-changes', methods=['POST'])
+def get_commit_changes():
+    """
+    Get what changed in a specific commit
+    """
+    try:
+        data = request.json
+        commit_hash = data.get('commit_hash', '')
+        
+        if not commit_hash:
+            return jsonify({
+                'success': False,
+                'error': 'No commit hash provided'
+            }), 400
+        
+        git_client = BitBucketClient()
+        result = git_client.get_commit_changes(commit_hash)
+        
+        return jsonify(result)
         
     except Exception as e:
         return jsonify({
@@ -542,6 +652,7 @@ def format_conflict(conflict):
         'risk_factors': conflict.risk_factors,
         'recommendation': recommendation
     }
+
 
 if __name__ == '__main__':
     print("=" * 60)

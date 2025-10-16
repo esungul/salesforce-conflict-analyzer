@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+=<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -134,70 +134,83 @@
 
         <!-- Error Message -->
         <div id="error" class="error" style="display: none;"></div>
-         <div id="devopsView" class="view-container" style="display: none;">
-        <div class="view-header">
-            <h2>DevOps View</h2>
-            <button onclick="switchView('developer')" class="btn-secondary">Switch to Developer View</button>
-        </div>
-        
-        <!-- Tabs -->
-        <div class="tabs">
-            <button class="tab-button active" onclick="showTab('overview')">Overview</button>
-            <button class="tab-button" onclick="showTab('stories')">All Stories</button>
-            <button class="tab-button" onclick="showTab('sequence')">Deployment Plan</button>
-            <button class="tab-button" onclick="showTab('enforcement')">Enforcement Report</button>
-            <button class="tab-button" onclick="showTab('production')">🟢 Production</button>
-        </div>
-        
-        <div id="tab-overview" class="tab-content active"></div>
-        <div id="tab-stories" class="tab-content" style="display: none;"></div>
-        <div id="tab-sequence" class="tab-content" style="display: none;"></div>
-        <div id="tab-enforcement" class="tab-content" style="display: none;"></div>
-        <div id="tab-production" class="tab-content"></div>
-    </div>
-    <div id="roleSelectorModal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <h2>Select Your View</h2>
-        <p>Choose how you want to see the analysis results</p>
-        <div style="display: flex; gap: 20px; justify-content: center; margin-top: 30px;">
-            <button onclick="selectRole('developer')" class="role-button">
-                <div style="font-size: 48px; margin-bottom: 10px;">👨‍💻</div>
-                <h3>I'm a Developer</h3>
-                <p>See my stories and what I need to do</p>
-            </button>
-            <button onclick="selectRole('devops')" class="role-button">
-                <div style="font-size: 48px; margin-bottom: 10px;">⚙️</div>
-                <h3>I'm DevOps</h3>
-                <p>Full deployment planning view</p>
-            </button>
-        </div>
-    </div>
-</div>
 
-<!-- Developer View -->
-<div id="developerView" class="view-container" style="display: none;">
-    <div class="view-header">
-        <h2>Developer View</h2>
-        <button onclick="switchView('devops')" class="btn-secondary">Switch to DevOps View</button>
-    </div>
-    
-    <div class="developer-filter">
-        <label>Your name:</label>
-        <select id="developerSelect" onchange="filterByDeveloper()">
-            <option value="">Select your name...</option>
-        </select>
-    </div>
-    
-    <div id="developerStories"></div>
-</div>
+        <!-- DevOps View -->
+        <div id="devopsView" class="view-container" style="display: none;">
+            <div class="view-header">
+                <h2>DevOps View</h2>
+                <button onclick="switchView('developer')" class="btn-secondary">Switch to Developer View</button>
+            </div>
+            
+            <!-- Tabs -->
+            <div class="tabs">
+              <button class="tab-button" onclick="showTab('overview')">Overview</button>
+              <button class="tab-button" onclick="showTab('stories')">All Stories</button>
+              <!-- Deployment Plan must use 'deploy' so app.js renders into #tab-deploy -->
+              <button class="tab-button" onclick="showTab('deploy')">Deployment Plan</button>
+              <!-- Decisions tab (rendered by app.js) -->
+              <button class="tab-button" onclick="showTab('decisions')">Decisions</button>
+              <button class="tab-button" onclick="showTab('enforcement')">Enforcement Report</button>
+              <button class="tab-button" onclick="showTab('production')">🟢 Production</button>
+            </div>
+
+            <!-- Tab panes -->
+            <div id="tab-overview" class="tab-content active"></div>
+            <div id="tab-stories" class="tab-content" style="display:none;"></div>
+            <div id="tab-sequence" class="tab-content" style="display:none;"></div>
+            <div id="tab-enforcement" class="tab-content" style="display:none;"></div>
+            <div id="tab-production" class="tab-content" style="display:none;"></div>
+            <div id="tab-deploy" class="tab-content" style="display:none;"></div>
+            <!-- New: Decisions render targets -->
+            <div id="tab-decisions" class="tab-content" style="display:none;"></div>
+            <!-- Optional singular fallback (harmless if unused) -->
+            <div id="tab-decision" class="tab-content" style="display:none;"></div>
+        </div>
+
+        <!-- Role Selector -->
+        <div id="roleSelectorModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h2>Select Your View</h2>
+                <p>Choose how you want to see the analysis results</p>
+                <div style="display: flex; gap: 20px; justify-content: center; margin-top: 30px;">
+                    <button onclick="selectRole('developer')" class="role-button">
+                        <div style="font-size: 48px; margin-bottom: 10px;">👨‍💻</div>
+                        <h3>I'm a Developer</h3>
+                        <p>See my stories and what I need to do</p>
+                    </button>
+                    <button onclick="selectRole('devops')" class="role-button">
+                        <div style="font-size: 48px; margin-bottom: 10px;">⚙️</div>
+                        <h3>I'm DevOps</h3>
+                        <p>Full deployment planning view</p>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Developer View -->
+        <div id="developerView" class="view-container" style="display: none;">
+            <div class="view-header">
+                <h2>Developer View</h2>
+                <button onclick="switchView('devops')" class="btn-secondary">Switch to DevOps View</button>
+            </div>
+            
+            <div class="developer-filter">
+                <label>Your name:</label>
+                <select id="developerSelect" onchange="filterByDeveloper()">
+                    <option value="">Select your name...</option>
+                </select>
+            </div>
+            
+            <div id="developerStories"></div>
+        </div>
     </div>
 
     <script src="app.js"></script>
     <footer style="max-width: 1200px; margin: 40px auto; text-align: center; color: #6b7280; font-size: 14px;">
-    <p>Copado Deployment Validator v1.0 | Built for LLA Peacock Project </p>
-    <p style="font-size: 12px; margin-top: 8px;">© 2025 - Internal Tool</p>
-</footer>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/diff_match_patch/20121119/diff_match_patch.js"></script>
+        <p>Copado Deployment Validator v1.0 | Built for LLA Peacock Project </p>
+        <p style="font-size: 12px; margin-top: 8px;">© 2025 - Internal Tool</p>
+    </footer>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/diff_match_patch/20121119/diff_match_patch.js"></script>
 
 </body>
 </html>

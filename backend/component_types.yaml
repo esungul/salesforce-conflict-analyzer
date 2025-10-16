@@ -1,0 +1,163 @@
+version: 1
+defaults:
+  strip_type_prefix: true  # turns "Type.Name" → "Name" for all types
+
+types:
+  # --- Salesforce single-file ---
+  ApexClass:
+    domain: salesforce
+    kind: single_file
+    folders: [ "classes" ]
+    exts: [ ".cls" ]
+
+  ApexTrigger:
+    domain: salesforce
+    kind: single_file
+    folders: [ "triggers" ]
+    exts: [ ".trigger" ]
+
+  ApexPage:
+    domain: salesforce
+    kind: single_file
+    folders: [ "pages" ]
+    exts: [ ".page" ]
+
+  ApexComponent:
+    domain: salesforce
+    kind: single_file
+    folders: [ "components" ]
+    exts: [ ".component" ]
+
+  PermissionSet:
+    domain: salesforce
+    kind: single_file
+    folders:
+      - "permissionsets"
+      - "force-app/main/default/permissionsets"
+    exts:
+      - ".permissionset"
+      - ".permissionset-meta.xml"
+  
+  Group:
+    domain: salesforce
+    kind: single_file
+    folders: [ "groups", "force-app/main/default/groups" ]
+    exts: [ ".group", ".group-meta.xml" ]   # first is your repo’s real format
+  
+  CustomLabel:
+    domain: salesforce
+    kind: single_file
+    folders:
+      - "labels"
+      - "force-app/main/default/labels"
+
+  CustomObject:
+    domain: salesforce
+    kind: single_file
+    folders:
+      - "objects"
+      - "force-app/main/default/objects"   # optional SFDX fallback
+    exts:
+      - ".object"
+
+
+  Flow:
+    domain: salesforce
+    kind: single_file
+    folders: [ "flows", "force-app/main/default/flows" ]
+    exts: [ ".flow-meta.xml" ]
+
+  CustomMetadata:
+    domain: salesforce
+    kind: single_file
+    folders:
+      - "customMetadata"
+      - "force-app/main/default/customMetadata"
+    exts:
+      - ".md"          # try this first
+      - ".md-meta.xml" # fallback
+    
+ 
+
+                  
+
+
+
+  Layout:
+    domain: salesforce
+    kind: single_file
+    folders: [ "layouts", "force-app/main/default/layouts" ]
+    exts: [ ".layout-meta.xml" ]
+
+  Profile:
+    domain: salesforce
+    kind: single_file
+    folders: [ "profiles", "force-app/main/default/profiles" ]
+    exts: [ ".profile-meta.xml" ]
+  
+
+
+
+
+  # --- Vlocity / OmniStudio bundles ---
+  OmniScript:
+    domain: vlocity
+    kind: bundle
+    folder_roots: [ "vlocity/OmniScript" ]
+    primary_glob: "{name}/{name}_DataPack.json"
+
+  IntegrationProcedure:
+    domain: vlocity
+    kind: bundle
+    folder_roots: [ "vlocity/IntegrationProcedure" ]
+    primary_glob: "{name}/{name}_DataPack.json"
+
+  DataRaptor:
+    domain: vlocity
+    kind: bundle
+    folder_roots: [ "vlocity/DataRaptor" ]
+    primary_glob: "{name}/{name}_DataPack.json"
+  
+  
+  Product2:
+    domain: vlocity
+    kind: bundle
+    folder_roots: [ "vlocity/Product2" ]
+
+  OrchestrationItemDefinition:
+    domain: vlocity
+    kind: bundle
+    folder_roots: [ "vlocity/OrchestrationItemDefinition" ]
+
+  OrchestrationDependencyDefinition:
+    domain: vlocity
+    kind: bundle
+    folder_roots: [ "vlocity/OrchestrationDependencyDefinition" ]
+
+  CalculationMatrixVersion:
+    domain: vlocity
+    kind: bundle
+    folder_roots: ["vlocity/CalculationMatrixVersion"]
+
+  CalculationMatrix:
+    domain: vlocity
+    kind: bundle
+    folder_roots: ["vlocity/CalculationMatrix"]
+
+  Catalog:
+    domain: vlocity
+    kind: bundle
+    folder_roots: ["vlocity/Catalog"]
+
+  AttributeCategory:
+    domain: vlocity
+    kind: bundle
+    folder_roots: ["vlocity/AttributeCategory"]
+
+  PriceList:
+    domain: vlocity
+    kind: bundle
+    folder_roots: ["vlocity/PriceList"]
+
+
+

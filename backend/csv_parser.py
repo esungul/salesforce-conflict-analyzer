@@ -152,7 +152,7 @@ class CopadoCSVParser:
         
         return status_map.get(str(status_str), ConflictStatus.UNKNOWN)
     
-    def _parse_date(self, date_str) -> datetime:
+    def _parse_dateback(self, date_str) -> datetime:
         """Parse date string from Copado CSV"""
         if pd.isna(date_str):
             return None
@@ -161,7 +161,25 @@ class CopadoCSVParser:
             return pd.to_datetime(date_str)
         except:
             return None
-    
+     
+    def _parse_date(self, date_str) -> datetime:
+        """Parse date string from Copado CSV and ensure timezone-naive"""
+        if pd.isna(date_str):
+            return None
+        
+        try:
+            # Parse the date
+            parsed_date = pd.to_datetime(date_str)
+            
+            # If it's timezone-aware, convert to timezone-naive in UTC
+            if parsed_date.tz is not None:
+                parsed_date = parsed_date.tz_convert('UTC').tz_localize(None)
+            
+            return parsed_date
+        except Exception as e:
+            print(f"Error parsing date '{date_str}': {e}")
+            return None
+        
     def _get_optional_string(self, row: pd.Series, column: str) -> str:
         """Get string value or None if missing"""
         value = row.get(column)
