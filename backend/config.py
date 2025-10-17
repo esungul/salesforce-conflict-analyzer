@@ -1,58 +1,61 @@
 # config.py
 import os
+from dataclasses import dataclass
 
-# Public mapping from human environment names (CSV/UI) to internal org IDs
-ENV_ALIAS = {
-    "Production": "master",
-    "Preprod": "prep",
-    "PreProd": "prep",  # optional alias tolerance
-    "UAT": "uatsfdc",
-}
+@dataclass(frozen=True)
+class Config:
+    # Threading / concurrency
+    API_MAX_WORKERS: int
+    BITBUCKET_MAX_WORKERS: int
+    BITBUCKET_POOL_MAXSIZE: int
 
-# Internal mapping from org ID to connection config.
-# Keep secrets in environment variables.
-ORG_CONFIG = {
-    "master": {
-        "sf_login_url": os.environ.get("SF_MASTER_LOGIN_URL", "https://login.salesforce.com"),
-        "sf_username":  os.environ.get("SF_MASTER_USERNAME", ""),
-        "sf_auth_type": os.environ.get("SF_MASTER_AUTH_TYPE", "jwt"),
-        "sf_client_id": os.environ.get("SF_MASTER_CLIENT_ID", ""),
-        "sf_jwt_key":   os.environ.get("SF_MASTER_JWT_KEY_PATH", ""),  # path to private key if using JWT
-    },
-    "prep": {
-        "sf_login_url": os.environ.get("SF_PREP_LOGIN_URL", "https://test.salesforce.com"),
-        "sf_username":  os.environ.get("SF_PREP_USERNAME", ""),
-        "sf_auth_type": os.environ.get("SF_PREP_AUTH_TYPE", "jwt"),
-        "sf_client_id": os.environ.get("SF_PREP_CLIENT_ID", ""),
-        "sf_jwt_key":   os.environ.get("SF_PREP_JWT_KEY_PATH", ""),
-    },
-    "uatsfdc": {
-        "sf_login_url": os.environ.get("SF_UAT_LOGIN_URL", "https://test.salesforce.com"),
-        "sf_username":  os.environ.get("SF_UAT_USERNAME", ""),
-        "sf_auth_type": os.environ.get("SF_UAT_AUTH_TYPE", "jwt"),
-        "sf_client_id": os.environ.get("SF_UAT_CLIENT_ID", ""),
-        "sf_jwt_key":   os.environ.get("SF_UAT_JWT_KEY_PATH", ""),
-    },
-}
+    # HTTP timeouts (seconds)
+    BITBUCKET_TIMEOUT: float
 
-def resolve_org(org_id: str) -> dict:
-    """
-    Return the connection config for a given orgId or raise ValueError with the allowed list.
-    """
-    cfg = ORG_CONFIG.get(org_id)
-    if not cfg:
-        allowed = ", ".join(sorted(ORG_CONFIG.keys()))
-        raise ValueError(f"Unknown orgId '{org_id}'. Allowed: {allowed}")
-    return cfg
+    # Optional: service base URL if your wrapper calls your own server via HTTP
+    SELF_BASE_URL: str
 
-def map_environment_to_org_id(env_label: str) -> str:
-    """
-    Map a human-friendly environment name (e.g. from CSV) to our internal orgId.
-    """
-    if not env_label:
-        raise ValueError("Empty environment label")
-    org_id = ENV_ALIAS.get(env_label.strip())
-    if not org_id:
-        allowed = ", ".join(sorted(ENV_ALIAS.keys()))
-        raise ValueError(f"Unknown environment '{env_label}'. Allowed environment labels: {allowed}")
-    return org_id
+    # Optional: Bitbucket base URL, token, workspace/repo (only if you centralize these)
+    BITBUCKET_BASE_URL: str | None = None
+    BITBUCKET_TOKEN: str | None = None
+    BITBUCKET_WORKSPACE: str | None = None
+    BITBUCKET_REPO_SLUG: str | None = None
+
+    # Optional: path to component types YAML if you want to move it here
+    COMPONENT_TYPES_YAML: str | None = None
+
+
+_cfg: Config | None = None
+
+def _get_int(name: str, default: int) -> int:
+    try:
+        v = int(os.getenv(name, str(default)))
+        return v
+    except Exception:
+        return default
+
+def _get_float(name: str, default: float) -> float:
+    try:
+        v = float(os.getenv(name, str(default)))
+        return v
+    except Exception:
+        return default
+
+def get_config() -> Config:
+    global _cfg
+    if _cfg is not None:
+        return _cfg
+
+    _cfg = Config(
+        API_MAX_WORKERS=_get_int("API_MAX_WORKERS", 8),
+        BITBUCKET_MAX_WORKERS=_get_int("BITBUCKET_MAX_WORKERS", 8),
+        BITBUCKET_POOL_MAXSIZE=_get_int("BITBUCKET_POOL_MAXSIZE", 32),
+        BITBUCKET_TIMEOUT=_get_float("BITBUCKET_TIMEOUT", 3.0),
+        SELF_BASE_URL=os.getenv("SELF_BASE_URL", "http://127.0.0.1:5000"),
+        BITBUCKET_BASE_URL=os.getenv("BITBUCKET_BASE_URL"),
+        BITBUCKET_TOKEN=os.getenv("BITBUCKET_TOKEN"),
+        BITBUCKET_WORKSPACE=os.getenv("BITBUCKET_WORKSPACE"),
+        BITBUCKET_REPO_SLUG=os.getenv("BITBUCKET_REPO_SLUG"),
+        COMPONENT_TYPES_YAML=os.getenv("COMPONENT_TYPES_YAML"),  # e.g., "component_types.yaml"
+    )
+    return _cfg

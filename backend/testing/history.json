@@ -1,0 +1,13 @@
+{
+  "orgA": "QAorg",
+  "orgB": "prod",
+  "branchA": "qasales",
+  "branchB": "master",
+  "limit": 5,
+  "components": [
+    { "type": "CustomMetadata",      "name": "PR_Generic.ValidateNonPayAsset" },
+    { "type": "ApexClass",           "name": "PR_AccessoriesHelper" },
+    { "type": "IntegrationProcedure","name": "PR_ServiceTabSourceIP" },
+    { "type": "DataRaptor",          "name": "PR_GetStoreDetails" }
+  ]
+}

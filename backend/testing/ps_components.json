@@ -1,0 +1,11 @@
+{
+  "branch": "master",
+  "components": [
+    { "type": "CustomMetadata",       "name": "PR_Generic.ValidateNonPayAsset" },
+    { "type": "ApexClass",            "name": "PR_AccessoriesHelper" },
+    { "type": "IntegrationProcedure", "name": "PR_ServiceTabSourceIP" },
+    { "type": "DataRaptor",           "name": "PR_GetStoreDetails" },
+    { "type": "IntegrationProcedure", "name": "PR_ValidateNonPayAssetsIP" },
+    { "type": "DataRaptor",           "name": "PR_GetAccessoriesFromPlanDR" }
+  ]
+}
