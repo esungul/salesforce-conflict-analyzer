@@ -47,6 +47,49 @@ class BitBucketClient:
     """Client for interacting with BitBucket API v2"""
     
     from component_registry import vlocity_bundle_folder_candidates
+    
+    
+    
+    def get_diffstat(self, ref_a: str, ref_b: str, pagelen: int = 200) -> list[dict]:
+        """
+        Fetch Bitbucket diffstat between two refs (branch names or commit SHAs).
+        Returns a flat list of entries with keys: status, old_path, new_path.
+        """
+        if not ref_a or not ref_b:
+            return []
+
+        spec = f"{ref_a}..{ref_b}"
+        url = f"{self.base_url}/diffstat/{spec}"
+        params = {"pagelen": int(pagelen)}
+
+        items: list[dict] = []
+        try:
+            while url:
+                resp = self.session.get(url, headers=self._get_headers(), params=params, timeout=self.timeout)
+                if resp.status_code == 404:
+                    # No diff found (e.g., refs invalid) — return empty
+                    return []
+                resp.raise_for_status()
+                data = resp.json() or {}
+                for v in data.get("values", []) or []:
+                    status = v.get("status")
+                    old_path = (v.get("old") or {}).get("path")
+                    new_path = (v.get("new") or {}).get("path")
+                    items.append({
+                        "status": status,
+                        "old_path": old_path,
+                        "new_path": new_path
+                    })
+                url = data.get("next")
+                params = None  # 'next' already includes query params
+        except Exception as e:
+            self.logger.error("get_diffstat(%s..%s) failed: %s", ref_a, ref_b, e)
+            return []
+
+        return items
+
+    
+    
 
     def verify_commit_in_branch(self, commit_hash: str, branch: str = "master") -> dict:
         """
@@ -355,7 +398,8 @@ class BitBucketClient:
             'file_path': folder,
             'total_files': len(bundle_files)
         }
-
+    
+    
 
     
     def _is_commit_ancestor(self, ancestor_hash: str, descendant_hash: str, max_depth: int = 50) -> bool:

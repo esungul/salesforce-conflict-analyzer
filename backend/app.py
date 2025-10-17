@@ -18,10 +18,17 @@ from pdf_generator import generate_pdf_report
 from flask import send_file
 from production_analyzer import parse_production_state, check_regression
 from git_client import BitBucketClient 
-import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from config import get_config
-
+from typing import Optional, Tuple
+from sf_adapter import sf_records_to_rows
+import csv
+from tempfile import NamedTemporaryFile
+from salesforce_client import (
+    sf_login_from_config,
+    fetch_user_story_metadata_by_release,
+    fetch_user_story_metadata_by_story_names,
+)
 
 
 import logging
@@ -78,7 +85,57 @@ from flask import request, jsonify
 import component_registry as cr
 from git_client import BitBucketClient
 
+from enum import Enum
+from datetime import datetime, date
+
+
 # ---------------- Helpers ----------------
+
+##########
+
+  
+
+
+
+
+def json_safe(obj):
+    """Recursively convert objects to JSON-serializable types."""
+    # Enums → use name (or .value if you prefer)
+    if isinstance(obj, Enum):
+        return obj.name  # or obj.value
+
+    # Datetime/Date → ISO-8601 strings
+    if isinstance(obj, (datetime, date)):
+        return obj.isoformat()
+
+    # Sets/Tuples → lists
+    if isinstance(obj, (set, tuple)):
+        return [json_safe(x) for x in obj]
+
+    # Dict → recurse
+    if isinstance(obj, dict):
+        return {k: json_safe(v) for k, v in obj.items()}
+
+    # Lists → recurse
+    if isinstance(obj, list):
+        return [json_safe(x) for x in obj]
+
+    # Model-like objects → try to_dict(), else __dict__
+    if hasattr(obj, "to_dict") and callable(getattr(obj, "to_dict")):
+        return json_safe(obj.to_dict())
+    if hasattr(obj, "__dict__"):
+        # filter out private attrs
+        return {k: json_safe(v) for k, v in obj.__dict__.items() if not k.startswith("_")}
+
+    # Bytes → utf-8
+    if isinstance(obj, (bytes, bytearray)):
+        try:
+            return obj.decode("utf-8")
+        except Exception:
+            return str(obj)
+
+    # Fallback: leave primitives as-is
+    return obj
 
 
 def _strip_type_prefix(ctype: str, cname: str) -> str:
@@ -238,6 +295,139 @@ def _resolve_primary_file_for_component(client: BitBucketClient, branch: str, ct
     _content, path = client.get_file_content_smart(component_name=cname, component_type=ctype, branch=branch)
     return path
 
+
+
+
+
+# ===== /api/compare-commits (fast, diffstat-based component change summary) =====
+
+
+# =============== /api/compare-commits (fast, diffstat-based, timeout-safe) ===============
+from flask import request, jsonify
+from git_client import BitBucketClient
+import component_registry as cr
+from urllib.parse import unquote
+from requests.exceptions import ReadTimeout, ConnectionError
+from config import get_config
+
+
+
+
+
+
+
+
+@app.route('/api/analyze-sf', methods=['POST'])
+def analyze_salesforce_stub():
+    """
+    Online path: validate input -> fetch from Salesforce -> adapt to rows ->
+    write a CSV we can inspect -> reuse existing CSV parser -> detect conflicts.
+    """
+    payload = request.get_json(force=True, silent=True) or {}
+
+    # Normalize inputs
+    release_names = payload.get("releaseNames")
+    if isinstance(release_names, str):
+        release_names = [rn.strip() for rn in release_names.split(",") if rn.strip()] or [release_names]
+
+    story_names = payload.get("userStoryNames")
+    if isinstance(story_names, str):
+        story_names = [sn.strip() for sn in story_names.split(",") if sn.strip()] or [story_names]
+
+    if not release_names and not story_names:
+        return jsonify({"error": "Provide releaseNames or userStoryNames"}), 400
+    if release_names and not isinstance(release_names, list):
+        return jsonify({"error": "releaseNames must be a string or an array of strings"}), 400
+    if story_names and not isinstance(story_names, list):
+        return jsonify({"error": "userStoryNames must be a string or an array of strings"}), 400
+
+    # --- Salesforce fetch ---
+    try:
+        sf = sf_login_from_config(payload.get("configJsonPath"))
+        if release_names:
+            records = fetch_user_story_metadata_by_release(sf, release_names)
+        else:
+            records = fetch_user_story_metadata_by_story_names(sf, story_names)
+    except Exception as e:
+        # Auth or query error
+        return jsonify({"error": str(e)}), 401
+
+    # Adapt SF JSON -> "rows" with the same headers as your CSV
+    rows = sf_records_to_rows(records)
+
+    # No data? Return empty in the same shape
+    if not rows:
+        return jsonify({
+            "summary": {
+                "stories": 0, "components": 0,
+                "component_conflicts": 0, "story_conflicts": 0
+            },
+            "component_conflicts": [],
+            "story_conflicts": []
+        }), 200
+
+    # --- Write CSV to a visible folder so you can inspect it ---
+    os.makedirs("./tmp/online_inputs", exist_ok=True)
+    header = list(rows[0].keys())
+    # Use a friendly prefix (release or stories)
+    pref = "release" if release_names else "stories"
+    with NamedTemporaryFile(
+        mode="w+", newline="", suffix=".csv", prefix=f"{pref}_", dir="./tmp/online_inputs", delete=False
+    ) as tmp:
+        writer = csv.DictWriter(tmp, fieldnames=header, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(rows)
+        tmp_path = tmp.name  # keep this file for inspection
+
+    # --- Reuse your existing CSV pipeline ---
+    parser = CopadoCSVParser()
+    parsed = parser.parse_file(tmp_path)  # your parser's method
+
+    # IMPORTANT: ConflictDetector requires user_stories in __init__
+    detector = ConflictDetector(parsed.user_stories)
+
+    # Component-level conflicts (touching the same component)
+    # Your ConflictDetector exposes a public method named 'detect_conflicts'
+    # which returns component conflict objects; we’ll serialize them as dicts if needed.
+    component_conflicts = detector.detect_conflicts()
+
+    # Story-to-story conflicts (pairs/groups of stories conflicting across multiple components)
+    story_conflicts = detector.analyze_story_to_story_conflicts()
+
+    # Summaries (optional but nice to include)
+    summary = detector.get_conflict_summary(component_conflicts) if hasattr(detector, "get_conflict_summary") else {
+        "total_conflicts": len(component_conflicts),
+        "severity_breakdown": {},  # provide if you have it
+        "affected_stories": 0,
+        "avg_risk_score": 0
+    }
+
+    # If component_conflicts are model objects, convert to dicts
+    def _asdict(x):
+        if isinstance(x, dict):
+            return x
+        if hasattr(x, "__dict__"):
+            return {k: v for k, v in x.__dict__.items() if not k.startswith("_")}
+        return x
+
+    component_conflicts_out = [_asdict(c) for c in component_conflicts]
+    story_conflicts_out = [dict(sc) if not isinstance(sc, dict) else sc for sc in story_conflicts]
+    component_conflicts_out = json_safe(component_conflicts)
+    story_conflicts_out = json_safe(story_conflicts)
+    summary_out = json_safe(summary)
+    
+    return jsonify({
+    "summary": {
+        "stories": len(parsed.user_stories),
+        "components": len(parsed.components),
+        "component_conflicts": len(component_conflicts_out),
+        "story_conflicts": len(story_conflicts_out),
+        "detail": summary_out
+    },
+    "component_conflicts": component_conflicts_out,
+    "story_conflicts": story_conflicts_out,
+    "debug_csv_path": tmp_path
+}), 200
 
 # ---------------- Wrapper 1: Compare Orgs (summary + optional diffs) ----------------
 

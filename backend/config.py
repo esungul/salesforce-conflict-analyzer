@@ -50,7 +50,7 @@ def get_config() -> Config:
         API_MAX_WORKERS=_get_int("API_MAX_WORKERS", 8),
         BITBUCKET_MAX_WORKERS=_get_int("BITBUCKET_MAX_WORKERS", 8),
         BITBUCKET_POOL_MAXSIZE=_get_int("BITBUCKET_POOL_MAXSIZE", 32),
-        BITBUCKET_TIMEOUT=_get_float("BITBUCKET_TIMEOUT", 3.0),
+        BITBUCKET_TIMEOUT=_get_float("BITBUCKET_TIMEOUT", 10.0),
         SELF_BASE_URL=os.getenv("SELF_BASE_URL", "http://127.0.0.1:5000"),
         BITBUCKET_BASE_URL=os.getenv("BITBUCKET_BASE_URL"),
         BITBUCKET_TOKEN=os.getenv("BITBUCKET_TOKEN"),
