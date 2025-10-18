@@ -20,7 +20,7 @@ from production_analyzer import parse_production_state, check_regression
 from git_client import BitBucketClient 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from config import get_config
-from typing import Optional, Tuple
+from typing import Optional, Tuple,Dict
 from sf_adapter import sf_records_to_rows
 import csv
 from tempfile import NamedTemporaryFile
@@ -28,12 +28,37 @@ from salesforce_client import (
     sf_login_from_config,
     fetch_user_story_metadata_by_release,
     fetch_user_story_metadata_by_story_names,
+    fetch_story_commits
 )
 
 
 import logging
-logging.basicConfig(level=logging.INFO)  # put once (e.g., in app.py main)
+logging.basicConfig(level=logging.DEBUG)  # put once (e.g., in app.py main)
 logger = logging.getLogger(__name__)
+
+import logging
+import os
+
+def setup_logging():
+    """
+    Configure consistent logging for all modules.
+    Set LOG_LEVEL=DEBUG in your environment to see debug logs.
+    """
+    log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+    logging.basicConfig(
+        level=getattr(logging, log_level, logging.INFO),
+        format="%(asctime)s %(levelname)s [%(name)s]: %(message)s",
+    )
+
+    # Silence noisy libraries
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("simple_salesforce").setLevel(logging.WARNING)
+    logging.getLogger("werkzeug").setLevel(logging.INFO)
+
+    logging.getLogger(__name__).info("Logging initialized at %s level", log_level)
+
+# Call this early — before importing your submodules if possible
+setup_logging()
 
 
 
@@ -92,9 +117,6 @@ from datetime import datetime, date
 # ---------------- Helpers ----------------
 
 ##########
-
-  
-
 
 
 
@@ -295,8 +317,313 @@ def _resolve_primary_file_for_component(client: BitBucketClient, branch: str, ct
     _content, path = client.get_file_content_smart(component_name=cname, component_type=ctype, branch=branch)
     return path
 
+def build_story_component_index(rows):
+    """
+    Builds indexes for fast story and component lookup
+    """
+    story_by_name = {}
+    story_component_details = {}
+    story_component_details_loose = {}
+
+    def _first_non_empty(d, keys):
+        for k in keys:
+            v = d.get(k)
+            if isinstance(v, str) and v.strip():
+                return v.strip()
+        return None
+
+    for r in rows:
+        us_name = r.get("copado__User_Story__r.Name")
+        if not us_name:
+            continue
+
+        # Extract Jira key with fallbacks
+        jira_key = _first_non_empty(r, [
+            "jira_key",
+            "copado__User_Story__r.copadoccmint__JIRA_key__c",
+            "copado__User_Story__r.copado__Jira_Key__c",
+        ])
+
+        # Extract developer with fallbacks
+        developer = _first_non_empty(r, [
+            "developer",
+            "copado__User_Story__r.copado__Developer__r.Name",
+            "CreatedBy.Name",
+            "LastModifiedBy.Name",
+        ])
+
+        if us_name not in story_by_name:
+            story_by_name[us_name] = {
+                "name": us_name,
+                "title": r.get("copado__User_Story__r.copado__User_Story_Title__c"),
+                "developer": developer,
+                "environment": r.get("copado__User_Story__r.copado__Environment__r.Name"),
+                "project": r.get("copado__User_Story__r.copado__Project__r.Name") or "Unknown",
+                "close_date": r.get("copado__User_Story__r.copado__Close_Date__c"),
+                "story_points": r.get("copado__User_Story__r.copado__Story_Points_SFDC__c"),
+                "jira_key": jira_key,
+            }
+
+        ctype = r.get("copado__Type__c") or ""
+        api = r.get("copado__Metadata_API_Name__c") or ""
+        mdir = r.get("copado__ModuleDirectory__c") or ""
+        strict_key = f"{ctype}|{api}|{mdir}"
+        loose_key = f"{ctype}|{api}"
+
+        details = {
+            "component_action": r.get("copado__Action__c"),
+            "component_status": r.get("copado__Status__c"),
+            "component_category": r.get("copado__Category__c"),
+            "module_directory": mdir,
+            "last_commit_date": r.get("copado__Last_Commit_Date__c"),
+            "created_by": r.get("CreatedBy.Name"),
+            "last_modified_by": r.get("LastModifiedBy.Name"),
+            "created_date": r.get("CreatedDate"),
+            "last_modified_date": r.get("LastModifiedDate"),
+        }
+
+        story_component_details[(us_name, strict_key)] = details
+        story_component_details_loose[(us_name, loose_key)] = details
+
+    return story_by_name, story_component_details, story_component_details_loose
+
+def enrich_conflicts_with_story_detailsbackup(component_conflicts_out,
+                                        story_by_name,
+                                        story_component_details,
+                                        story_component_details_loose,
+                                        story_commits_by_name=None):
+    """
+    Replace involved_stories (ids or mixed dicts/objects) with full dicts including:
+      - story fields (developer, environment, jira_key)
+      - per-story component fields (action/status/category/module dir/dates)
+      - optional commit_url/commit_sha
+    """
+    def _ensure_comp_keys(conf: dict):
+        # returns (strict_key, loose_key)
+        t = conf.get("type") or ""
+        a = conf.get("api_name") or ""
+        m = conf.get("module_directory") or ""
+        if not (t or a or m):
+            key = conf.get("component_key")
+            if key and "|" in key:
+                parts = key.split("|", 2)
+                t = parts[0]; a = parts[1]; m = parts[2] if len(parts) > 2 else ""
+        strict_key = f"{t}|{a}|{m}"
+        loose_key  = f"{t}|{a}"
+        # write back normalized fields for UI consistency
+        conf["type"] = conf.get("type") or t
+        conf["api_name"] = conf.get("api_name") or a
+        conf["module_directory"] = conf.get("module_directory") or m
+        return strict_key, loose_key
+
+    def _to_story_name(item) -> str | None:
+        if item is None:
+            return None
+        if isinstance(item, str):
+            s = item.strip()
+            return s or None
+        if isinstance(item, dict):
+            for k in ("name", "user_story_name", "user_story", "story", "Name", "id", "Id", "ID"):
+                v = item.get(k)
+                if isinstance(v, str) and v.strip():
+                    return v.strip()
+        for attr in ("name", "user_story_name", "user_story", "story", "id", "Id", "ID"):
+            v = getattr(item, attr, None)
+            if isinstance(v, str) and v.strip():
+                return v.strip()
+        return None
+
+    enriched = []
+
+    for conf in (component_conflicts_out or []):
+        strict_key, loose_key = _ensure_comp_keys(conf)
+
+        inv = conf.get("involved_stories") or []
+        normalized_names = []
+        for s in inv:
+            n = _to_story_name(s)
+            if n:
+                normalized_names.append(n)
+
+        inv_detail = []
+        for us_name in normalized_names:
+            s_base = story_by_name.get(us_name, {}) or {}
+            # prefer strict match; fall back to loose
+            s_comp = story_component_details.get((us_name, strict_key))
+            if not s_comp:
+                s_comp = story_component_details_loose.get((us_name, loose_key), {})
+            s_commit = (story_commits_by_name or {}).get(us_name, {}) if story_commits_by_name else {}
+
+            # developer fallback if story has none
+            developer = s_base.get("developer")
+            if not developer:
+                developer = s_comp.get("created_by") or s_comp.get("last_modified_by")
+
+            merged = {
+                **s_base,
+                **s_comp,
+                "developer": developer,
+                "commit_url": s_commit.get("commit_url"),
+                "commit_sha": s_commit.get("commit_sha"),
+            }
+            inv_detail.append(merged)
+
+        conf["involved_stories"] = inv_detail
+        enriched.append(conf)
+
+    return enriched
 
 
+def enrich_conflicts_with_story_details(conflicts, stories, *args, **kwargs):
+    """
+    Enrich component conflicts with (a) involved_stories and (b) stories_with_commit_info.story
+    using Salesforce rows and optional commit metadata. Non-breaking drop-in.
+    """
+    import logging
+    logger = logging.getLogger("app")
+
+    def _first_nonempty(*vals):
+        for v in vals:
+            if v is None:
+                continue
+            s = str(v).strip()
+            if s and s != "—":  # Skip em-dash placeholder
+                return s
+        return None
+
+    def _story_key_from_row(row):
+        return (
+            row.get("copado__User_Story__r.Name")
+            or row.get("name")
+            or row.get("id")
+            or row.get("story_id")
+        )
+
+    def _normalize_to_map(maybe_map, key_func):
+        if isinstance(maybe_map, dict):
+            return maybe_map
+        if isinstance(maybe_map, list):
+            out = {}
+            for row in maybe_map:
+                if isinstance(row, dict):
+                    k = key_func(row)
+                    if k:
+                        out[k] = row
+            return out
+        return {}
+
+    def _enrich_from_sources(s_name, preexisting=None):
+        preexisting = preexisting or {}
+        s_base = stories_by_name.get(s_name, {}) or {}
+        s_commit = commits_by_name.get(s_name, {}) or {}
+
+        # CRITICAL: Enhanced developer fallback chain
+        developer = _first_nonempty(
+            preexisting.get("developer"),
+            s_base.get("developer"),  # From sf_adapter
+            s_base.get("copado__User_Story__r.copado__Developer__r.Name"),
+            s_base.get("CreatedBy.Name"),
+            s_base.get("created_by"),
+            s_base.get("LastModifiedBy.Name"),
+            s_base.get("last_modified_by"),
+            preexisting.get("created_by"),
+            s_commit.get("created_by"),
+        )
+
+        # CRITICAL: Enhanced Jira key fallback chain
+        jira_key = _first_nonempty(
+            preexisting.get("jira_key"),
+            s_base.get("jira_key"),  # From sf_adapter or build_story_component_index
+            s_base.get("copado__User_Story__r.copadoccmint__JIRA_key__c"),
+            s_base.get("copado__User_Story__r.copado__Jira_Key__c"),
+        )
+
+        environment = _first_nonempty(
+            preexisting.get("environment"),
+            s_base.get("copado__User_Story__r.copado__Environment__r.Name"),
+            "Unknown",
+        )
+
+        project = _first_nonempty(
+            preexisting.get("project"),
+            s_base.get("copado__User_Story__r.copado__Project__r.Name"),
+            "Unknown",
+        )
+
+        return {
+            **preexisting,
+            "name": preexisting.get("name") or preexisting.get("id") or s_name,
+            "title": preexisting.get("title") or s_base.get("copado__User_Story__r.copado__User_Story_Title__c"),
+            "developer": developer or "—",
+            "jira_key": jira_key,
+            "environment": environment,
+            "project": project,
+            "story_points": s_base.get("copado__User_Story__r.copado__Story_Points_SFDC__c"),
+            "close_date": s_base.get("copado__User_Story__r.copado__Close_Date__c"),
+            "module_directory": preexisting.get("module_directory") or s_base.get("copado__ModuleDirectory__c"),
+            "created_by": preexisting.get("created_by") or s_base.get("CreatedBy.Name"),
+            "last_modified_by": preexisting.get("last_modified_by") or s_base.get("LastModifiedBy.Name"),
+            "created_date": preexisting.get("created_date") or s_base.get("CreatedDate"),
+            "last_modified_date": preexisting.get("last_modified_date") or s_base.get("LastModifiedDate"),
+            "commit_url": preexisting.get("commit_url") or s_commit.get("commit_url"),
+            "commit_sha": preexisting.get("commit_sha") or s_commit.get("commit_sha"),
+            "last_commit_date": preexisting.get("last_commit_date") or s_commit.get("commit_date"),
+        }
+
+    # Normalize inputs
+    story_commits = {}
+    if args and len(args) >= 1 and args[0] is not None:
+        story_commits = args[0]
+    if "story_commits_by_name" in kwargs and kwargs["story_commits_by_name"] is not None:
+        story_commits = kwargs["story_commits_by_name"]
+    elif "commits" in kwargs and kwargs["commits"] is not None:
+        story_commits = kwargs["commits"]
+
+    stories_by_name = _normalize_to_map(stories, key_func=_story_key_from_row)
+    commits_by_name = _normalize_to_map(
+        story_commits,
+        key_func=lambda r: r.get("name") or r.get("id") or r.get("story_id") or r.get("copado__User_Story__r.Name")
+    )
+
+    enriched = []
+    for conflict in conflicts or []:
+        cpy = conflict.copy()
+
+        # Enrich involved_stories
+        inv = cpy.get("involved_stories", []) or []
+        inv_details = []
+        for s in inv:
+            if isinstance(s, dict):
+                s_name = s.get("name") or s.get("id") or s.get("story_id") or s.get("copado__User_Story__r.Name")
+                pre = s
+            else:
+                s_name = s
+                pre = {}
+            if s_name and isinstance(s_name, str):
+                inv_details.append(_enrich_from_sources(s_name, pre))
+        cpy["involved_stories"] = inv_details
+
+        # Enrich stories_with_commit_info
+        swci = cpy.get("stories_with_commit_info") or []
+        swci_out = []
+        for item in swci:
+            item_copy = dict(item) if isinstance(item, dict) else {}
+            story_obj = item_copy.get("story") or {}
+            if "created_by" in item_copy and item_copy.get("created_by"):
+                story_obj = {**story_obj, "created_by": item_copy.get("created_by")}
+            s_name = story_obj.get("id") or story_obj.get("name") or story_obj.get("story_id")
+            if s_name and isinstance(s_name, str):
+                item_copy["story"] = _enrich_from_sources(s_name, story_obj)
+            else:
+                item_copy["story"] = story_obj
+            swci_out.append(item_copy)
+        cpy["stories_with_commit_info"] = swci_out
+
+        enriched.append(cpy)
+
+    # FIXED: Correct logging format
+    logger.debug("enrich_conflicts_with_story_details: enriched %d conflict(s)", len(enriched))
+    return enriched
 
 
 # ===== /api/compare-commits (fast, diffstat-based component change summary) =====
@@ -312,16 +639,51 @@ from config import get_config
 
 
 
+def enrich_story_conflicts(story_conflicts, story_by_name):
+    """
+    Enrich story_conflicts with developer and jira_key from story_by_name index.
+    
+    Args:
+        story_conflicts: List of story conflict dicts with story1_id, story2_id, etc.
+        story_by_name: Dict mapping story name -> story details (from build_story_component_index)
+    
+    Returns:
+        Enriched list of story conflicts with developer and jira_key populated
+    """
+    enriched = []
+    
+    for conflict in story_conflicts or []:
+        enriched_conflict = conflict.copy()
+        
+        # Get story IDs
+        story1_id = conflict.get("story1_id")
+        story2_id = conflict.get("story2_id")
+        
+        # Enrich story1
+        if story1_id and story1_id in story_by_name:
+            story1_data = story_by_name[story1_id]
+            enriched_conflict["story1_developer"] = story1_data.get("developer")
+            enriched_conflict["story1_jira_key"] = story1_data.get("jira_key")
+            enriched_conflict["story1_title"] = story1_data.get("title")
+        
+        # Enrich story2
+        if story2_id and story2_id in story_by_name:
+            story2_data = story_by_name[story2_id]
+            enriched_conflict["story2_developer"] = story2_data.get("developer")
+            enriched_conflict["story2_jira_key"] = story2_data.get("jira_key")
+            enriched_conflict["story2_title"] = story2_data.get("title")
+        
+        enriched.append(enriched_conflict)
+    
+    return enriched
 
 
-
-
-
+# ---------- Route (replace your existing /api/analyze-sf with this) ----------
 @app.route('/api/analyze-sf', methods=['POST'])
 def analyze_salesforce_stub():
     """
     Online path: validate input -> fetch from Salesforce -> adapt to rows ->
-    write a CSV we can inspect -> reuse existing CSV parser -> detect conflicts.
+    write a CSV we can inspect -> reuse existing CSV parser -> detect conflicts -> enrich result.
     """
     payload = request.get_json(force=True, silent=True) or {}
 
@@ -369,7 +731,6 @@ def analyze_salesforce_stub():
     # --- Write CSV to a visible folder so you can inspect it ---
     os.makedirs("./tmp/online_inputs", exist_ok=True)
     header = list(rows[0].keys())
-    # Use a friendly prefix (release or stories)
     pref = "release" if release_names else "stories"
     with NamedTemporaryFile(
         mode="w+", newline="", suffix=".csv", prefix=f"{pref}_", dir="./tmp/online_inputs", delete=False
@@ -383,51 +744,155 @@ def analyze_salesforce_stub():
     parser = CopadoCSVParser()
     parsed = parser.parse_file(tmp_path)  # your parser's method
 
-    # IMPORTANT: ConflictDetector requires user_stories in __init__
+    # Conflict detection
     detector = ConflictDetector(parsed.user_stories)
-
-    # Component-level conflicts (touching the same component)
-    # Your ConflictDetector exposes a public method named 'detect_conflicts'
-    # which returns component conflict objects; we’ll serialize them as dicts if needed.
     component_conflicts = detector.detect_conflicts()
-
-    # Story-to-story conflicts (pairs/groups of stories conflicting across multiple components)
     story_conflicts = detector.analyze_story_to_story_conflicts()
 
-    # Summaries (optional but nice to include)
+    # Summary (optional)
     summary = detector.get_conflict_summary(component_conflicts) if hasattr(detector, "get_conflict_summary") else {
         "total_conflicts": len(component_conflicts),
-        "severity_breakdown": {},  # provide if you have it
+        "severity_breakdown": {},
         "affected_stories": 0,
         "avg_risk_score": 0
     }
 
-    # If component_conflicts are model objects, convert to dicts
-    def _asdict(x):
-        if isinstance(x, dict):
-            return x
-        if hasattr(x, "__dict__"):
-            return {k: v for k, v in x.__dict__.items() if not k.startswith("_")}
-        return x
-
-    component_conflicts_out = [_asdict(c) for c in component_conflicts]
-    story_conflicts_out = [dict(sc) if not isinstance(sc, dict) else sc for sc in story_conflicts]
+    # JSON-safe serialization (avoid double conversion bug)
     component_conflicts_out = json_safe(component_conflicts)
     story_conflicts_out = json_safe(story_conflicts)
     summary_out = json_safe(summary)
+
+    # ---------- Enrichment: full per-story details for each conflict ----------
+    # Build fast lookup indexes from the SF rows we already fetched
+    # NOTE: your build_story_component_index(rows) must return THREE values now
+    story_by_name, story_component_details, story_component_details_loose = build_story_component_index(rows)
+
+    # Optional: fetch Git commit link/SHA per story (batched); best-effort only
+    if story_names:
+        candidate_story_names = story_names
+    else:
+        candidate_story_names = [
+            getattr(us, "id", getattr(us, "name", None)) for us in parsed.user_stories
+            if getattr(us, "id", None) or getattr(us, "name", None)
+        ]
+    candidate_story_names = [s for s in candidate_story_names if s]
+
+    story_commits_by_name = {}
+    try:
+        if candidate_story_names:
+            _sc = fetch_story_commits(sf, candidate_story_names)
+            story_commits_by_name = {sc["user_story_name"]: sc for sc in _sc if sc.get("user_story_name")}
+    except Exception:
+        story_commits_by_name = {}
+
+    # Replace involved_stories (ids/objects) with full dicts (developer, dates, action/status, module dir, commit URL/SHA)
+    component_conflicts_out = enrich_conflicts_with_story_details(
+    component_conflicts_out,
+    story_by_name,
+    story_commits_by_name=story_commits_by_name,
+)
+
+    # ---------- A) Add latest owner + deploy order recommendation ----------
+    for c in component_conflicts_out:
+        swci = c.get("stories_with_commit_info") or []
+        timeline = []
+        for item in swci:
+            story_obj = (item or {}).get("story") or {}
+            sid = story_obj.get("id") or story_obj.get("name")
+            cdate = (item or {}).get("commit_date")
+            if sid and cdate:
+                timeline.append((sid, cdate))
+        # Sort ascending by ISO date string (oldest -> newest)
+        timeline.sort(key=lambda x: x[1])
+        if timeline:
+            deploy_order = [sid for sid, _ in timeline]
+            latest_owner = deploy_order[-1]
+            c["latest_owner"] = latest_owner
+            c["deploy_order_hint"] = deploy_order
+            c["recommendation"] = {
+                "action": "DEPLOY LATEST STORY LAST",
+                "steps": [
+                    ("Deploy " + ", then ".join(deploy_order[:-1])) if len(deploy_order) > 1 else f"Deploy {deploy_order[0]}",
+                    f"Deploy {latest_owner} last",
+                    "Smoke-test the component after final deploy"
+                ],
+                "priority": "LOW"
+            }
     
+    
+    
+        # ---------- B) Fill missing developer names in involved_stories ----------
+    for c in component_conflicts_out:
+        # 1) Build helper maps from SWCI
+        dev_by_story = {}
+        created_by_map = {}
+        for item in (c.get("stories_with_commit_info") or []):
+            story_obj = (item or {}).get("story") or {}
+            sid = story_obj.get("id") or story_obj.get("name")
+            if sid:
+                if story_obj.get("developer"):
+                    dev_by_story[sid] = story_obj.get("developer")
+                cb = item.get("created_by")
+                if cb:
+                    created_by_map[sid] = cb
+
+        # 2) Precedence: SWCI developer → CreatedBy.Name → LastModifiedBy.Name → SWCI.created_by
+        for s in c.get("involved_stories", []):
+            if s.get("developer"):
+                continue
+            us_name = s.get("name")
+            if us_name and us_name in dev_by_story:
+                s["developer"] = dev_by_story[us_name]
+                continue
+            if s.get("created_by"):
+                s["developer"] = s["created_by"]
+                continue
+            if s.get("last_modified_by"):
+                s["developer"] = s["last_modified_by"]
+                continue
+            if us_name and us_name in created_by_map:
+                s["developer"] = created_by_map[us_name]
+
+    # ---------- Jira backfill (place this RIGHT HERE) ----------
+    for c in component_conflicts_out:
+        for s in c.get("involved_stories", []):
+            if not s.get("jira_key"):
+                us_name = s.get("name")
+                if us_name and us_name in story_by_name:
+                    jk = story_by_name[us_name].get("jira_key")
+                    if jk:
+                        s["jira_key"] = jk
+
+   
+    # ---------- ENRICH COMPONENT CONFLICTS ----------
+    component_conflicts_out = enrich_conflicts_with_story_details(
+        component_conflicts_out,
+        story_by_name,
+        story_commits_by_name=story_commits_by_name,
+    )
+    story_conflicts_out = enrich_story_conflicts(story_conflicts_out, story_by_name)
+
+  
+
+    # ---------- Return payload ----------
     return jsonify({
-    "summary": {
-        "stories": len(parsed.user_stories),
-        "components": len(parsed.components),
-        "component_conflicts": len(component_conflicts_out),
-        "story_conflicts": len(story_conflicts_out),
-        "detail": summary_out
-    },
-    "component_conflicts": component_conflicts_out,
-    "story_conflicts": story_conflicts_out,
-    "debug_csv_path": tmp_path
-}), 200
+        "summary": {
+            "stories": len(parsed.user_stories),
+            "components": len(parsed.components),
+            "component_conflicts": len(component_conflicts_out),
+            "story_conflicts": len(story_conflicts_out),
+            "detail": summary_out
+        },
+        "component_conflicts": component_conflicts_out,
+        "story_conflicts": story_conflicts_out,
+        "debug_csv_path": tmp_path
+    }), 200
+
+
+
+
+
+
 
 # ---------------- Wrapper 1: Compare Orgs (summary + optional diffs) ----------------
 
