@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Deployment Planner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Base styles (we’ll add real styles next) -->
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <!-- App Header -->
+  <header id="app-header" class="topbar" role="banner" aria-label="Application header">
+    <div class="brand">Deployment Planner</div>
+    <div class="env">
+      <span id="env-badge" class="badge">ENV: DEV</span>
+      <span id="source-badge" class="badge">Source: —</span>
+    </div>
+    <div class="actions">
+      <button id="analyze-trigger" class="btn btn-primary" aria-haspopup="menu" aria-expanded="false">
+        Analyze
+      </button>
+      <div id="analyze-menu" class="menu" role="menu" aria-hidden="true">
+        <button data-action="analyze-csv" role="menuitem">Analyze CSV</button>
+        <button data-action="analyze-online" role="menuitem">Analyze Online</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Global banner area -->
+  <section id="banner-region" aria-live="polite" class="banner-region"></section>
+
+  <!-- Tabs -->
+  <nav id="tabs" class="tabs" role="tablist" aria-label="Main sections">
+    <button class="tab-button" role="tab" aria-selected="true" data-tab="overview">Overview</button>
+    <button class="tab-button" role="tab" aria-selected="false" data-tab="stories">Safe Stories</button>
+    <button class="tab-button" role="tab" aria-selected="false" data-tab="conflicts">Conflicts</button>
+    <button class="tab-button" role="tab" aria-selected="false" data-tab="enforcement">Enforcement</button>
+    <button class="tab-button" role="tab" aria-selected="false" data-tab="decisions">Decisions</button>
+    <button class="tab-button" role="tab" aria-selected="false" data-tab="plan">Plan</button>
+  </nav>
+
+  <!-- Panels -->
+  <main id="app" class="app">
+    <section id="tab-overview" class="tab-panel" role="tabpanel">UI shell loaded. (Overview)</section>
+    <section id="tab-stories" class="tab-panel" role="tabpanel" hidden></section>
+    <section id="tab-conflicts" class="tab-panel" role="tabpanel" hidden></section>
+    <section id="tab-enforcement" class="tab-panel" role="tabpanel" hidden></section>
+    <section id="tab-decisions" class="tab-panel" role="tabpanel" hidden></section>
+    <section id="tab-plan" class="tab-panel" role="tabpanel" hidden></section>
+  </main>
+
+  <!-- Toasts -->
+  <div id="toast-region" class="toasts" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Modals container -->
+  <div id="modal-root"></div>
+    <script>
+    window.__CONFIG__ = {
+      ENV: 'DEV',
+      API_URL: 'http://localhost:5000',   // ← put your backend URL/port here
+      FEATURES: { telemetry: true }       // optional: console logs for debugging
+    };
+  </script>
+
+  <!-- Config first, then main app (ES modules) -->
+   <script type="module" src="./src/config.js"></script>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

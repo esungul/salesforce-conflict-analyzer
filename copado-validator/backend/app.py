@@ -1309,8 +1309,6 @@ def health_check():
 
 
 @app.route('/api/production-state', methods=['POST'])
-   
-
 def get_production_state():
     cfg = get_config()
     max_workers = int(cfg.API_MAX_WORKERS)
