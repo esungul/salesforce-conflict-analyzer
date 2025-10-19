@@ -4,6 +4,8 @@ import { openAnalyzeCsvFlow } from './controllers/analyzeCsv.js';
 import { openAnalyzeOnlineFlow } from './controllers/analyzeOnline.js';
 import { renderStoriesTab }   from './ui/tabs/stories.js';
 import { renderConflictsTab } from './ui/tabs/conflicts.js';
+import { renderEnforcementTab } from './ui/tabs/enforcement.js';
+
 
 /* ---------- tiny DOM helpers ---------- */
 const $  = (s, r=document) => r.querySelector(s);
@@ -111,7 +113,7 @@ function wireTabs() {
       if (tab === 'overview')  renderOverviewLanding();
       if (tab === 'stories')   renderStoriesTab(ANALYSIS || {});
       if (tab === 'conflicts') renderConflictsTab(ANALYSIS || {});
-      // later: enforcement/decisions/plan
+      if (tab === 'enforcement') renderEnforcementTab(ANALYSIS || {});
     });
   });
 }
@@ -126,6 +128,7 @@ function wireAnalysisEvents() {
     toast(`Analysis loaded from ${STATE.source}.`);
     selectTab('overview');
     debugLog('analysis:loaded', { source: STATE.source, data });
+
   });
 }
 
@@ -157,11 +160,16 @@ function setTabBadge(tabName, count){
   badge.style.display = count ? 'inline-flex' : 'none';
 }
 
-// call after analysis load succeeds
+// when analysis arrives, re-render the active tab
 document.addEventListener('analysis:loaded', (e) => {
-  const analysis = e.detail?.analysis || window.__analysis || {};
-  updateTabBadges(analysis);
+  ANALYSIS = e.detail?.analysis || ANALYSIS;
+  const activeBtn = document.querySelector('.tab-button.active');
+  const activeKey = activeBtn?.dataset.tab || 'stories';
+  if (activeKey === 'stories')     renderStoriesTab(ANALYSIS || {});
+  if (activeKey === 'conflicts')   renderConflictsTab(ANALYSIS || {});
+  if (activeKey === 'enforcement') renderEnforcementTab(ANALYSIS || {});
 });
+
 
 
 /* ---------- landing content ---------- */

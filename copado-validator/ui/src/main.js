@@ -4,6 +4,9 @@ import { openAnalyzeCsvFlow } from './controllers/analyzeCsv.js';
 import { openAnalyzeOnlineFlow } from './controllers/analyzeOnline.js';
 import { renderStoriesTab }   from './ui/tabs/stories.js';
 import { renderConflictsTab } from './ui/tabs/conflicts.js';
+import { renderEnforcementTab } from './ui/tabs/enforcement.js';
+import { renderDeploymentPlanTab } from './ui/tabs/deployment-plan.js';
+
 
 /* ---------- tiny DOM helpers ---------- */
 const $  = (s, r=document) => r.querySelector(s);
@@ -17,9 +20,12 @@ function el(tag, props={}, children=[]) {
 /* ---------- state ---------- */
 const STATE = {
   role: localStorage.getItem('ui.role') || 'Developer', // 'Developer' | 'DevOps'
-  source: '—', // 'CSV' | 'Live (SF)' | '—'
+  source: '–', // 'CSV' | 'Live (SF)' | '–'
+  analysisId: null, // Track current analysis to detect when new analysis loads
 };
 let ANALYSIS = null; // latest normalized analysis payload
+let ENFORCEMENT_RESULTS = []; // Track enforcement results for deployment plan
+let CONFLICTS_DATA = {}; // Track conflicts data for deployment plan
 
 /* ---------- boot ---------- */
 document.addEventListener('DOMContentLoaded', () => {
@@ -111,7 +117,8 @@ function wireTabs() {
       if (tab === 'overview')  renderOverviewLanding();
       if (tab === 'stories')   renderStoriesTab(ANALYSIS || {});
       if (tab === 'conflicts') renderConflictsTab(ANALYSIS || {});
-      // later: enforcement/decisions/plan
+      if (tab === 'enforcement') renderEnforcementTab(ANALYSIS || {});
+      if (tab === 'plan') renderDeploymentPlanTab(ANALYSIS || {}, ENFORCEMENT_RESULTS, CONFLICTS_DATA);
     });
   });
 }
@@ -120,12 +127,25 @@ function wireTabs() {
 function wireAnalysisEvents() {
   window.addEventListener('analysis:loaded', (ev) => {
     const { source, data } = ev.detail || {};
+    
+    // Generate unique ID for this analysis
+    const newAnalysisId = `${source}-${data?.all_stories?.length || 0}-${Date.now()}`;
+    const analysisChanged = STATE.analysisId !== newAnalysisId;
+    
     ANALYSIS = data;
-    STATE.source = source || STATE.source || '—';
+    STATE.source = source || STATE.source || '–';
+    STATE.analysisId = newAnalysisId;
+    
     updateSourceBadge();
+    updateTabBadges(ANALYSIS);
     toast(`Analysis loaded from ${STATE.source}.`);
+    
+    debugLog('analysis:loaded', { source: STATE.source, analysisChanged, analysisId: STATE.analysisId });
+
+    // Don't auto-switch tabs - let user stay in current tab
+    // If user is already on Enforcement, it will auto-run with new data
+    // If user is elsewhere, they can navigate to Enforcement manually
     selectTab('overview');
-    debugLog('analysis:loaded', { source: STATE.source, data });
   });
 }
 
@@ -136,21 +156,11 @@ function selectTab(name) {
 }
 
 function updateTabBadges(analysis){
-  const allStories = analysis?.all_stories || [];
-  const conflicts  = analysis?.conflicts || analysis?.component_conflicts || [];
-  const conflictedIds = new Set();
-  conflicts.forEach(c => (c.involved_stories || []).forEach(id => conflictedIds.add(String(id))));
-
-  const safeCount = allStories.reduce((acc, s) => {
-    const id = String(s.id || s.name || s.story || s.latest_owner || s.commit_sha || '');
-    return acc + (id && !conflictedIds.has(id) ? 1 : 0);
-  }, 0);
-
-  const conflictsCount = analysis?.summary?.component_conflicts
-    ?? (Array.isArray(conflicts) ? conflicts.length : 0);
-
-  setTabBadge('Safe Stories', safeCount);   // label you set in step 1
-  setTabBadge('Conflicts', conflictsCount);
+  const sum = analysis?.summary || {};
+  const stories = Number(sum.stories || (analysis?.all_stories?.length || 0));
+  const conflicts = Number(sum.component_conflicts || (analysis?.conflicts?.length || analysis?.component_conflicts?.length || 0));
+  setTabBadge('Safe Stories', stories);
+  setTabBadge('Conflicts', conflicts);
 }
 
 function setTabBadge(tabName, count){
@@ -166,11 +176,20 @@ function setTabBadge(tabName, count){
   badge.style.display = count ? 'inline-flex' : 'none';
 }
 
-// call after analysis load succeeds
+// when analysis arrives, re-render the active tab
 document.addEventListener('analysis:loaded', (e) => {
-  const analysis = e.detail?.analysis || window.__analysis || {};
-  updateTabBadges(analysis);
+  ANALYSIS = e.detail?.analysis || ANALYSIS;
+  ENFORCEMENT_RESULTS = e.detail?.enforcementResults || ENFORCEMENT_RESULTS;
+  CONFLICTS_DATA = e.detail?.conflictsData || CONFLICTS_DATA;
+  
+  const activeBtn = document.querySelector('.tab-button.active');
+  const activeKey = activeBtn?.dataset.tab || 'stories';
+  if (activeKey === 'stories')     renderStoriesTab(ANALYSIS || {});
+  if (activeKey === 'conflicts')   renderConflictsTab(ANALYSIS || {});
+  if (activeKey === 'enforcement') renderEnforcementTab(ANALYSIS || {});
+  if (activeKey === 'plan')        renderDeploymentPlanTab(ANALYSIS || {}, ENFORCEMENT_RESULTS, CONFLICTS_DATA);
 });
+
 
 
 /* ---------- landing content ---------- */
@@ -195,8 +214,8 @@ function renderOverviewLanding() {
       card('Your Focus', roleCopy),
       card('Next Actions', `
         1) Run <b>Analyze</b><br/>
-        2) Open <b>Conflicts</b> to resolve items<br/>
-        3) Review <b>Enforcement</b> (Regression Guard)<br/>
+        2) Open <b>Enforcement</b> (Auto-runs on new data)<br/>
+        3) Review <b>Conflicts</b> to resolve items<br/>
         4) Generate <b>Plan</b> and export
       `)
     ),

@@ -1,14 +1,7 @@
 // ui/src/api/endpoints.js
 import { postForm, postJson, validateAnalysisShape, normalizeAnalysis } from './client.js';
-import { FEATURES } from '../config.js';
+import { API_URL, FEATURES } from '../config.js';
 
-/**
- * Online Salesforce analysis
- * Accepts:
- *  - By Release Name: { releaseNames: string }  // single string
- *  - By User Stories: { userStoryNames: string[] } // array of strings
- *  - Optional: repo, branch (passed through if provided)
- */
 export async function analyzeFromSalesforce({ repo, branch, filters }) {
   const rn = filters?.releaseNames ?? [];
   const us = filters?.userStoryNames ?? [];
@@ -37,9 +30,69 @@ export async function analyzeFromSalesforce({ repo, branch, filters }) {
 export async function analyzeFromCsv({ file }) {
   if (!file) throw new Error('Please select a CSV file.');
   const fd = new FormData();
-  fd.append('file', file); // <-- exact field name per your backend example
+  fd.append('file', file);
 
   const data = await postForm('/api/analyze', fd);
   validateAnalysisShape(data);
   return normalizeAnalysis(data);
+}
+
+// --- Enforcement: compare components vs production branch ---
+export async function checkProductionState({ components, branch = 'master' }) {
+  const payload = {
+    branch,
+    components: (components || []).map(c => ({ type: c.type, name: c.name }))
+  };
+
+  // FIX: Use API_URL in both logging AND the actual fetch call
+  const apiUrl = `${API_URL}/api/production-state`;
+  console.log('🔍 Frontend API Call Details:', {
+    fullUrl: apiUrl,
+    apiUrl: apiUrl,
+    payload: payload,
+    componentsCount: components?.length || 0
+  });
+
+  // FIX: Use the full URL with API_URL in the fetch call
+  const res = await fetch(apiUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  console.log('🔍 Response Status:', res.status, res.statusText);
+
+  // Try to parse JSON; capture raw text if not JSON
+  let body = null;
+  let text = '';
+  try { body = await res.json(); } catch { try { text = await res.text(); } catch {} }
+
+  if (!res.ok) {
+    const msg = body?.message || text || `HTTP ${res.status}`;
+    throw new Error(`Production state error ${res.status}: ${msg}`);
+  }
+
+  // Normalize your backend shape -> { components: [...] , meta: {...} }
+  const items = Array.isArray(body?.production_state) ? body.production_state : [];
+  const norm = items.map(p => ({
+    type: p.component_type || p.type || '',
+    name: p.component_name || p.name || '',
+    exists: !!(p.exists_in_prod ?? (p.last_commit_hash || p.last_commit_date)),
+    commit_date: p.last_commit_date || '',
+    commit_sha: p.last_commit_hash || '',
+    author: p.last_author || '',
+    branch: body.branch || branch
+  }));
+
+  return {
+    components: norm,
+    meta: {
+      branch: body.branch || branch,
+      checked_at: body.checked_at || null,
+      total: body.total_components ?? norm.length,
+      existing: body.existing ?? null,
+      missing: body.missing ?? null,
+      success: body.success ?? true
+    }
+  };
 }
