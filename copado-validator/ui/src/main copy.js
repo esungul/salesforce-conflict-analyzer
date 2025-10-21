@@ -189,8 +189,6 @@ if (onlineBtn) {
 }
 
 /* ---------- ENHANCED: wire tabs ---------- */
-// In your wireTabsEnhanced() function, add the reports tab:
-
 function wireTabsEnhanced() {
   const buttons = $$('.tab-button');
   const panels = $$('.tab-panel');
@@ -217,36 +215,28 @@ function wireTabsEnhanced() {
           else renderOverviewLanding();
         }
         if (tab === 'conflicts') {
-          if (ANALYSIS) {
+        if (ANALYSIS) {
             console.log('ANALYSIS for conflicts:', ANALYSIS);
             console.log('component_conflicts:', ANALYSIS.component_conflicts);
             console.log('conflicts:', ANALYSIS.conflicts);
             renderConflictsTab(ANALYSIS);
-          } else {
+        } else {
             renderOverviewLanding();
-          }
         }
-        if (tab === 'enforcement') {
-          if (ANALYSIS) {
-            console.log('ANALYSIS for enforcement:', ANALYSIS);
-            console.log('blocked_stories:', ANALYSIS.blocked_stories);
-            renderEnforcementTab(ANALYSIS);
-          } else {
-            renderOverviewLanding();
-          }
         }
+        
+if (tab === 'enforcement') {
+  if (ANALYSIS) {
+    console.log('ANALYSIS for enforcement:', ANALYSIS);
+    console.log('blocked_stories:', ANALYSIS.blocked_stories);
+    renderEnforcementTab(ANALYSIS);
+  } else {
+    renderOverviewLanding();
+  }
+}
         if (tab === 'plan') {
           if (ANALYSIS) renderDeploymentPlanTab(STORIES_DATA || {}, ENFORCEMENT_RESULTS || [], CONFLICTS_DATA || {});
           else renderOverviewLanding();
-        }
-        // 🆕 ADD THIS SECTION FOR REPORTS TAB
-        if (tab === 'reports') {
-          if (ANALYSIS) {
-            console.log('ANALYSIS for reports:', ANALYSIS);
-            renderReportsTab(ANALYSIS);
-          } else {
-            renderOverviewLanding();
-          }
         }
       } catch (err) {
         console.error('Tab render error:', err);
@@ -255,7 +245,6 @@ function wireTabsEnhanced() {
     });
   });
 }
-
 
 /* ---------- NEW: Helper - Toast Notification ---------- */
 export function toast(message, duration = 3000) {
@@ -454,360 +443,6 @@ function renderOverviewLanding() {
   `;
 }
 
-function injectSafeEnhancements() {
-  const style = document.createElement('style');
-  style.textContent = `
-    /* Safe hover effects only */
-    .story-card:hover,
-    .conflict-card:hover,
-    .enforcement-card:hover,
-    .report-type-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-      transition: all 0.3s ease;
-    }
-    
-    .btn-primary:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(0, 113, 227, 0.4);
-    }
-    
-    .stat-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-    }
-    
-    /* Enhanced status badges */
-    .status-safe {
-      background: linear-gradient(135deg, #34C759, #2daa4d);
-      color: white;
-    }
-    
-    .status-conflict {
-      background: linear-gradient(135deg, #FF9500, #e68500);
-      color: white;
-    }
-    
-    .status-blocked {
-      background: linear-gradient(135deg, #FF3B30, #e63329);
-      color: white;
-    }
-    
-    /* Subtle topbar enhancement */
-    .topbar {
-      backdrop-filter: blur(10px);
-      background: rgba(255, 255, 255, 0.95);
-    }
-  `;
-  document.head.appendChild(style);
-}
-
-// Call it after your existing injectOnce() function
-document.addEventListener('DOMContentLoaded', () => {
-  injectSafeEnhancements();
-});
-
-// Enhanced professional styles - add to your existing injection in main.js
-function injectEnhancedProfessionalStyles() {
-  const style = document.createElement('style');
-  style.textContent = `
-    /* ===== ENHANCED CARD STYLES ===== */
-    .story-card,
-    .conflict-card,
-    .enforcement-card,
-    .report-type-section,
-    .report-options-section,
-    .report-actions-section,
-    .report-preview-section {
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      position: relative;
-      border-radius: 12px;
-    }
-    
-    .story-card:hover,
-    .conflict-card:hover,
-    .enforcement-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
-      border-color: #d2d2d7;
-    }
-    
-    /* ===== ENHANCED STATUS BADGES ===== */
-    .status-badge {
-      position: relative;
-      overflow: hidden;
-      transition: all 0.3s ease;
-      font-weight: 600;
-      border: 1px solid;
-    }
-    
-    .status-badge:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-    
-    .status-safe {
-      background: linear-gradient(135deg, #34C759, #2daa4d);
-      border-color: #2daa4d;
-      color: white;
-    }
-    
-    .status-conflict {
-      background: linear-gradient(135deg, #FF9500, #e68500);
-      border-color: #e68500;
-      color: white;
-    }
-    
-    .status-blocked {
-      background: linear-gradient(135deg, #FF3B30, #e63329);
-      border-color: #e63329;
-      color: white;
-    }
-    
-    /* ===== ENHANCED BUTTONS ===== */
-    .btn {
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      border-radius: 10px;
-      font-weight: 600;
-      position: relative;
-      overflow: hidden;
-    }
-    
-    .btn-primary {
-      background: linear-gradient(135deg, #0071e3, #0056b3);
-      box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
-    }
-    
-    .btn-primary:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(0, 113, 227, 0.4);
-    }
-    
-    .btn-secondary:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    }
-    
-    /* ===== ENHANCED STATS & METRICS ===== */
-    .stat-card {
-      transition: all 0.3s ease;
-      border-radius: 12px;
-    }
-    
-    .stat-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
-    }
-    
-    .stat-value {
-      font-weight: 700;
-      background: linear-gradient(135deg, #1d1d1f, #434346);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    
-    /* ===== ENHANCED FILTER BAR ===== */
-    .filter-bar {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.8);
-    }
-    
-    /* ===== ENHANCED TOPBAR ===== */
-    .topbar {
-      backdrop-filter: blur(20px);
-      background: rgba(255, 255, 255, 0.92);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.8);
-    }
-    
-    .brand {
-      font-weight: 700;
-      background: linear-gradient(135deg, #1d1d1f, #434346);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    
-    /* ===== ENHANCED REPORT CARDS ===== */
-    .report-type-card {
-      transition: all 0.3s ease;
-      cursor: pointer;
-      border-radius: 12px;
-    }
-    
-    .report-type-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
-      border-color: #0071e3;
-      background: #f8f9fa;
-    }
-    
-    .report-type-card.selected {
-      border-color: #0071e3;
-      background: #e8f0ff;
-      box-shadow: 0 8px 24px rgba(0, 113, 227, 0.15);
-    }
-    
-    /* ===== ENHANCED COMPONENT ITEMS ===== */
-    .component-item {
-      transition: all 0.3s ease;
-      border-radius: 10px;
-    }
-    
-    .component-item:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-    }
-    
-    .component-item.has-old-commit {
-      border-left: 4px solid #FF3B30;
-      background: #fff3f3;
-    }
-    
-    /* ===== ENHANCED TIMELINE ===== */
-    .timeline-marker {
-      box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
-    }
-    
-    .conflicting-story .timeline-marker {
-      box-shadow: 0 0 0 3px rgba(255, 59, 48, 0.2);
-    }
-    
-    .current-story .timeline-marker {
-      box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
-    }
-    
-    .production-story .timeline-marker {
-      box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.2);
-    }
-    
-    /* ===== ENHANCED TYPOGRAPHY ===== */
-    .section-header h2 {
-      background: linear-gradient(135deg, #1d1d1f, #434346);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      font-weight: 700;
-    }
-    
-    .story-title,
-    .conflict-story-title,
-    .enforcement-title {
-      font-weight: 600;
-      letter-spacing: -0.1px;
-    }
-    
-    /* ===== ENHANCED EMPTY STATES ===== */
-    .empty-card {
-      border-radius: 16px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
-    }
-    
-    .empty-icon {
-      opacity: 0.9;
-      filter: grayscale(0.1);
-    }
-    
-    /* ===== SUBTLE LOADING EFFECTS ===== */
-    .loading-state {
-      background: linear-gradient(90deg, #f5f5f7 25%, #e8e8ed 50%, #f5f5f7 75%);
-      background-size: 200% 100%;
-      animation: shimmer 2s infinite;
-      border-radius: 8px;
-    }
-    
-    @keyframes shimmer {
-      0% { background-position: -200% 0; }
-      100% { background-position: 200% 0; }
-    }
-    
-    /* ===== ENHANCED TAB NAVIGATION ===== */
-    .tab-button {
-      transition: all 0.3s ease;
-      position: relative;
-    }
-    
-    .tab-button:hover {
-      background: rgba(0, 113, 227, 0.04);
-    }
-    
-    .tab-button[aria-selected="true"] {
-      font-weight: 600;
-    }
-    
-    /* ===== RESPONSIVE ENHANCEMENTS ===== */
-    @media (max-width: 768px) {
-      .story-card:hover,
-      .conflict-card:hover,
-      .enforcement-card:hover {
-        transform: translateY(-1px);
-      }
-      
-      .btn-primary:hover:not(:disabled) {
-        transform: translateY(-1px);
-      }
-    }
-  `;
-  
-  // Remove any previous enhanced styles to avoid duplicates
-  const existingStyle = document.getElementById('enhanced-professional-styles');
-  if (existingStyle) {
-    existingStyle.remove();
-  }
-  
-  style.id = 'enhanced-professional-styles';
-  document.head.appendChild(style);
-}
-
-// Call this function in your DOMContentLoaded
-document.addEventListener('DOMContentLoaded', () => {
-  injectEnhancedProfessionalStyles();
-});
-
-// Micro-interactions for premium feel
-function injectMicroInteractions() {
-  const style = document.createElement('style');
-  style.textContent = `
-    /* Subtle pulse animation for important elements */
-    @keyframes subtle-pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.8; }
-    }
-    
-    .status-badge {
-      animation: subtle-pulse 3s ease-in-out infinite;
-    }
-    
-    /* Ripple effect for buttons */
-    .btn-primary {
-      position: relative;
-      overflow: hidden;
-    }
-    
-    .btn-primary:active::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 0;
-      height: 0;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.5);
-      transform: translate(-50%, -50%);
-      animation: ripple 0.6s ease-out;
-    }
-    
-    @keyframes ripple {
-      to {
-        width: 200px;
-        height: 200px;
-        opacity: 0;
-      }
-    }
-  `;
-  document.head.appendChild(style);
-}
 
 /* ---------- minimal CSS hooks ---------- */
 const injectOnce = (() => {
