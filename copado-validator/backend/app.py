@@ -593,6 +593,8 @@ class StoryAnalyzerTransformer:
 # NEW ROUTE: Use the transformer
 # ============================================================
 
+
+
 @app.route('/api/analyze-stories', methods=['POST'])
 def analyze_stories():
     """
@@ -642,8 +644,25 @@ def analyze_stories():
             
             # Fetch 1: Component metadata per story
             logger.info(f"[ROUTE] Fetching story metadata for: {story_names}")
-            raw_metadata = fetch_user_story_metadata_by_story_names(sf, story_names or [])
+            raw_metadata = fetch_user_story_metadata_by_story_names(
+                sf, 
+                story_names=story_names or [], 
+                release_names=release_names or []
+            )
             logger.info(f"[ROUTE] Got {len(raw_metadata)} metadata records")
+            
+            # CRITICAL FIX: Extract user story names from metadata for commit fetching
+            all_story_names_from_metadata = list(set([
+                record.get('copado__User_Story__r', {}).get('Name') 
+                for record in raw_metadata 
+                if record.get('copado__User_Story__r', {}).get('Name')
+            ]))
+            logger.info(f"[ROUTE] Found {len(all_story_names_from_metadata)} unique story names in metadata")
+            
+            # CRITICAL FIX: Populate story_names if empty (for release-only input)
+            if not story_names and raw_metadata:
+                story_names = all_story_names_from_metadata
+                logger.info(f"[ROUTE] Using {len(story_names)} story names extracted from metadata")
             
             # Fetch 2: Commit info per story
             logger.info(f"[ROUTE] Fetching story commits for: {story_names}")
@@ -654,7 +673,7 @@ def analyze_stories():
             sf_records = sf_records_to_rows(raw_metadata)
             logger.info(f"[ROUTE] Normalized to {len(sf_records)} rows")
             
-            # Fetch 3: Get unique components and their production state (BATCHED - single query)
+            # Fetch 3: Get unique components and their production state (BATCHED - with chunking)
             unique_components = []
             seen = set()
             for row in sf_records:
@@ -670,70 +689,98 @@ def analyze_stories():
             
             logger.info(f"[ROUTE] Found {len(unique_components)} unique components")
             
-            # Fetch production state for ALL components in ONE query
-            logger.info(f"[ROUTE] Fetching production state for {len(unique_components)} components (batched)")
-            production_records = fetch_production_component_state(sf, unique_components)
-            logger.info(f"[ROUTE] Got {len(production_records)} production records (may have duplicates)")
-            
-            # CRITICAL: Sort by commit date DESC to ensure latest is first
-            production_records.sort(
-                key=lambda r: r.get("copado__Last_Commit_Date__c") or "0000-01-01",
-                reverse=True
-            )
-            
-            logger.info(f"[ROUTE] Sorted {len(production_records)} records by copado__Last_Commit_Date__c DESC")
-            if production_records:
-                logger.debug(f"[ROUTE] First (latest): {production_records[0].get('copado__Metadata_API_Name__c')} | date={production_records[0].get('copado__Last_Commit_Date__c')}")
-                if len(production_records) > 1:
-                    logger.debug(f"[ROUTE] Last (oldest): {production_records[-1].get('copado__Metadata_API_Name__c')} | date={production_records[-1].get('copado__Last_Commit_Date__c')}")
-            
-            # Group production records by api_name and keep only the LATEST (first after sort)
+            # CRITICAL FIX: Enhanced production state handling with bulk safety
             prod_index = {}
-            duplicates_skipped = 0
+            production_records = []
             
-            for i, prod_rec in enumerate(production_records):
-                api_name = prod_rec.get("copado__Metadata_API_Name__c")
+            if unique_components:
+                # Fetch production state for ALL components in BATCHED queries
+                logger.info(f"[ROUTE] Fetching production state for {len(unique_components)} components (batched)")
+                production_records = fetch_production_component_state(sf, unique_components)
+                logger.info(f"[ROUTE] Got {len(production_records)} production records")
                 
-                if not api_name:
-                    logger.warning(f"[ROUTE] Record {i} missing api_name, skipping")
-                    continue
-                
-                if api_name in prod_index:
-                    duplicates_skipped += 1
-                    logger.debug(f"[ROUTE] Skipping duplicate for {api_name} (already have latest)")
-                    continue
-                
-                # Handle nested SF response structure
-                user_story_rel = prod_rec.get("copado__User_Story__r") or {}
-                
-                story_id = (
-                    user_story_rel.get("Name") or 
-                    prod_rec.get("copado__User_Story__r.Name")
-                )
-                
-                story_title = (
-                    user_story_rel.get("copado__User_Story_Title__c") or
-                    prod_rec.get("copado__User_Story__r.copado__User_Story_Title__c")
-                )
-                
-                last_modified_by = (
-                    prod_rec.get("LastModifiedBy.Name") or
-                    (prod_rec.get("LastModifiedBy") or {}).get("Name")
-                )
-                
-                commit_date = prod_rec.get("copado__Last_Commit_Date__c")
-                
-                prod_index[api_name] = {
-                    "production_commit_date": commit_date,
-                    "production_story_id": story_id,
-                    "production_story_title": story_title,
-                    "production_modified_by": last_modified_by,
-                    "production_modified_date": prod_rec.get("LastModifiedDate")
-                }
-                
-                logger.debug(f"[ROUTE] [Index #{len(prod_index)}] {api_name} | commit_date={commit_date} | story={story_id}")
-            
-            logger.info(f"[ROUTE] Built production index: {len(prod_index)} unique | {duplicates_skipped} duplicates skipped")
+                if production_records:
+                    # Ensure we have a proper list for sorting
+                    if hasattr(production_records, '__iter__') and not isinstance(production_records, list):
+                        production_records = list(production_records)
+                        logger.debug("[ROUTE] Converted production_records to list for proper sorting")
+                    
+                    # Sort by commit date DESC to ensure latest is first
+                    production_records.sort(
+                        key=lambda r: r.get("copado__Last_Commit_Date__c") or "0000-01-01",
+                        reverse=True
+                    )
+                    
+                    logger.info(f"[ROUTE] Sorted {len(production_records)} production records by copado__Last_Commit_Date__c DESC")
+                    
+                    # Debug: Log first few production records to verify sorting
+                    for i, rec in enumerate(production_records[:3]):
+                        logger.debug(f"[ROUTE] Production record #{i+1}: {rec.get('copado__Metadata_API_Name__c')} -> {rec.get('copado__Last_Commit_Date__c')}")
+                    
+                    # CRITICAL FIX: Group production records by api_name with robust duplicate handling
+                    duplicates_skipped = 0
+                    valid_records = 0
+                    
+                    for i, prod_rec in enumerate(production_records):
+                        api_name = prod_rec.get("copado__Metadata_API_Name__c")
+                        
+                        if not api_name:
+                            logger.warning(f"[ROUTE] Production record {i} missing api_name, skipping")
+                            continue
+                        
+                        # Handle nested SF response structure
+                        user_story_rel = prod_rec.get("copado__User_Story__r") or {}
+                        
+                        story_id = (
+                            user_story_rel.get("Name") or 
+                            prod_rec.get("copado__User_Story__r.Name")
+                        )
+                        
+                        story_title = (
+                            user_story_rel.get("copado__User_Story_Title__c") or
+                            prod_rec.get("copado__User_Story__r.copado__User_Story_Title__c")
+                        )
+                        
+                        last_modified_by = (
+                            prod_rec.get("LastModifiedBy.Name") or
+                            (prod_rec.get("LastModifiedBy") or {}).get("Name")
+                        )
+                        
+                        commit_date = prod_rec.get("copado__Last_Commit_Date__c")
+                        
+                        # CRITICAL FIX: Only add if we haven't seen this API name OR if this one is newer
+                        existing_record = prod_index.get(api_name)
+                        existing_date = existing_record.get("production_commit_date") if existing_record else None
+                        
+                        if api_name in prod_index:
+                            # Only replace if current record is newer and has valid data
+                            if commit_date and existing_date and commit_date > existing_date:
+                                logger.debug(f"[ROUTE] Replacing older production record for {api_name}: {existing_date} -> {commit_date}")
+                                # Continue to update the record below
+                            else:
+                                duplicates_skipped += 1
+                                logger.debug(f"[ROUTE] Skipping duplicate for {api_name} (already have latest)")
+                                continue
+                        
+                        # CRITICAL FIX: Only add to index if we have valid production data
+                        if commit_date or story_id:  # At least one of these should be present
+                            prod_index[api_name] = {
+                                "production_commit_date": commit_date,
+                                "production_story_id": story_id,
+                                "production_story_title": story_title,
+                                "production_modified_by": last_modified_by,
+                                "production_modified_date": prod_rec.get("LastModifiedDate")
+                            }
+                            valid_records += 1
+                            logger.debug(f"[ROUTE] [Index #{valid_records}] {api_name} | commit_date={commit_date} | story={story_id}")
+                        else:
+                            logger.warning(f"[ROUTE] Skipping production record for {api_name} - missing both commit date and story ID")
+                    
+                    logger.info(f"[ROUTE] Built production index: {valid_records} valid | {duplicates_skipped} duplicates skipped")
+                else:
+                    logger.warning("[ROUTE] No production records found for any components")
+            else:
+                logger.warning("[ROUTE] No unique components found to query production state")
             
             # Build commits index by story_name only (no environment filtering)
             commits_index = {}
@@ -751,10 +798,11 @@ def analyze_stories():
                     logger.debug(f"[ROUTE] Indexed commit for {story_name}: sha={sha_display}...")
             
             logger.info(f"[ROUTE] Built commits index with {len(commits_index)} entries")
-            logger.debug(f"[ROUTE] Commits index keys: {list(commits_index.keys())}")
             
-            # Enrich sf_records with BOTH commit data AND production state
+            # CRITICAL FIX: Enhanced enrichment with fallback handling
             enriched_count = 0
+            missing_production_count = 0
+            
             for row in sf_records:
                 story_name = row.get("copado__User_Story__r.Name")
                 api_name = row.get("copado__Metadata_API_Name__c")
@@ -769,24 +817,45 @@ def analyze_stories():
                     else:
                         logger.debug(f"[ROUTE] No commit found for {story_name}")
                 
-                # Add production state from prod_index
-                if api_name and api_name in prod_index:
-                    prod_data = prod_index[api_name]
-                    
-                    # OVERWRITE production fields (don't touch commit_hash/commit_url)
-                    row["production_commit_date"] = prod_data.get("production_commit_date")
-                    row["production_story_id"] = prod_data.get("production_story_id")
-                    row["production_story_title"] = prod_data.get("production_story_title")
-                    row["production_modified_by"] = prod_data.get("production_modified_by")
-                    row["production_modified_date"] = prod_data.get("production_modified_date")
-                    
-                    enriched_count += 1
-                    logger.debug(f"[ROUTE] Enriched {api_name} with production state: story={prod_data.get('production_story_id')}, date={prod_data.get('production_commit_date')}")
-                else:
-                    if api_name:
+                # Add production state from prod_index with validation
+                if api_name:
+                    if api_name in prod_index:
+                        prod_data = prod_index[api_name]
+                        
+                        # Validate production data before enrichment
+                        if prod_data.get("production_commit_date") or prod_data.get("production_story_id"):
+                            # OVERWRITE production fields (don't touch commit_hash/commit_url)
+                            row["production_commit_date"] = prod_data.get("production_commit_date")
+                            row["production_story_id"] = prod_data.get("production_story_id")
+                            row["production_story_title"] = prod_data.get("production_story_title")
+                            row["production_modified_by"] = prod_data.get("production_modified_by")
+                            row["production_modified_date"] = prod_data.get("production_modified_date")
+                            
+                            enriched_count += 1
+                            logger.debug(f"[ROUTE] Enriched {api_name} with production state: story={prod_data.get('production_story_id')}, date={prod_data.get('production_commit_date')}")
+                        else:
+                            # Production record exists but has no valid data
+                            logger.warning(f"[ROUTE] Production record for {api_name} has no valid data")
+                            missing_production_count += 1
+                    else:
+                        # No production record found for this component
                         logger.debug(f"[ROUTE] {api_name} has NO production record (NEW component)")
+                        missing_production_count += 1
             
-            logger.info(f"[ROUTE] Enriched {enriched_count} rows with production state from prod_index")
+            logger.info(f"[ROUTE] Enriched {enriched_count} rows with production state | {missing_production_count} components without production data")
+            
+            # CRITICAL FIX: Ensure all rows have production fields even if null
+            for row in sf_records:
+                if "production_commit_date" not in row:
+                    row["production_commit_date"] = None
+                if "production_story_id" not in row:
+                    row["production_story_id"] = None
+                if "production_story_title" not in row:
+                    row["production_story_title"] = None
+                if "production_modified_by" not in row:
+                    row["production_modified_by"] = None
+                if "production_modified_date" not in row:
+                    row["production_modified_date"] = None
             
         except Exception as e:
             logger.error(f"[ROUTE] Error fetching SF data: {str(e)}", exc_info=True)
@@ -825,6 +894,13 @@ def analyze_stories():
             "success": False,
             "error": str(e)
         }), 500
+
+
+
+
+
+
+
 # === Component History Wrapper API ===
 # Returns last N commit IDs (and metadata) for each component on each org/branch.
 from flask import request, jsonify

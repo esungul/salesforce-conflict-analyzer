@@ -84,7 +84,7 @@ def fetch_user_story_metadata_by_release(sf, release_names: list[str]) -> list[d
         
     return records
 
-def fetch_user_story_metadata_by_story_names(sf, story_names: list[str]) -> list[dict]:
+def fetch_user_story_metadata_by_story_namesbackup(sf, story_names: list[str]) -> list[dict]:
     records: list[dict] = []
     for batch in chunked(story_names, 100):
         soql = f"""
@@ -94,6 +94,36 @@ def fetch_user_story_metadata_by_story_names(sf, story_names: list[str]) -> list
             ORDER BY copado__Last_Commit_Date__c
         """
         records.extend(_query_all(sf, soql))
+    return records
+
+def fetch_user_story_metadata_by_story_names(sf, story_names: list[str] = None, release_names: list[str] = None) -> list[dict]:
+    """
+    Fetch user story metadata by either story names OR release names
+    """
+    records: list[dict] = []
+    
+    # Query by story names
+    if story_names:
+        for batch in chunked(story_names, 100):
+            soql = f"""
+                SELECT {", ".join(_FIELDS)}
+                FROM copado__User_Story_Metadata__c
+                WHERE copado__User_Story__r.Name IN {soql_in(batch)}
+                ORDER BY copado__Last_Commit_Date__c
+            """
+            records.extend(_query_all(sf, soql))
+    
+    # Query by release names
+    if release_names:
+        for batch in chunked(release_names, 100):
+            soql = f"""
+                SELECT {", ".join(_FIELDS)}
+                FROM copado__User_Story_Metadata__c
+                WHERE copado__User_Story__r.copado__Release__r.Name IN {soql_in(batch)}
+                ORDER BY copado__Last_Commit_Date__c
+            """
+            records.extend(_query_all(sf, soql))
+    
     return records
 
 def sf_login_from_config(config_json_path: str | None = None):
@@ -247,6 +277,86 @@ def ensure_required_fields(field_list):
 
 def fetch_production_component_state(sf, components: List[Dict]) -> List[Dict]:
     if not components:
+        logger.info("[SF] No components provided for production state lookup")
+        return []
+    
+    api_names = [comp.get("api_name") for comp in components if comp.get("api_name")]
+    logger.info(f"[SF] Running production state query with {len(api_names)} components")
+    
+    if not api_names:
+        logger.info("[SF] No valid API names found")
+        return []
+    
+    # CHUNK the API names to avoid SOQL limits
+    all_records = []
+    batches = list(chunked(api_names, 50))
+    logger.info(f"[SF] Processing {len(batches)} batches")
+    
+    for i, batch in enumerate(batches):
+        soql = f"""
+            SELECT 
+                copado__Metadata_API_Name__c,
+                copado__Type__c,
+                copado__Last_Commit_Date__c,
+                copado__User_Story__r.Name,
+                copado__User_Story__r.copado__User_Story_Title__c,
+                LastModifiedDate,
+                LastModifiedBy.Name
+            FROM copado__User_Story_Metadata__c
+            WHERE copado__Metadata_API_Name__c IN {soql_in(batch)}
+            AND copado__User_Story__r.copado__Environment__r.Name = 'production'
+            ORDER BY copado__Last_Commit_Date__c DESC
+        """
+        
+        logger.info(f"[SF] Batch {i+1}/{len(batches)}: {len(batch)} components")
+        
+        try:
+            result = sf.query_all(soql)
+            records = result.get("records", [])
+            all_records.extend(records)
+            logger.info(f"[SF] Batch {i+1} got {len(records)} production records")
+                    
+        except Exception as e:
+            logger.error(f"[SF] Error in production state batch {i+1}: {str(e)}")
+            continue
+    
+    logger.info(f"[SF] Total production records fetched: {len(all_records)}")
+    
+    if all_records:
+        logger.info(f"[SF] Starting normalization of {len(all_records)} records")
+        
+        # NORMALIZE: Convert SF format to consistent flat structure
+        normalized = []
+        normalized_count = 0
+        
+        for rec in all_records:
+            # Handle nested User Story relationship
+            user_story = rec.get("copado__User_Story__r") or {}
+            
+            normalized_rec = {
+                "copado__Metadata_API_Name__c": rec.get("copado__Metadata_API_Name__c"),
+                "copado__Type__c": rec.get("copado__Type__c"),
+                "copado__Last_Commit_Date__c": rec.get("copado__Last_Commit_Date__c"),
+                "copado__User_Story__r.Name": user_story.get("Name"),
+                "copado__User_Story__r.copado__User_Story_Title__c": user_story.get("copado__User_Story_Title__c"),
+                "LastModifiedDate": rec.get("LastModifiedDate"),
+                "LastModifiedBy.Name": rec.get("LastModifiedBy.Name") or (rec.get("LastModifiedBy") or {}).get("Name")
+            }
+            normalized.append(normalized_rec)
+            normalized_count += 1
+            
+            # Log first few and every 100th record
+            if normalized_count <= 3 or normalized_count % 100 == 0:
+                logger.debug(f"[SF] Normalized {normalized_count}: {normalized_rec['copado__Metadata_API_Name__c']} → story={normalized_rec['copado__User_Story__r.Name']}")
+        
+        logger.info(f"[SF] Completed normalization: {len(normalized)} records")
+        return normalized
+    
+    logger.info("[SF] No records to normalize, returning empty list")
+    return all_records
+
+
+    if not components:
         return []
     
     api_names = [comp.get("api_name") for comp in components if comp.get("api_name")]
@@ -300,3 +410,81 @@ def fetch_production_component_state(sf, components: List[Dict]) -> List[Dict]:
         return normalized
     
     return records
+
+
+
+    if not components:
+        return []
+    
+    api_names = [comp.get("api_name") for comp in components if comp.get("api_name")]
+    logger.info(f"[SF] Running production state query with {len(api_names)} components")
+    logger.info(f"[SF] Running production state query with {len(api_names)} components")
+    logger.info(f"[SF] First 5 components: {api_names[:5]}")
+    
+    if not api_names:
+        return []
+    
+    # CHUNK the API names to avoid SOQL limits - THE ONLY FIX NEEDED
+    all_records = []
+    batches = list(chunked(api_names, 50))
+    logger.info(f"[SF] Processing {len(batches)} batches")
+    for i, batch in enumerate(batches):
+        soql = f"""
+            SELECT 
+                copado__Metadata_API_Name__c,
+                copado__Type__c,
+                copado__Last_Commit_Date__c,
+                copado__User_Story__r.Name,
+                copado__User_Story__r.copado__User_Story_Title__c,
+                LastModifiedDate,
+                LastModifiedBy.Name
+            FROM copado__User_Story_Metadata__c
+            WHERE copado__Metadata_API_Name__c IN {soql_in(batch)}
+            AND copado__User_Story__r.copado__Environment__r.Name = 'production'
+            ORDER BY copado__Last_Commit_Date__c DESC
+        """
+        
+        logger.debug(f"[SF] Production state batch: {len(batch)} components")
+        logger.info(f"[SF] Batch {i+1}/{len(batches)}: {len(batch)} components")
+        
+        logger.debug(f"[SF] SOQL for batch {i+1}: {soql}")
+        
+        try:
+            result = sf.query_all(soql)
+            records = result.get("records", [])
+            all_records.extend(records)
+            logger.info(f"[SF] Batch got {len(records)} production records")
+        except Exception as e:
+            logger.error(f"[SF] Error in production state batch query: {str(e)}")
+            logger.error(f"[SF] Error in production state batch {i+1}: {str(e)}")
+            logger.error(f"[SF] Failed SOQL: {soql}")
+            continue
+    
+    logger.info(f"[SF] Total production records fetched: {len(all_records)}")
+    
+    # ... rest of the function remains exactly the same ...
+    if records:
+        logger.info(f"[SF] Sample record keys: {list(records[0].keys())}")
+        logger.debug(f"[SF] Sample record #1: {json.dumps(records[0], indent=2, default=str)}")
+        
+        # NORMALIZE: Convert SF format to consistent flat structure
+        normalized = []
+        for rec in records:
+            # Handle nested User Story relationship
+            user_story = rec.get("copado__User_Story__r") or {}
+            
+            normalized_rec = {
+                "copado__Metadata_API_Name__c": rec.get("copado__Metadata_API_Name__c"),
+                "copado__Type__c": rec.get("copado__Type__c"),
+                "copado__Last_Commit_Date__c": rec.get("copado__Last_Commit_Date__c"),
+                "copado__User_Story__r.Name": user_story.get("Name"),
+                "copado__User_Story__r.copado__User_Story_Title__c": user_story.get("copado__User_Story_Title__c"),
+                "LastModifiedDate": rec.get("LastModifiedDate"),
+                "LastModifiedBy.Name": rec.get("LastModifiedBy.Name") or (rec.get("LastModifiedBy") or {}).get("Name")
+            }
+            normalized.append(normalized_rec)
+            logger.debug(f"[SF] Normalized: {normalized_rec['copado__Metadata_API_Name__c']} → story={normalized_rec['copado__User_Story__r.Name']}")
+        
+        return normalized
+    
+    return all_records

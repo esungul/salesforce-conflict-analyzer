@@ -44,8 +44,341 @@ document.addEventListener('DOMContentLoaded', () => {
   wireAnalysisEvents();
   renderOverviewLanding();
   injectEnhancedProfessionalStyles();
+  injectRoleBasedStyles();
   debugLog('boot', CONFIG);
 });
+
+
+
+
+function renderOverviewLanding() {
+  const panel = $('#tab-overview');
+  if (!panel) return;
+
+  // Show role-specific landing pages
+  if (STATE.role === 'Developer') {
+    renderDeveloperOverview();
+  } else {
+    renderDevOpsOverview();
+  }
+}
+
+function renderDeveloperOverview() {
+  const panel = $('#tab-overview');
+  if (!panel) return;
+
+  panel.innerHTML = `
+    <div class="landing-container">
+      <!-- Developer Header -->
+      <div class="hero-section">
+        <div class="hero-content">
+          <div class="hero-badge developer-badge">👨‍💻 Developer Workspace</div>
+          <h1 class="hero-title">Component & Story Tracking</h1>
+          <p class="hero-subtitle">Track user stories, review component history, and validate deployments</p>
+          
+          <div class="hero-stats">
+            <div class="stat">
+              <div class="stat-value">Zero</div>
+              <div class="stat-label">Deployment Conflicts</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value">100%</div>
+              <div class="stat-label">Compliance</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value">24/7</div>
+              <div class="stat-label">Monitoring</div>
+            </div>
+          </div>
+
+          <button id="hero-analyze-btn" class="cta-button">
+            <span class="button-icon">📊</span>
+            Start Analysis
+            <span class="button-arrow">→</span>
+          </button>
+        </div>
+        
+        <div class="hero-visual">
+          <div class="visual-card">
+            <div class="card-header">
+              <div class="card-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+            <div class="card-content">
+              <div class="app-icon">⚡</div>
+              <div class="card-text">Developer Ready</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions for Developer -->
+      <div class="actions-section">
+        <h2 class="section-title">Developer Tools</h2>
+        <div class="actions-grid">
+          <div class="action-card" data-action="track-stories">
+            <div class="action-icon">📝</div>
+            <h3>Track Stories</h3>
+            <p>Monitor user story progress and status</p>
+            <div class="action-arrow">→</div>
+          </div>
+          <div class="action-card" data-action="component-history">
+            <div class="action-icon">🕒</div>
+            <h3>Component History</h3>
+            <p>Review deployment history and changes</p>
+            <div class="action-arrow">→</div>
+          </div>
+          <div class="action-card" data-action="compare-diff">
+            <div class="action-icon">🔍</div>
+            <h3>Compare Changes</h3>
+            <p>Compare components across environments</p>
+            <div class="action-arrow">→</div>
+          </div>
+          <div class="action-card" data-action="validate-production">
+            <div class="action-icon">✅</div>
+            <h3>Validate Deployment</h3>
+            <p>Check production readiness and conflicts</p>
+            <div class="action-arrow">→</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity for Developer -->
+      <div class="features-section">
+        <h2 class="section-title">Recent Activity</h2>
+        <div class="activity-grid">
+          <div class="activity-item">
+            <div class="activity-icon">🚀</div>
+            <div class="activity-content">
+              <h4>US-12345 deployed</h4>
+              <p>2 hours ago • 12 components</p>
+            </div>
+            <div class="activity-status success">Success</div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-icon">⚠️</div>
+            <div class="activity-content">
+              <h4>Conflict detected</h4>
+              <p>4 hours ago • Requires review</p>
+            </div>
+            <div class="activity-status warning">Attention</div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-icon">📦</div>
+            <div class="activity-content">
+              <h4>Component updated</h4>
+              <p>6 hours ago • AccountTrigger</p>
+            </div>
+            <div class="activity-status info">Updated</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Wire up developer buttons
+  const heroBtn = document.getElementById('hero-analyze-btn');
+  if (heroBtn) {
+    heroBtn.addEventListener('click', () => openAnalyzeModal());
+  }
+
+  const actionCards = panel.querySelectorAll('.action-card');
+  actionCards.forEach(card => {
+    card.addEventListener('click', (e) => {
+      const action = e.currentTarget.dataset.action;
+      handleDeveloperAction(action);
+    });
+  });
+
+  updateHeroButtonState();
+  injectAllLandingStyles();
+}
+
+function renderDevOpsOverview() {
+  const panel = $('#tab-overview');
+  if (!panel) return;
+
+  panel.innerHTML = `
+    <div class="landing-container">
+      <!-- DevOps Header -->
+      <div class="hero-section">
+        <div class="hero-content">
+          <div class="hero-badge devops-badge">🔧 DevOps Control Center</div>
+          <h1 class="hero-title">Deployment Operations</h1>
+          <p class="hero-subtitle">Manage releases, monitor deployments, and ensure system stability</p>
+          
+          <div class="hero-stats">
+            <div class="stat">
+              <div class="stat-value">12</div>
+              <div class="stat-label">Active Releases</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value">98%</div>
+              <div class="stat-label">Success Rate</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value">45m</div>
+              <div class="stat-label">Avg Deployment</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value">0</div>
+              <div class="stat-label">Critical Issues</div>
+            </div>
+          </div>
+
+          <button id="hero-analyze-btn" class="cta-button">
+            <span class="button-icon">📊</span>
+            Analyze Release
+            <span class="button-arrow">→</span>
+          </button>
+        </div>
+        
+        <div class="hero-visual">
+          <div class="visual-card">
+            <div class="card-header">
+              <div class="card-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+            <div class="card-content">
+              <div class="app-icon">🚀</div>
+              <div class="card-text">Ops Ready</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DevOps Actions -->
+      <div class="actions-section">
+        <h2 class="section-title">Operations Center</h2>
+        <div class="actions-grid">
+          <div class="action-card" data-action="release-planning">
+            <div class="action-icon">📋</div>
+            <h3>Release Planning</h3>
+            <p>Plan and schedule deployment releases</p>
+            <div class="action-arrow">→</div>
+          </div>
+          <div class="action-card" data-action="deployment-monitor">
+            <div class="action-icon">📈</div>
+            <h3>Deployment Monitor</h3>
+            <p>Real-time deployment status and metrics</p>
+            <div class="action-arrow">→</div>
+          </div>
+          <div class="action-card" data-action="compliance-check">
+            <div class="action-icon">🛡️</div>
+            <h3>Compliance Check</h3>
+            <p>Validate deployment compliance and policies</p>
+            <div class="action-arrow">→</div>
+          </div>
+          <div class="action-card" data-action="rollback-plan">
+            <div class="action-icon">↩️</div>
+            <h3>Rollback Plans</h3>
+            <p>Manage emergency rollback procedures</p>
+            <div class="action-arrow">→</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Deployment Pipeline -->
+      <div class="features-section">
+        <h2 class="section-title">Deployment Pipeline</h2>
+        <div class="pipeline-grid">
+          <div class="pipeline-stage active">
+            <div class="stage-number">1</div>
+            <div class="stage-info">
+              <h4>Development</h4>
+              <p>12 stories ready</p>
+            </div>
+          </div>
+          <div class="pipeline-stage">
+            <div class="stage-number">2</div>
+            <div class="stage-info">
+              <h4>Testing</h4>
+              <p>QA in progress</p>
+            </div>
+          </div>
+          <div class="pipeline-stage">
+            <div class="stage-number">3</div>
+            <div class="stage-info">
+              <h4>Staging</h4>
+              <p>Next: Feb 15</p>
+            </div>
+          </div>
+          <div class="pipeline-stage">
+            <div class="stage-number">4</div>
+            <div class="stage-info">
+              <h4>Production</h4>
+              <p>Scheduled</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Wire up DevOps buttons
+  const heroBtn = document.getElementById('hero-analyze-btn');
+  if (heroBtn) {
+    heroBtn.addEventListener('click', () => openAnalyzeModal());
+  }
+
+  const actionCards = panel.querySelectorAll('.action-card');
+  actionCards.forEach(card => {
+    card.addEventListener('click', (e) => {
+      const action = e.currentTarget.dataset.action;
+      handleDevOpsAction(action);
+    });
+  });
+
+  updateHeroButtonState();
+  injectAllLandingStyles();
+}
+
+function handleDeveloperAction(action) {
+  switch(action) {
+    case 'track-stories':
+      const storiesBtn = document.querySelector('[data-tab="stories"]');
+      if (storiesBtn) storiesBtn.click();
+      break;
+    case 'component-history':
+      toast('Component history feature coming soon');
+      break;
+    case 'compare-diff':
+      toast('Comparison tool coming soon');
+      break;
+    case 'validate-production':
+      const enforcementBtn = document.querySelector('[data-tab="enforcement"]');
+      if (enforcementBtn) enforcementBtn.click();
+      break;
+  }
+}
+
+function handleDevOpsAction(action) {
+  switch(action) {
+    case 'release-planning':
+      const planBtn = document.querySelector('[data-tab="plan"]');
+      if (planBtn) planBtn.click();
+      break;
+    case 'deployment-monitor':
+      toast('Deployment monitor coming soon');
+      break;
+    case 'compliance-check':
+      const decisionsBtn = document.querySelector('[data-tab="decisions"]');
+      if (decisionsBtn) decisionsBtn.click();
+      break;
+    case 'rollback-plan':
+      toast('Rollback planning coming soon');
+      break;
+  }
+}
+
+
+
 
 /* ---------- role switcher ---------- */
 function mountRoleSwitcher() {
@@ -60,8 +393,12 @@ function mountRoleSwitcher() {
     devBtn.classList.toggle('btn-primary', STATE.role === 'Developer');
     opsBtn.classList.toggle('btn-primary', STATE.role === 'DevOps');
     localStorage.setItem('ui.role', STATE.role);
+    
+    // Update tab visibility and re-render overview
+    updateTabVisibility();
     renderOverviewLanding();
   }
+  
   devBtn.addEventListener('click', () => { STATE.role = 'Developer'; sync(); });
   opsBtn.addEventListener('click', () => { STATE.role = 'DevOps'; sync(); });
 
@@ -70,6 +407,652 @@ function mountRoleSwitcher() {
   sync();
 }
 
+function updateTabVisibility() {
+  const tabs = {
+    'overview': true, // Always visible
+    'stories': STATE.role === 'Developer',
+    'conflicts': STATE.role === 'Developer', 
+    'enforcement': STATE.role === 'Developer',
+    'decisions': STATE.role === 'DevOps',
+    'plan': STATE.role === 'DevOps',
+    'reports': true // Always visible
+  };
+
+  Object.keys(tabs).forEach(tab => {
+    const tabBtn = document.querySelector(`[data-tab="${tab}"]`);
+    if (tabBtn) {
+      tabBtn.style.display = tabs[tab] ? 'flex' : 'none';
+    }
+  });
+}
+
+function injectAllLandingStyles() {
+  if (document.querySelector('#all-landing-styles')) return;
+
+  const style = document.createElement('style');
+  style.id = 'all-landing-styles';
+  style.textContent = `
+    /* Base Landing Styles */
+    .landing-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    .hero-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+      margin-bottom: 80px;
+      padding: 40px 0;
+    }
+
+    .hero-content {
+      padding-right: 20px;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .developer-badge {
+      background: linear-gradient(135deg, #0071e3, #0056b3);
+    }
+
+    .devops-badge {
+      background: linear-gradient(135deg, #34C759, #2daa4d);
+    }
+
+    .hero-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin: 0 0 16px;
+      background: linear-gradient(135deg, #1d1d1f, #0071e3);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.2;
+    }
+
+    .hero-subtitle {
+      font-size: 1.125rem;
+      color: #86868b;
+      margin: 0 0 40px;
+      line-height: 1.6;
+    }
+
+    .hero-stats {
+      display: flex;
+      gap: 40px;
+      margin: 40px 0;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #0071e3;
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 0.875rem;
+      color: #86868b;
+      font-weight: 500;
+    }
+
+    .cta-button {
+      background: linear-gradient(135deg, #0071e3, #0056b3);
+      color: white;
+      border: none;
+      padding: 16px 32px;
+      font-size: 1.125rem;
+      font-weight: 600;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 4px 16px rgba(0, 113, 227, 0.3);
+    }
+
+    .cta-button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 113, 227, 0.4);
+    }
+
+    .cta-button:disabled {
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+
+    .button-icon {
+      font-size: 1.25rem;
+    }
+
+    .button-arrow {
+      font-size: 1.125rem;
+      transition: transform 0.3s ease;
+    }
+
+    .cta-button:hover .button-arrow {
+      transform: translateX(4px);
+    }
+
+    .hero-visual {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .visual-card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.1),
+        0 2px 8px rgba(0, 0, 0, 0.08);
+      border: 1px solid #e5e5e7;
+      max-width: 280px;
+      width: 100%;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: flex-start;
+      margin-bottom: 20px;
+    }
+
+    .card-dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .card-dots span {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .card-dots span:nth-child(1) { background: #ff3b30; }
+    .card-dots span:nth-child(2) { background: #ff9500; }
+    .card-dots span:nth-child(3) { background: #34c759; }
+
+    .card-content {
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    .app-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+    }
+
+    .card-text {
+      font-size: 1rem;
+      color: #1d1d1f;
+      font-weight: 600;
+    }
+
+    .features-section {
+      margin-bottom: 60px;
+    }
+
+    .section-title {
+      font-size: 2rem;
+      font-weight: 700;
+      text-align: center;
+      margin: 0 0 40px;
+      color: #1d1d1f;
+    }
+
+    .actions-section {
+      margin-bottom: 60px;
+    }
+
+    .actions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+    }
+
+    .action-card {
+      background: white;
+      border: 1px solid #e5e5e7;
+      border-radius: 16px;
+      padding: 30px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .action-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
+      border-color: #0071e3;
+    }
+
+    .action-icon {
+      font-size: 2.5rem;
+      margin-bottom: 16px;
+    }
+
+    .action-card h3 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0 0 12px;
+      color: #1d1d1f;
+    }
+
+    .action-card p {
+      font-size: 0.875rem;
+      color: #86868b;
+      line-height: 1.6;
+      margin: 0 0 20px;
+    }
+
+    .action-arrow {
+      color: #0071e3;
+      font-size: 1.25rem;
+      font-weight: 600;
+      transition: transform 0.3s ease;
+    }
+
+    .action-card:hover .action-arrow {
+      transform: translateX(4px);
+    }
+
+    /* Developer Specific Styles */
+    .activity-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .activity-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px;
+      background: white;
+      border: 1px solid #e5e5e7;
+      border-radius: 12px;
+      transition: all 0.3s ease;
+    }
+
+    .activity-item:hover {
+      border-color: #0071e3;
+      transform: translateY(-2px);
+    }
+
+    .activity-icon {
+      font-size: 1.5rem;
+    }
+
+    .activity-content {
+      flex: 1;
+    }
+
+    .activity-content h4 {
+      margin: 0 0 4px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1d1d1f;
+    }
+
+    .activity-content p {
+      margin: 0;
+      font-size: 0.875rem;
+      color: #86868b;
+    }
+
+    .activity-status {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .activity-status.success {
+      background: #d1f4e0;
+      color: #2daa4d;
+    }
+
+    .activity-status.warning {
+      background: #ffd4a3;
+      color: #e68500;
+    }
+
+    .activity-status.info {
+      background: #c7e2ff;
+      color: #0071e3;
+    }
+
+    /* DevOps Specific Styles */
+    .pipeline-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .pipeline-stage {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px;
+      background: white;
+      border: 1px solid #e5e5e7;
+      border-radius: 12px;
+      transition: all 0.3s ease;
+    }
+
+    .pipeline-stage.active {
+      background: #e8f0ff;
+      border-color: #0071e3;
+    }
+
+    .pipeline-stage:hover {
+      transform: translateY(-2px);
+    }
+
+    .stage-number {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #0071e3;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    .pipeline-stage.active .stage-number {
+      background: #0056b3;
+    }
+
+    .stage-info h4 {
+      margin: 0 0 4px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1d1d1f;
+    }
+
+    .stage-info p {
+      margin: 0;
+      font-size: 0.875rem;
+      color: #86868b;
+    }
+
+    /* Dark theme support */
+    [data-theme="midnight"] .hero-title {
+      background: linear-gradient(135deg, #ffffff, #90cdf4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    [data-theme="midnight"] .visual-card,
+    [data-theme="midnight"] .action-card,
+    [data-theme="midnight"] .activity-item,
+    [data-theme="midnight"] .pipeline-stage {
+      background: #2d2d2f;
+      border-color: #424245;
+    }
+
+    [data-theme="midnight"] .card-text,
+    [data-theme="midnight"] .action-card h3,
+    [data-theme="midnight"] .activity-content h4,
+    [data-theme="midnight"] .stage-info h4,
+    [data-theme="midnight"] .section-title {
+      color: white;
+    }
+
+    [data-theme="midnight"] .pipeline-stage.active {
+      background: #1e3a5f;
+      border-color: #0071e3;
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+      .landing-container {
+        padding: 20px 16px;
+      }
+
+      .hero-section {
+        grid-template-columns: 1fr;
+        gap: 40px;
+        margin-bottom: 60px;
+        padding: 20px 0;
+      }
+
+      .hero-content {
+        padding-right: 0;
+        text-align: center;
+      }
+
+      .hero-title {
+        font-size: 2rem;
+      }
+
+      .hero-stats {
+        justify-content: center;
+        gap: 30px;
+      }
+
+      .actions-grid,
+      .pipeline-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .section-title {
+        font-size: 1.75rem;
+        margin-bottom: 30px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .hero-stats {
+        gap: 20px;
+      }
+
+      .stat-value {
+        font-size: 1.25rem;
+      }
+
+      .cta-button {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+
+/* ---------- Role-Based Styles ---------- */
+function injectRoleBasedStyles() {
+  if (document.querySelector('#role-based-styles')) return;
+
+  const style = document.createElement('style');
+  style.id = 'role-based-styles';
+  style.textContent = `
+    /* Role-specific badges */
+    .developer-badge {
+      background: linear-gradient(135deg, #0071e3, #0056b3);
+    }
+
+    .devops-badge {
+      background: linear-gradient(135deg, #34C759, #2daa4d);
+    }
+
+    /* Activity Grid for Developer */
+    .activity-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .activity-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px;
+      background: white;
+      border: 1px solid #e5e5e7;
+      border-radius: 12px;
+      transition: all 0.3s ease;
+    }
+
+    .activity-item:hover {
+      border-color: #0071e3;
+      transform: translateY(-2px);
+    }
+
+    .activity-icon {
+      font-size: 1.5rem;
+    }
+
+    .activity-content {
+      flex: 1;
+    }
+
+    .activity-content h4 {
+      margin: 0 0 4px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1d1d1f;
+    }
+
+    .activity-content p {
+      margin: 0;
+      font-size: 0.875rem;
+      color: #86868b;
+    }
+
+    .activity-status {
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .activity-status.success {
+      background: #d1f4e0;
+      color: #2daa4d;
+    }
+
+    .activity-status.warning {
+      background: #ffd4a3;
+      color: #e68500;
+    }
+
+    .activity-status.info {
+      background: #c7e2ff;
+      color: #0071e3;
+    }
+
+    /* Pipeline Grid for DevOps */
+    .pipeline-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .pipeline-stage {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 20px;
+      background: white;
+      border: 1px solid #e5e5e7;
+      border-radius: 12px;
+      transition: all 0.3s ease;
+    }
+
+    .pipeline-stage.active {
+      background: #e8f0ff;
+      border-color: #0071e3;
+    }
+
+    .pipeline-stage:hover {
+      transform: translateY(-2px);
+    }
+
+    .stage-number {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: #0071e3;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    .pipeline-stage.active .stage-number {
+      background: #0056b3;
+    }
+
+    .stage-info h4 {
+      margin: 0 0 4px;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #1d1d1f;
+    }
+
+    .stage-info p {
+      margin: 0;
+      font-size: 0.875rem;
+      color: #86868b;
+    }
+
+    /* Dark theme support */
+    [data-theme="midnight"] .activity-item,
+    [data-theme="midnight"] .pipeline-stage {
+      background: #2d2d2f;
+      border-color: #424245;
+    }
+
+    [data-theme="midnight"] .activity-content h4,
+    [data-theme="midnight"] .stage-info h4 {
+      color: white;
+    }
+
+    [data-theme="midnight"] .pipeline-stage.active {
+      background: #1e3a5f;
+      border-color: #0071e3;
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+      .pipeline-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .activity-item {
+        padding: 16px;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
 /* ---------- FIXED: theme switcher ---------- */
 function mountThemeSwitcher() {
   const header = $('#app-header .env');
@@ -629,7 +1612,7 @@ function updateSourceBadge() {
 
 /* ---------- IMPROVED: Overview landing with direct modal integration ---------- */
 
-function renderOverviewLanding() {
+function renderOverviewLandingtest() {
   const panel = $('#tab-overview');
   if (!panel) return;
 
