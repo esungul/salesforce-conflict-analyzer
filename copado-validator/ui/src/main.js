@@ -2,7 +2,7 @@
 import { CONFIG, applyHeaderBadges, debugLog, API_URL } from './config.js';
 import { openAnalyzeOnlineFlow } from './controllers/analyzeOnline.js';
 
-// NEW: Import enhanced tab renderers
+// Import enhanced tab renderers
 import { renderOverviewTab } from './ui/tabs/overview.js';
 import { renderStoriesTab } from './ui/tabs/stories-enhanced.js';
 import { renderConflictsTab } from './ui/tabs/conflicts-enhanced.js';
@@ -10,7 +10,6 @@ import { renderEnforcementTab } from './ui/tabs/enforcement-enhanced.js';
 import { createAnalyzeModal } from './ui/components/analyzeModal.js';
 import { renderDeploymentPlanTab } from './ui/tabs/deployment-plan.js';
 import { renderReportsTab } from './ui/tabs/reports-enhanced.js';
-
 
 /* ---------- tiny DOM helpers ---------- */
 const $ = (s, r=document) => r.querySelector(s);
@@ -40,10 +39,11 @@ document.addEventListener('DOMContentLoaded', () => {
   applyHeaderBadges();
   mountRoleSwitcher();
   mountThemeSwitcher();
-  wireAnalyzeMenuEnhanced();  // UPDATED
-  wireTabsEnhanced();         // UPDATED
+  wireAnalyzeMenuEnhanced();
+  wireTabsEnhanced();
   wireAnalysisEvents();
   renderOverviewLanding();
+  injectEnhancedProfessionalStyles();
   debugLog('boot', CONFIG);
 });
 
@@ -70,7 +70,7 @@ function mountRoleSwitcher() {
   sync();
 }
 
-/* ---------- theme switcher ---------- */
+/* ---------- FIXED: theme switcher ---------- */
 function mountThemeSwitcher() {
   const header = $('#app-header .env');
   if (!header || $('#theme-switch')) return;
@@ -81,24 +81,29 @@ function mountThemeSwitcher() {
     el('button', { className: 'btn role-btn', type: 'button', textContent: 'Quartz' })
   ];
 
-  const apply = (name) => {
-    const value = name === 'Quartz' ? 'quartz' : '';
-    document.documentElement.dataset.theme = value;
-    localStorage.setItem('ui.theme', value || 'midnight');
-    btns.forEach(b => b.classList.toggle('btn-primary', b.textContent === name));
+  const applyTheme = (themeName) => {
+    const isQuartz = themeName === 'Quartz';
+    document.documentElement.setAttribute('data-theme', isQuartz ? 'quartz' : 'midnight');
+    localStorage.setItem('ui.theme', isQuartz ? 'quartz' : 'midnight');
+    
+    // Update button states
+    btns.forEach(btn => {
+      btn.classList.toggle('btn-primary', btn.textContent === themeName);
+    });
   };
 
-  btns[0].addEventListener('click', () => apply('Midnight'));
-  btns[1].addEventListener('click', () => apply('Quartz'));
+  btns[0].addEventListener('click', () => applyTheme('Midnight'));
+  btns[1].addEventListener('click', () => applyTheme('Quartz'));
 
   wrap.append(...btns);
   header.parentElement.insertBefore(wrap, header.nextSibling);
 
-  const saved = localStorage.getItem('ui.theme');
-  apply(saved === 'quartz' ? 'Quartz' : 'Midnight');
+  // Initialize theme from localStorage or default to Midnight
+  const savedTheme = localStorage.getItem('ui.theme');
+  applyTheme(savedTheme === 'quartz' ? 'Quartz' : 'Midnight');
 }
 
-/* ---------- ENHANCED: analyze menu ---------- */
+/* ---------- FIXED: analyze menu with proper modal ---------- */
 function wireAnalyzeMenuEnhanced() {
   const trigger = $('#analyze-trigger');
   const menu = $('#analyze-menu');
@@ -112,9 +117,9 @@ function wireAnalyzeMenuEnhanced() {
     }
     
     e.stopPropagation();
-    const open = menu.getAttribute('aria-hidden') === 'false';
-    menu.setAttribute('aria-hidden', open ? 'true' : 'false');
-    trigger.setAttribute('aria-expanded', open ? 'false' : 'true');
+    const isOpen = menu.getAttribute('aria-hidden') === 'false';
+    menu.setAttribute('aria-hidden', isOpen ? 'true' : 'false');
+    trigger.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
   });
 
   document.addEventListener('click', () => {
@@ -122,75 +127,388 @@ function wireAnalyzeMenuEnhanced() {
     trigger.setAttribute('aria-expanded', 'false');
   });
 
-  // CSV Analysis
+  // CSV Analysis (keep disabled for now)
   const csvBtn = menu.querySelector('[data-action="analyze-csv"]');
   if (csvBtn) {
-    csvBtn.addEventListener('click', async () => {
+    csvBtn.addEventListener('click', () => {
       menu.setAttribute('aria-hidden', 'true');
-      try {
-        await openAnalyzeCsvFlow();
-      } catch (err) {
-        console.error('CSV analysis error:', err);
-        toast(`Error: ${err.message}`);
-      }
+      toast('CSV analysis is not available yet');
     });
   }
 
-  // Online Analysis - NEW: Show Modal
-const onlineBtn = menu.querySelector('[data-action="analyze-online"]');
-if (onlineBtn) {
-  onlineBtn.addEventListener('click', async (e) => {
-    menu.setAttribute('aria-hidden', 'true');
-    
-    const input = prompt('Enter story names (comma-separated):\nExample: US-0033635, US-0033636');
-    if (!input) return;
-    
-    try {
-      STATE.isLocked = true;
-      updateAnalyzeButton();
-      toast('Analyzing...');
-      
-      const stories = input.split(',').map(s => s.trim()).filter(Boolean);
-      
-      const result = await openAnalyzeOnlineFlow({
-        userStoryNames: stories,
-        releaseNames: undefined
-      });
-      
-      // MAP API response to expected structure
-      ANALYSIS = {
-        summary: result.ANALYSIS.summary,
-        all_stories: result.ANALYSIS.safe || [],
-        component_conflicts: result.ANALYSIS.conflicts || [],
-        blocked_stories: result.ANALYSIS.blocked || []
-      };
+  // FIXED: Online Analysis with proper modal
+  const onlineBtn = menu.querySelector('[data-action="analyze-online"]');
+  if (onlineBtn) {
+    onlineBtn.addEventListener('click', (e) => {
+      menu.setAttribute('aria-hidden', 'true');
+      openAnalyzeModal();
+    });
+  }
+}
 
-      STORIES_DATA = result.STORIES_DATA;
-      CONFLICTS_DATA = result.ANALYSIS.conflicts || [];
-      STATE.source = 'Online';
-      updateSourceBadge();
+/* ---------- NEW: Centralized function to open analyze modal ---------- */
+// In main.js - update the openAnalyzeModal function
+
+// In main.js - ensure this function is clean
+
+/* ---------- Update the analysis completion flow ---------- */
+function openAnalyzeModal() {
+  console.log('Opening analyze modal...');
+  
+  createAnalyzeModal({
+    onSubmit: async (data) => {
+      console.log('Starting analysis with:', data);
       
-      console.log('Mapped ANALYSIS:', ANALYSIS);
-      toast('Analysis complete!');
-      
-      const overviewBtn = document.querySelector('[data-tab="overview"]');
-      if (overviewBtn) overviewBtn.click();
-      
-    } catch (err) {
-      console.error('Error:', err);
-      toast(`Error: ${err.message}`);
-    } finally {
-      STATE.isLocked = false;
-      updateAnalyzeButton();
+      try {
+        STATE.isLocked = true;
+        updateAnalyzeButton();
+        
+        // Show initial loading spinner
+        showLoadingSpinner(true, 'Starting analysis...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        showLoadingSpinner(true, 'Connecting to Salesforce...');
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        showLoadingSpinner(true, 'Analyzing user stories...');
+        
+        const result = await openAnalyzeOnlineFlow({
+          userStoryNames: data.userStoryNames,
+          releaseNames: data.releaseNames
+        });
+        
+        // Show completion state
+        showLoadingSpinner(true, 'Analysis complete! Generating report...');
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        // Process the results
+        ANALYSIS = {
+          summary: result.ANALYSIS.summary,
+          all_stories: result.ANALYSIS.safe || [],
+          component_conflicts: result.ANALYSIS.conflicts || [],
+          blocked_stories: result.ANALYSIS.blocked || []
+        };
+
+        STORIES_DATA = result.STORIES_DATA;
+        CONFLICTS_DATA = result.ANALYSIS.conflicts || [];
+        STATE.source = 'Online';
+        updateSourceBadge();
+        
+        console.log('Analysis complete:', ANALYSIS);
+        
+        // Show success state briefly then auto-close
+        showLoadingSpinner(true, 'Analysis Complete!');
+        
+        // Add success styling
+        const spinner = document.getElementById('global-loading-spinner');
+        if (spinner) {
+          const container = spinner.querySelector('.spinner-container');
+          const spinnerEl = spinner.querySelector('.spinner');
+          const progress = spinner.querySelector('.spinner-progress');
+          
+          if (container) container.classList.add('spinner-success');
+          if (spinnerEl) {
+            spinnerEl.style.border = '4px solid #34C759';
+            spinnerEl.style.animation = 'none';
+          }
+          if (progress) {
+            progress.style.background = '#34C759';
+            progress.style.animation = 'none';
+          }
+        }
+        
+        // Auto-close after success message
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        showLoadingSpinner(false);
+        
+        // Switch to overview tab to show results
+        const overviewBtn = document.querySelector('[data-tab="overview"]');
+        if (overviewBtn) overviewBtn.click();
+        
+        // Show a brief success toast
+        toast('Analysis completed successfully!', 2000);
+        
+      } catch (err) {
+        console.error('Analysis error:', err);
+        
+        // Show error state
+        const spinner = document.getElementById('global-loading-spinner');
+        if (spinner) {
+          const container = spinner.querySelector('.spinner-container');
+          const spinnerEl = spinner.querySelector('.spinner');
+          const progress = spinner.querySelector('.spinner-progress');
+          
+          if (container) container.classList.add('spinner-error');
+          if (spinnerEl) {
+            spinnerEl.style.border = '4px solid #FF3B30';
+            spinnerEl.style.animation = 'none';
+          }
+          if (progress) {
+            progress.style.background = '#FF3B30';
+            progress.style.animation = 'none';
+          }
+        }
+        
+        showLoadingSpinner(true, `Error: ${err.message}`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        showLoadingSpinner(false);
+        
+        toast(`Analysis failed: ${err.message}`);
+        
+      } finally {
+        STATE.isLocked = false;
+        updateAnalyzeButton();
+      }
+    },
+    onCancel: () => {
+      console.log('User cancelled analysis');
     }
   });
 }
 
+
+async function startAnalysis(data) {
+  try {
+    STATE.isLocked = true;
+    updateAnalyzeButton();
+    showLoadingSpinner(true);
+    toast('Analyzing stories...');
+    
+    const result = await openAnalyzeOnlineFlow({
+      userStoryNames: data.userStoryNames,
+      releaseNames: data.releaseNames
+    });
+    
+    // Process results...
+    ANALYSIS = {
+      summary: result.ANALYSIS.summary,
+      all_stories: result.ANALYSIS.safe || [],
+      component_conflicts: result.ANALYSIS.conflicts || [],
+      blocked_stories: result.ANALYSIS.blocked || []
+    };
+
+    STORIES_DATA = result.STORIES_DATA;
+    CONFLICTS_DATA = result.ANALYSIS.conflicts || [];
+    STATE.source = 'Online';
+    updateSourceBadge();
+    
+    console.log('Analysis complete:', ANALYSIS);
+    toast('Analysis complete!');
+    
+    const overviewBtn = document.querySelector('[data-tab="overview"]');
+    if (overviewBtn) overviewBtn.click();
+    
+  } catch (err) {
+    console.error('Error:', err);
+    toast(`Error: ${err.message}`);
+  } finally {
+    STATE.isLocked = false;
+    updateAnalyzeButton();
+    showLoadingSpinner(false);
+  }
 }
 
-/* ---------- ENHANCED: wire tabs ---------- */
-// In your wireTabsEnhanced() function, add the reports tab:
+function showLoadingSpinner(show, message = 'Analyzing deployment data...') {
+  let spinner = document.getElementById('global-loading-spinner');
+  
+  if (show && !spinner) {
+    spinner = document.createElement('div');
+    spinner.id = 'global-loading-spinner';
+    spinner.innerHTML = `
+      <div class="spinner-overlay">
+        <div class="spinner-container">
+          <div class="spinner"></div>
+          <p class="spinner-message">${message}</p>
+          <div class="spinner-progress"></div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(spinner);
+    
+    // Ensure spinner styles are injected
+    if (!document.querySelector('#spinner-styles')) {
+      injectSpinnerStyles();
+    }
+  } else if (show && spinner) {
+    // Update existing spinner message and reset to loading state
+    const messageEl = spinner.querySelector('.spinner-message');
+    const container = spinner.querySelector('.spinner-container');
+    const spinnerEl = spinner.querySelector('.spinner');
+    const progress = spinner.querySelector('.spinner-progress');
+    
+    if (messageEl) messageEl.textContent = message;
+    if (container) {
+      container.classList.remove('spinner-success', 'spinner-error');
+    }
+    if (spinnerEl) {
+      spinnerEl.style.border = '4px solid #f3f3f3';
+      spinnerEl.style.borderTop = '4px solid #0071e3';
+      spinnerEl.style.animation = 'spin 1s linear infinite';
+    }
+    if (progress) {
+      progress.style.background = '#f3f3f3';
+      progress.style.animation = 'progress 2s infinite ease-in-out';
+    }
+  } else if (!show && spinner) {
+    // Fade out animation before removing
+    spinner.style.opacity = '0';
+    spinner.style.transition = 'opacity 0.3s ease';
+    setTimeout(() => {
+      if (spinner && spinner.parentNode) {
+        spinner.parentNode.removeChild(spinner);
+      }
+    }, 300);
+  }
+}
 
+function injectSpinnerStyles() {
+  const style = document.createElement('style');
+  style.id = 'spinner-styles';
+  style.textContent = `
+    .spinner-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+      backdrop-filter: blur(8px);
+    }
+    
+    .spinner-container {
+      background: white;
+      padding: 40px;
+      border-radius: 16px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      min-width: 300px;
+      animation: scaleIn 0.3s ease;
+    }
+
+    @keyframes scaleIn {
+      from { transform: scale(0.9); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #0071e3;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .spinner-message {
+      margin: 0 0 15px;
+      color: #1d1d1f;
+      font-size: 16px;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+    
+    .spinner-progress {
+      height: 4px;
+      background: #f3f3f3;
+      border-radius: 2px;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .spinner-progress::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: #0071e3;
+      animation: progress 2s infinite ease-in-out;
+    }
+    
+    @keyframes progress {
+      0% { left: -100%; }
+      100% { left: 100%; }
+    }
+
+    /* Success state */
+    .spinner-success .spinner {
+      border: 4px solid #34C759;
+      border-top: 4px solid #34C759;
+      animation: none;
+      position: relative;
+    }
+    
+    .spinner-success .spinner::before {
+      content: '✓';
+      display: block;
+      color: #34C759;
+      font-size: 24px;
+      line-height: 42px;
+      text-align: center;
+    }
+    
+    .spinner-success .spinner-progress {
+      background: #34C759;
+    }
+    
+    .spinner-success .spinner-progress::after {
+      display: none;
+    }
+
+    /* Error state */
+    .spinner-error .spinner {
+      border: 4px solid #FF3B30;
+      border-top: 4px solid #FF3B30;
+      animation: none;
+      position: relative;
+    }
+    
+    .spinner-error .spinner::before {
+      content: '✕';
+      display: block;
+      color: #FF3B30;
+      font-size: 24px;
+      line-height: 42px;
+      text-align: center;
+    }
+    
+    .spinner-error .spinner-progress {
+      background: #FF3B30;
+    }
+    
+    .spinner-error .spinner-progress::after {
+      display: none;
+    }
+
+    /* Dark theme support */
+    [data-theme="midnight"] .spinner-container {
+      background: #2d2d2f;
+    }
+    
+    [data-theme="midnight"] .spinner-message {
+      color: white;
+    }
+
+    /* Fade out animation */
+    .spinner-overlay.fade-out {
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+  `;
+  document.head.appendChild(style);
+}
+/* ---------- wire tabs ---------- */
 function wireTabsEnhanced() {
   const buttons = $$('.tab-button');
   const panels = $$('.tab-panel');
@@ -239,7 +557,6 @@ function wireTabsEnhanced() {
           if (ANALYSIS) renderDeploymentPlanTab(STORIES_DATA || {}, ENFORCEMENT_RESULTS || [], CONFLICTS_DATA || {});
           else renderOverviewLanding();
         }
-        // 🆕 ADD THIS SECTION FOR REPORTS TAB
         if (tab === 'reports') {
           if (ANALYSIS) {
             console.log('ANALYSIS for reports:', ANALYSIS);
@@ -257,7 +574,6 @@ function wireTabsEnhanced() {
 }
 
 
-/* ---------- NEW: Helper - Toast Notification ---------- */
 export function toast(message, duration = 3000) {
   const existing = document.querySelector('.toast');
   if (existing) existing.remove();
@@ -268,14 +584,18 @@ export function toast(message, duration = 3000) {
   toastEl.style.cssText = `
     position: fixed;
     bottom: 20px;
-    right: 20px;
+    left: 50%;
+    transform: translateX(-50%);
     background: #1d1d1f;
     color: white;
-    padding: 12px 20px;
+    padding: 12px 24px;
     border-radius: 8px;
-    font-size: 13px;
+    font-size: 14px;
     z-index: 999;
     animation: slideInUp 0.3s ease;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
   `;
 
   document.body.appendChild(toastEl);
@@ -286,7 +606,7 @@ export function toast(message, duration = 3000) {
   }, duration);
 }
 
-/* ---------- NEW: Helper - Update Analyze Button State ---------- */
+/* ---------- Helper - Update Analyze Button State ---------- */
 export function updateAnalyzeButton() {
   const btn = $('#analyze-trigger');
   if (!btn) return;
@@ -305,6 +625,635 @@ export function updateAnalyzeButton() {
 function updateSourceBadge() {
   const sourceEl = document.getElementById('source-badge');
   if (sourceEl) sourceEl.textContent = `Source: ${STATE.source}`;
+}
+
+/* ---------- IMPROVED: Overview landing with direct modal integration ---------- */
+
+function renderOverviewLanding() {
+  const panel = $('#tab-overview');
+  if (!panel) return;
+
+  panel.innerHTML = `
+    <div class="landing-container">
+      <!-- Hero Section -->
+      <div class="hero-section">
+        <div class="hero-content">
+          <div class="hero-badge">Salesforce DevOps</div>
+          <h1 class="hero-title">Deployment Planner</h1>
+          <p class="hero-subtitle">Intelligent analysis for conflict-free Salesforce deployments</p>
+          
+          <div class="hero-stats">
+            <div class="stat">
+              <div class="stat-value">Zero</div>
+              <div class="stat-label">Deployment Conflicts</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value">100%</div>
+              <div class="stat-label">Compliance</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value">24/7</div>
+              <div class="stat-label">Monitoring</div>
+            </div>
+          </div>
+
+          <button id="hero-analyze-btn" class="cta-button">
+            <span class="button-icon">📊</span>
+            Start Analysis
+            <span class="button-arrow">→</span>
+          </button>
+        </div>
+        
+        <div class="hero-visual">
+          <div class="visual-card">
+            <div class="card-header">
+              <div class="card-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+            <div class="card-content">
+              <div class="app-icon">⚡</div>
+              <div class="card-text">Ready to Analyze</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Features Grid -->
+      <div class="features-section">
+        <h2 class="section-title">Why Choose Deployment Planner?</h2>
+        <div class="features-grid">
+          <div class="feature">
+            <div class="feature-icon">🔍</div>
+            <h3>Conflict Detection</h3>
+            <p>Identify component conflicts before they impact your deployment</p>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">🛡️</div>
+            <h3>Safety First</h3>
+            <p>Comprehensive checks ensure deployment safety and compliance</p>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">🚀</div>
+            <h3>Fast Analysis</h3>
+            <p>Quick analysis of user stories and releases in seconds</p>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">📈</div>
+            <h3>Smart Reporting</h3>
+            <p>Detailed reports for stakeholders and deployment teams</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="actions-section">
+        <h2 class="section-title">Get Started</h2>
+        <div class="actions-grid">
+          <div class="action-card" data-action="analyze-stories">
+            <div class="action-icon">📝</div>
+            <h3>Analyze Stories</h3>
+            <p>Check user stories for deployment readiness</p>
+            <div class="action-arrow">→</div>
+          </div>
+          <div class="action-card" data-action="analyze-release">
+            <div class="action-icon">🏷️</div>
+            <h3>Analyze Release</h3>
+            <p>Batch analysis by release name</p>
+            <div class="action-arrow">→</div>
+          </div>
+          <div class="action-card" data-action="view-reports">
+            <div class="action-icon">📊</div>
+            <h3>View Reports</h3>
+            <p>Access deployment analytics</p>
+            <div class="action-arrow">→</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Wire up buttons
+  const heroBtn = document.getElementById('hero-analyze-btn');
+  if (heroBtn) {
+    heroBtn.addEventListener('click', () => openAnalyzeModal());
+  }
+
+  const actionCards = panel.querySelectorAll('.action-card');
+  actionCards.forEach(card => {
+    card.addEventListener('click', (e) => {
+      const action = e.currentTarget.dataset.action;
+      switch(action) {
+        case 'analyze-stories':
+        case 'analyze-release':
+          openAnalyzeModal();
+          break;
+        case 'view-reports':
+          const reportsBtn = document.querySelector('[data-tab="reports"]');
+          if (reportsBtn) reportsBtn.click();
+          break;
+      }
+    });
+  });
+
+  updateHeroButtonState();
+  injectCompactLandingStyles();
+}
+
+function injectCompactLandingStyles() {
+  if (document.querySelector('#compact-landing-styles')) return;
+
+  const style = document.createElement('style');
+  style.id = 'compact-landing-styles';
+  style.textContent = `
+    .landing-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    /* Hero Section */
+    .hero-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+      margin-bottom: 80px;
+      padding: 40px 0;
+    }
+
+    .hero-content {
+      padding-right: 20px;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #0071e3, #0056b3);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .hero-title {
+      font-size: 2.5rem;
+      font-weight: 700;
+      margin: 0 0 16px;
+      background: linear-gradient(135deg, #1d1d1f, #0071e3);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1.2;
+    }
+
+    .hero-subtitle {
+      font-size: 1.125rem;
+      color: #86868b;
+      margin: 0 0 40px;
+      line-height: 1.6;
+    }
+
+    .hero-stats {
+      display: flex;
+      gap: 40px;
+      margin: 40px 0;
+    }
+
+    .stat {
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #0071e3;
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-size: 0.875rem;
+      color: #86868b;
+      font-weight: 500;
+    }
+
+    .cta-button {
+      background: linear-gradient(135deg, #0071e3, #0056b3);
+      color: white;
+      border: none;
+      padding: 16px 32px;
+      font-size: 1.125rem;
+      font-weight: 600;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 4px 16px rgba(0, 113, 227, 0.3);
+    }
+
+    .cta-button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 113, 227, 0.4);
+    }
+
+    .cta-button:disabled {
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+
+    .button-icon {
+      font-size: 1.25rem;
+    }
+
+    .button-arrow {
+      font-size: 1.125rem;
+      transition: transform 0.3s ease;
+    }
+
+    .cta-button:hover .button-arrow {
+      transform: translateX(4px);
+    }
+
+    /* Hero Visual */
+    .hero-visual {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .visual-card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 
+        0 8px 32px rgba(0, 0, 0, 0.1),
+        0 2px 8px rgba(0, 0, 0, 0.08);
+      border: 1px solid #e5e5e7;
+      max-width: 280px;
+      width: 100%;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: flex-start;
+      margin-bottom: 20px;
+    }
+
+    .card-dots {
+      display: flex;
+      gap: 6px;
+    }
+
+    .card-dots span {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #d2d2d7;
+    }
+
+    .card-dots span:nth-child(1) { background: #ff3b30; }
+    .card-dots span:nth-child(2) { background: #ff9500; }
+    .card-dots span:nth-child(3) { background: #34c759; }
+
+    .card-content {
+      text-align: center;
+      padding: 20px 0;
+    }
+
+    .app-icon {
+      font-size: 3rem;
+      margin-bottom: 16px;
+      filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+    }
+
+    .card-text {
+      font-size: 1rem;
+      color: #1d1d1f;
+      font-weight: 600;
+    }
+
+    /* Features Section */
+    .features-section {
+      margin-bottom: 80px;
+    }
+
+    .section-title {
+      font-size: 2rem;
+      font-weight: 700;
+      text-align: center;
+      margin: 0 0 50px;
+      color: #1d1d1f;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 30px;
+    }
+
+    .feature {
+      text-align: center;
+      padding: 30px 20px;
+      background: white;
+      border-radius: 16px;
+      border: 1px solid #e5e5e7;
+      transition: all 0.3s ease;
+    }
+
+    .feature:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
+      border-color: #0071e3;
+    }
+
+    .feature-icon {
+      font-size: 2.5rem;
+      margin-bottom: 20px;
+    }
+
+    .feature h3 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0 0 12px;
+      color: #1d1d1f;
+    }
+
+    .feature p {
+      font-size: 0.875rem;
+      color: #86868b;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    /* Actions Section */
+    .actions-section {
+      margin-bottom: 40px;
+    }
+
+    .actions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+    }
+
+    .action-card {
+      background: white;
+      border: 1px solid #e5e5e7;
+      border-radius: 16px;
+      padding: 30px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .action-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
+      border-color: #0071e3;
+    }
+
+    .action-icon {
+      font-size: 2rem;
+      margin-bottom: 16px;
+    }
+
+    .action-card h3 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin: 0 0 8px;
+      color: #1d1d1f;
+    }
+
+    .action-card p {
+      font-size: 0.875rem;
+      color: #86868b;
+      line-height: 1.6;
+      margin: 0 0 20px;
+    }
+
+    .action-arrow {
+      color: #0071e3;
+      font-size: 1.25rem;
+      font-weight: 600;
+      transition: transform 0.3s ease;
+    }
+
+    .action-card:hover .action-arrow {
+      transform: translateX(4px);
+    }
+
+    /* Dark Theme Support */
+    [data-theme="midnight"] .hero-title {
+      background: linear-gradient(135deg, #ffffff, #90cdf4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    [data-theme="midnight"] .hero-subtitle,
+    [data-theme="midnight"] .stat-label,
+    [data-theme="midnight"] .feature p,
+    [data-theme="midnight"] .action-card p {
+      color: #a1a1a6;
+    }
+
+    [data-theme="midnight"] .visual-card,
+    [data-theme="midnight"] .feature,
+    [data-theme="midnight"] .action-card {
+      background: #2d2d2f;
+      border-color: #424245;
+    }
+
+    [data-theme="midnight"] .feature h3,
+    [data-theme="midnight"] .action-card h3,
+    [data-theme="midnight"] .section-title,
+    [data-theme="midnight"] .card-text {
+      color: white;
+    }
+
+    [data-theme="midnight"] .card-dots span {
+      background: #515154;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .landing-container {
+        padding: 20px 16px;
+      }
+
+      .hero-section {
+        grid-template-columns: 1fr;
+        gap: 40px;
+        margin-bottom: 60px;
+        padding: 20px 0;
+      }
+
+      .hero-content {
+        padding-right: 0;
+        text-align: center;
+      }
+
+      .hero-title {
+        font-size: 2rem;
+      }
+
+      .hero-stats {
+        justify-content: center;
+        gap: 30px;
+      }
+
+      .features-grid,
+      .actions-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .section-title {
+        font-size: 1.75rem;
+        margin-bottom: 40px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .hero-stats {
+        gap: 20px;
+      }
+
+      .stat-value {
+        font-size: 1.25rem;
+      }
+
+      .cta-button {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+function updateHeroButtonState() {
+  const heroBtn = document.getElementById('hero-analyze-btn');
+  if (!heroBtn) return;
+
+  if (STATE.isLocked) {
+    heroBtn.disabled = true;
+    heroBtn.innerHTML = '<span class="cta-icon">⏳</span> Analysis in Progress...';
+    heroBtn.style.opacity = '0.7';
+  } else {
+    heroBtn.disabled = false;
+    heroBtn.innerHTML = '<span class="cta-icon">📊</span> Start New Analysis';
+    heroBtn.style.opacity = '1';
+  }
+}
+
+
+function injectOverviewLandingStyles() {
+  if (document.querySelector('#overview-landing-styles')) return;
+  
+  const style = document.createElement('style');
+  style.id = 'overview-landing-styles';
+  style.textContent = `
+    .overview-hero {
+      text-align: center;
+      padding: 60px 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    .hero-icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+    }
+    
+    .overview-hero h1 {
+      font-size: 32px;
+      font-weight: 700;
+      margin: 0 0 12px;
+      background: linear-gradient(135deg, #1d1d1f, #0071e3);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .hero-subtitle {
+      font-size: 18px;
+      color: #86868b;
+      margin: 0 0 40px;
+      line-height: 1.5;
+    }
+    
+    .hero-features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin: 40px 0;
+    }
+    
+    .feature-card {
+      background: #f5f5f7;
+      padding: 24px;
+      border-radius: 12px;
+      transition: all 0.3s ease;
+    }
+    
+    .feature-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    }
+    
+    .feature-icon {
+      font-size: 32px;
+      margin-bottom: 12px;
+    }
+    
+    .feature-card h3 {
+      margin: 0 0 8px;
+      font-size: 16px;
+      font-weight: 600;
+      color: #1d1d1f;
+    }
+    
+    .feature-card p {
+      margin: 0;
+      font-size: 13px;
+      color: #86868b;
+      line-height: 1.4;
+    }
+    
+    .hero-actions {
+      margin-top: 40px;
+    }
+    
+    .btn-large {
+      padding: 14px 28px;
+      font-size: 16px;
+      border-radius: 12px;
+    }
+    
+    .hero-hint {
+      margin: 12px 0 0;
+      font-size: 13px;
+      color: #86868b;
+    }
+    
+    [data-theme="midnight"] .feature-card {
+      background: rgba(255, 255, 255, 0.05);
+    }
+    
+    [data-theme="midnight"] .overview-hero h1 {
+      background: linear-gradient(135deg, #ffffff, #0071e3);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+  `;
+  document.head.appendChild(style);
 }
 
 /* ---------- batch processing ---------- */
@@ -440,78 +1389,26 @@ function wireAnalysisEvents() {
   });
 }
 
-function renderOverviewLanding() {
-  const panel = $('#tab-overview');
-  if (!panel) return;
-
-  // Remove this check - always show landing
-  panel.innerHTML = `
-    <div style="text-align: center; padding: 60px 20px; color: #86868b;">
-      <div style="font-size: 48px; margin-bottom: 20px;">📊</div>
-      <h2 style="margin: 0 0 10px; font-size: 20px; font-weight: 600; color: #1d1d1f;">Welcome to Deployment Planner</h2>
-      <p style="margin: 0; font-size: 14px;">Click "Analyze" to get started with your deployment analysis</p>
-    </div>
-  `;
-}
-
-function injectSafeEnhancements() {
-  const style = document.createElement('style');
-  style.textContent = `
-    /* Safe hover effects only */
-    .story-card:hover,
-    .conflict-card:hover,
-    .enforcement-card:hover,
-    .report-type-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-      transition: all 0.3s ease;
-    }
-    
-    .btn-primary:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 20px rgba(0, 113, 227, 0.4);
-    }
-    
-    .stat-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-    }
-    
-    /* Enhanced status badges */
-    .status-safe {
-      background: linear-gradient(135deg, #34C759, #2daa4d);
-      color: white;
-    }
-    
-    .status-conflict {
-      background: linear-gradient(135deg, #FF9500, #e68500);
-      color: white;
-    }
-    
-    .status-blocked {
-      background: linear-gradient(135deg, #FF3B30, #e63329);
-      color: white;
-    }
-    
-    /* Subtle topbar enhancement */
-    .topbar {
-      backdrop-filter: blur(10px);
-      background: rgba(255, 255, 255, 0.95);
-    }
-  `;
-  document.head.appendChild(style);
-}
-
-// Call it after your existing injectOnce() function
-document.addEventListener('DOMContentLoaded', () => {
-  injectSafeEnhancements();
-});
-
-// Enhanced professional styles - add to your existing injection in main.js
 function injectEnhancedProfessionalStyles() {
   const style = document.createElement('style');
   style.textContent = `
-    /* ===== ENHANCED CARD STYLES ===== */
+    /* Enhanced professional styles with theme support */
+    [data-theme="midnight"] {
+      --bg-primary: #1d1d1f;
+      --bg-secondary: #2d2d2f;
+      --text-primary: #ffffff;
+      --text-secondary: #a1a1a6;
+      --border-color: #424245;
+    }
+    
+    [data-theme="quartz"] {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f5f5f7;
+      --text-primary: #1d1d1f;
+      --text-secondary: #86868b;
+      --border-color: #d2d2d7;
+    }
+
     .story-card,
     .conflict-card,
     .enforcement-card,
@@ -522,6 +1419,9 @@ function injectEnhancedProfessionalStyles() {
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       position: relative;
       border-radius: 12px;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
     }
     
     .story-card:hover,
@@ -529,10 +1429,10 @@ function injectEnhancedProfessionalStyles() {
     .enforcement-card:hover {
       transform: translateY(-3px);
       box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
-      border-color: #d2d2d7;
+      border-color: #0071e3;
     }
     
-    /* ===== ENHANCED STATUS BADGES ===== */
+    /* Enhanced status badges */
     .status-badge {
       position: relative;
       overflow: hidden;
@@ -564,7 +1464,7 @@ function injectEnhancedProfessionalStyles() {
       color: white;
     }
     
-    /* ===== ENHANCED BUTTONS ===== */
+    /* Enhanced buttons */
     .btn {
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       border-radius: 10px;
@@ -576,6 +1476,7 @@ function injectEnhancedProfessionalStyles() {
     .btn-primary {
       background: linear-gradient(135deg, #0071e3, #0056b3);
       box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
+      color: white;
     }
     
     .btn-primary:hover:not(:disabled) {
@@ -583,229 +1484,38 @@ function injectEnhancedProfessionalStyles() {
       box-shadow: 0 8px 24px rgba(0, 113, 227, 0.4);
     }
     
-    .btn-secondary:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    }
-    
-    /* ===== ENHANCED STATS & METRICS ===== */
-    .stat-card {
-      transition: all 0.3s ease;
-      border-radius: 12px;
-    }
-    
-    .stat-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
-    }
-    
-    .stat-value {
-      font-weight: 700;
-      background: linear-gradient(135deg, #1d1d1f, #434346);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    
-    /* ===== ENHANCED FILTER BAR ===== */
-    .filter-bar {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-      border-radius: 12px;
-      border: 1px solid rgba(255, 255, 255, 0.8);
-    }
-    
-    /* ===== ENHANCED TOPBAR ===== */
+    /* Enhanced topbar */
     .topbar {
       backdrop-filter: blur(20px);
       background: rgba(255, 255, 255, 0.92);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.8);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    }
+    
+    [data-theme="midnight"] .topbar {
+      background: rgba(29, 29, 31, 0.92);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     }
     
     .brand {
       font-weight: 700;
-      background: linear-gradient(135deg, #1d1d1f, #434346);
+      background: linear-gradient(135deg, #1d1d1f, #0071e3);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
     
-    /* ===== ENHANCED REPORT CARDS ===== */
-    .report-type-card {
-      transition: all 0.3s ease;
-      cursor: pointer;
-      border-radius: 12px;
-    }
-    
-    .report-type-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.1);
-      border-color: #0071e3;
-      background: #f8f9fa;
-    }
-    
-    .report-type-card.selected {
-      border-color: #0071e3;
-      background: #e8f0ff;
-      box-shadow: 0 8px 24px rgba(0, 113, 227, 0.15);
-    }
-    
-    /* ===== ENHANCED COMPONENT ITEMS ===== */
-    .component-item {
-      transition: all 0.3s ease;
-      border-radius: 10px;
-    }
-    
-    .component-item:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-    }
-    
-    .component-item.has-old-commit {
-      border-left: 4px solid #FF3B30;
-      background: #fff3f3;
-    }
-    
-    /* ===== ENHANCED TIMELINE ===== */
-    .timeline-marker {
-      box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
-    }
-    
-    .conflicting-story .timeline-marker {
-      box-shadow: 0 0 0 3px rgba(255, 59, 48, 0.2);
-    }
-    
-    .current-story .timeline-marker {
-      box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
-    }
-    
-    .production-story .timeline-marker {
-      box-shadow: 0 0 0 3px rgba(52, 199, 89, 0.2);
-    }
-    
-    /* ===== ENHANCED TYPOGRAPHY ===== */
-    .section-header h2 {
-      background: linear-gradient(135deg, #1d1d1f, #434346);
+    [data-theme="midnight"] .brand {
+      background: linear-gradient(135deg, #ffffff, #0071e3);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
-      font-weight: 700;
-    }
-    
-    .story-title,
-    .conflict-story-title,
-    .enforcement-title {
-      font-weight: 600;
-      letter-spacing: -0.1px;
-    }
-    
-    /* ===== ENHANCED EMPTY STATES ===== */
-    .empty-card {
-      border-radius: 16px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
-    }
-    
-    .empty-icon {
-      opacity: 0.9;
-      filter: grayscale(0.1);
-    }
-    
-    /* ===== SUBTLE LOADING EFFECTS ===== */
-    .loading-state {
-      background: linear-gradient(90deg, #f5f5f7 25%, #e8e8ed 50%, #f5f5f7 75%);
-      background-size: 200% 100%;
-      animation: shimmer 2s infinite;
-      border-radius: 8px;
-    }
-    
-    @keyframes shimmer {
-      0% { background-position: -200% 0; }
-      100% { background-position: 200% 0; }
-    }
-    
-    /* ===== ENHANCED TAB NAVIGATION ===== */
-    .tab-button {
-      transition: all 0.3s ease;
-      position: relative;
-    }
-    
-    .tab-button:hover {
-      background: rgba(0, 113, 227, 0.04);
-    }
-    
-    .tab-button[aria-selected="true"] {
-      font-weight: 600;
-    }
-    
-    /* ===== RESPONSIVE ENHANCEMENTS ===== */
-    @media (max-width: 768px) {
-      .story-card:hover,
-      .conflict-card:hover,
-      .enforcement-card:hover {
-        transform: translateY(-1px);
-      }
-      
-      .btn-primary:hover:not(:disabled) {
-        transform: translateY(-1px);
-      }
     }
   `;
   
-  // Remove any previous enhanced styles to avoid duplicates
   const existingStyle = document.getElementById('enhanced-professional-styles');
-  if (existingStyle) {
-    existingStyle.remove();
-  }
+  if (existingStyle) existingStyle.remove();
   
   style.id = 'enhanced-professional-styles';
-  document.head.appendChild(style);
-}
-
-// Call this function in your DOMContentLoaded
-document.addEventListener('DOMContentLoaded', () => {
-  injectEnhancedProfessionalStyles();
-});
-
-// Micro-interactions for premium feel
-function injectMicroInteractions() {
-  const style = document.createElement('style');
-  style.textContent = `
-    /* Subtle pulse animation for important elements */
-    @keyframes subtle-pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.8; }
-    }
-    
-    .status-badge {
-      animation: subtle-pulse 3s ease-in-out infinite;
-    }
-    
-    /* Ripple effect for buttons */
-    .btn-primary {
-      position: relative;
-      overflow: hidden;
-    }
-    
-    .btn-primary:active::after {
-      content: '';
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      width: 0;
-      height: 0;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.5);
-      transform: translate(-50%, -50%);
-      animation: ripple 0.6s ease-out;
-    }
-    
-    @keyframes ripple {
-      to {
-        width: 200px;
-        height: 200px;
-        opacity: 0;
-      }
-    }
-  `;
   document.head.appendChild(style);
 }
 
