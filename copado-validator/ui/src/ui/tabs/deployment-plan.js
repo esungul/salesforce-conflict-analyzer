@@ -27,41 +27,106 @@ export function renderDeploymentPlanTab(analysis = {}, enforcementResults = [], 
   injectPlanCss();
 }
 
-/* ─────────────── Plan Generation ─────────────── */
+/* ─────────────────────────── Plan Generation ─────────────────────────── */
 
 function generateDeploymentPlan(analysis, enforcementResults, conflictsData) {
   const allStories = analysis?.all_stories || [];
   
-  // Separate stories
-  const behindProd = enforcementResults.filter(r => r.status === 'BEHIND_PROD');
-  const conflicted = Object.keys(conflictsData || {}).length > 0;
+  debugLog('plan:generate', {
+    totalStories: allStories.length,
+    enforcementResults: enforcementResults.length,
+    conflictsCount: Object.keys(conflictsData || {}).length
+  });
   
+  // ===== DATA DIAGNOSTICS =====
+  debugLog('plan:all-stories', allStories.map(s => ({
+    id: s.id || s.key,
+    developer: s.developer || s.created_by || 'Unknown',
+    commit_date: s.commit_date || s.lastModifiedDate || 'Unknown',
+    prod_date: s.prod_commit_date || s.production_date || 'Unknown',
+    components: (s.components || []).length
+  })));
+  
+  // STEP 1: Identify stories BEHIND_PROD (exclude these from deployment)
+  const behindProd = enforcementResults.filter(r => r.status === 'BEHIND_PROD');
+  debugLog('plan:behind', { count: behindProd.length, stories: behindProd.map(bp => bp.primaryStoryId) });
+  
+  // STEP 2: Filter out BEHIND_PROD stories - only keep SAFE stories
   const safeStories = allStories.filter(story => {
-    const isBehind = behindProd.some(bp => bp.primaryStoryId === (story.id || story.key));
+    const storyId = story.id || story.key;
+    const isBehind = behindProd.some(bp => bp.primaryStoryId === storyId);
     return !isBehind;
   });
-
-  // Sort by commit date (oldest first = safest)
-  const sorted = safeStories.sort((a, b) => {
-    const dateA = new Date(a.commit_date || a.lastModifiedDate || 0);
-    const dateB = new Date(b.commit_date || b.lastModifiedDate || 0);
-    return dateA - dateB;
+  debugLog('plan:safe', { count: safeStories.length, excluded: allStories.length - safeStories.length });
+  
+  // STEP 3: From SAFE stories, identify which have CONFLICTS (don't deploy, but show)
+  const storiesWithConflicts = new Set(Object.keys(conflictsData || {}));
+  debugLog('plan:conflicts-detected', { 
+    count: storiesWithConflicts.size,
+    conflictStories: Array.from(storiesWithConflicts) 
+  });
+  
+  // STEP 4: Separate SAFE stories into DEPLOYABLE and CONFLICTED
+  const deployable = safeStories.filter(story => {
+    const storyId = story.id || story.key;
+    const hasConflict = storiesWithConflicts.has(storyId);
+    return !hasConflict;
+  });
+  
+  const conflicted = safeStories.filter(story => {
+    const storyId = story.id || story.key;
+    const hasConflict = storiesWithConflicts.has(storyId);
+    return hasConflict;
+  });
+  
+  debugLog('plan:split', { 
+    deployable: deployable.length, 
+    conflicted: conflicted.length,
+    totalSafe: safeStories.length
   });
 
-  // Create sequences with reasons
+  // STEP 5: Remove duplicates from DEPLOYABLE (keep first occurrence)
+  const uniqueDeployable = [];
+  const seenIds = new Set();
+  
+  deployable.forEach(story => {
+    const storyId = story.id || story.key;
+    if (!seenIds.has(storyId)) {
+      seenIds.add(storyId);
+      uniqueDeployable.push(story);
+    } else {
+      debugLog('plan:duplicate-removed', { storyId, reason: 'Already in deployable sequence' });
+    }
+  });
+  
+  // STEP 6: Sort DEPLOYABLE stories by US number (extract numeric part: US-0033553 → 33553)
+  const sorted = uniqueDeployable.sort((a, b) => {
+    const numA = extractStoryNumber(a.id || a.key);
+    const numB = extractStoryNumber(b.id || b.key);
+    return numA - numB; // Lower US numbers first = older stories = safer
+  });
+
+  // STEP 7: Create deployment sequences from DEPLOYABLE stories
   const sequences = sorted.map((story, idx) => {
     const storyComps = story.components || [];
-    const devs = new Set(storyComps.map(c => c.created_by || c.developer || 'Unknown'));
     
-    // Calculate risk
+    // Get developer name - check multiple fields
+    const devName = story.developer || story.created_by || story.assignee || 'Unknown';
+    const devs = new Set([devName]);
+    
+    // Get commit dates
+    const storyCommit = story.commit_date || story.lastModifiedDate || 'Unknown';
+    const prodCommit = story.prod_commit_date || story.production_date || 'Unknown';
+    
+    // Calculate risk (no conflicts since we filtered them out)
     const risk = calculateRisk(storyComps.length, devs.size, 0, false);
     
     // Reason for sequence
     let reason = '';
     if (idx === 0) {
-      reason = 'Oldest commit. No dependencies. Deploy first.';
+      reason = 'Lowest US number. Deploy first.';
     } else {
-      reason = `After Sequence ${idx}. Verified dependencies.`;
+      reason = `Sequence ${idx + 1}. Depends on previous sequences.`;
     }
 
     return {
@@ -70,31 +135,61 @@ function generateDeploymentPlan(analysis, enforcementResults, conflictsData) {
       status: 'AHEAD_OF_PROD',
       components: storyComps,
       devs: Array.from(devs),
+      developerName: devName,
       componentCount: storyComps.length,
       developerCount: devs.size,
+      storyCommit,
+      prodCommit,
       risk,
       reason,
       action: `DEPLOY (Seq ${idx + 1})`
     };
   });
 
-  // Get conflicts & behind prod
-  const conflictStories = Object.keys(conflictsData || {}).slice(0, 10);
-  const behindStories = Array.from(new Set(behindProd.map(bp => bp.primaryStoryId))).slice(0, 10);
+  // STEP 8: Collect conflict story IDs (sorted by US number)
+  const conflictStories = conflicted
+    .map(s => s.id || s.key)
+    .filter((id, idx, arr) => arr.indexOf(id) === idx) // Remove duplicates
+    .sort((a, b) => extractStoryNumber(a) - extractStoryNumber(b))
+    .slice(0, 10);
+  debugLog('plan:conflicts:display', { count: conflictStories.length, stories: conflictStories });
+  
+  // STEP 9: Collect behind prod story IDs (sorted by US number)
+  const behindStories = Array.from(new Set(behindProd.map(bp => bp.primaryStoryId)))
+    .sort((a, b) => extractStoryNumber(a) - extractStoryNumber(b))
+    .slice(0, 10);
+  debugLog('plan:behind:display', { count: behindStories.length, stories: behindStories });
 
-  return {
+  const finalPlan = {
     generated: new Date().toISOString(),
     summary: {
-      total: allStories.length,
-      safe: sequences.length,
-      conflicted: conflictStories.length,
-      behind: behindStories.length
+      total: allStories.length,                    // All input stories
+      safe: sequences.length,                      // Safe + no conflicts = deployable
+      conflicted: conflictStories.length,          // Safe but has conflicts
+      behind: behindStories.length                 // Behind prod = excluded
     },
-    sequences,
-    conflicts: conflictStories,
-    behind: behindStories,
+    sequences,                                     // Ordered deployment plan
+    conflicts: conflictStories,                    // Stories to AVOID
+    behind: behindStories,                         // Stories to EXCLUDE
     enforcementResults
   };
+  
+  debugLog('plan:complete', {
+    total: finalPlan.summary.total,
+    deployed: finalPlan.summary.safe,
+    conflict: finalPlan.summary.conflicted,
+    behind: finalPlan.summary.behind,
+    math: `${finalPlan.summary.safe} deployed + ${finalPlan.summary.conflicted} conflicts + ${finalPlan.summary.behind} behind = ${finalPlan.summary.safe + finalPlan.summary.conflicted + finalPlan.summary.behind} unique stories`
+  });
+  
+  return finalPlan;
+}
+
+// Helper: Extract numeric part from US-0033553 → 33553
+function extractStoryNumber(storyId) {
+  if (!storyId) return 0;
+  const match = String(storyId).match(/(\d+)/);
+  return match ? parseInt(match[1]) : 0;
 }
 
 function calculateRisk(componentCount, devCount, conflicts, isBehind) {
@@ -112,7 +207,7 @@ function getRiskLevel(risk) {
   return 'HIGH';
 }
 
-/* ─────────────── UI Components ─────────────── */
+/* ─────────────────────────── UI Components ─────────────────────────── */
 
 function header() {
   const div = document.createElement('div');
@@ -161,11 +256,11 @@ function reportPreview(plan) {
       </div>
       <div class="summary-item">
         <div class="summary-label">Conflicts</div>
-        <div class="summary-value ${plan.summary.conflicted > 0 ? 'danger' : ''}">${plan.summary.conflicted}</div>
+        <div class="summary-value ${plan.summary.conflicted > 0 ? 'warning' : ''}">${plan.summary.conflicted}</div>
       </div>
       <div class="summary-item">
         <div class="summary-label">Behind Production</div>
-        <div class="summary-value">${plan.summary.behind}</div>
+        <div class="summary-value ${plan.summary.behind > 0 ? 'danger' : ''}">${plan.summary.behind}</div>
       </div>
     </div>
   `;
@@ -179,11 +274,29 @@ function reportPreview(plan) {
     const seqCard = document.createElement('div');
     seqCard.className = `sequence-card risk-${getRiskLevel(seq.risk).toLowerCase()}`;
     
+    const devInfo = seq.developerName && seq.developerName !== 'Unknown' 
+      ? `<div class="seq-dev">Developer: ${escapeHtml(seq.developerName)}</div>` 
+      : '<div class="seq-dev warning-text">Developer: Unknown</div>';
+    
+    const commitInfo = seq.storyCommit && seq.storyCommit !== 'Unknown'
+      ? `<div class="seq-commit">Story Commit: ${escapeHtml(seq.storyCommit)}</div>`
+      : '<div class="seq-commit warning-text">Story Commit: Unknown</div>';
+    
+    const prodInfo = seq.prodCommit && seq.prodCommit !== 'Unknown'
+      ? `<div class="seq-commit">Prod Commit: ${escapeHtml(seq.prodCommit)}</div>`
+      : '';
+    
     seqCard.innerHTML = `
       <div class="seq-header">
         <div class="seq-number">Sequence ${seq.sequence}</div>
         <div class="seq-id">${escapeHtml(seq.storyId)}</div>
         <div class="seq-risk">Risk: ${seq.risk}/10</div>
+      </div>
+
+      <div class="seq-metadata">
+        ${devInfo}
+        ${commitInfo}
+        ${prodInfo}
       </div>
 
       <div class="seq-reason">
@@ -192,7 +305,6 @@ function reportPreview(plan) {
 
       <div class="seq-stats">
         <span>${seq.componentCount} Components</span>
-        <span>${seq.developerCount} Developer${seq.developerCount > 1 ? 's' : ''}</span>
       </div>
 
       <div class="seq-components">
@@ -201,7 +313,8 @@ function reportPreview(plan) {
           ${seq.components.slice(0, 8).map(c => {
             const name = c?.name || c?.fullName || 'Unknown';
             const type = c?.type || 'Component';
-            return `<div class="component-item">${escapeHtml(type)}: ${escapeHtml(name)}</div>`;
+            const isUnknown = name === 'Unknown';
+            return `<div class="component-item ${isUnknown ? 'unknown-comp' : ''}">${escapeHtml(type)}: ${escapeHtml(name)}</div>`;
           }).join('')}
           ${seq.components.length > 8 ? `<div class="component-more">+ ${seq.components.length - 8} more</div>` : ''}
         </div>
@@ -215,12 +328,12 @@ function reportPreview(plan) {
 
   div.append(sequences);
 
-  // Conflicts
+  // Conflicts - Warning style
   if (plan.conflicts.length > 0) {
     const conflicts = document.createElement('div');
     conflicts.className = 'plan-conflicts';
     conflicts.innerHTML = `
-      <h3>Cannot Deploy</h3>
+      <h3>⚠️ Conflicts Detected</h3>
       <p>${plan.conflicts.length} story/stories have conflicts</p>
       <div class="conflicts-list">
         ${plan.conflicts.map(c => `<div class="conflict-item">${escapeHtml(c)}</div>`).join('')}
@@ -229,13 +342,13 @@ function reportPreview(plan) {
     div.append(conflicts);
   }
 
-  // Behind Production
+  // Behind Production - Danger style
   if (plan.behind.length > 0) {
     const behind = document.createElement('div');
     behind.className = 'plan-behind';
     behind.innerHTML = `
-      <h3>Excluded</h3>
-      <p>${plan.behind.length} story/stories behind production</p>
+      <h3>🚫 Behind Production</h3>
+      <p>${plan.behind.length} story/stories behind production - DO NOT DEPLOY</p>
       <div class="behind-list">
         ${plan.behind.map(b => `<div class="behind-item">${escapeHtml(b)}</div>`).join('')}
       </div>
@@ -246,7 +359,7 @@ function reportPreview(plan) {
   return div;
 }
 
-/* ─────────────── Export Functions ─────────────── */
+/* ─────────────────────────── Export Functions ─────────────────────────── */
 
 function exportPDF() {
   const plan = PLAN_STATE.planData;
@@ -265,10 +378,10 @@ function exportCSV() {
   const plan = PLAN_STATE.planData;
   if (!plan) return;
 
-  let csv = 'Sequence,Story ID,Status,Risk,Components,Developers,Action\n';
+  let csv = 'Sequence,Story ID,Developer,Story Commit,Prod Commit,Status,Risk,Components,Action\n';
   
   plan.sequences.forEach(seq => {
-    csv += `${seq.sequence},"${seq.storyId}","${seq.status}","${seq.risk}/10",${seq.componentCount},${seq.developerCount},"${seq.action}"\n`;
+    csv += `${seq.sequence},"${seq.storyId}","${seq.developerName}","${seq.storyCommit}","${seq.prodCommit}","${seq.status}","${seq.risk}/10",${seq.componentCount},"${seq.action}"\n`;
   });
 
   if (plan.conflicts.length > 0) {
@@ -308,6 +421,7 @@ function exportActionTable() {
     .risk-low { color: #34c759; }
     .risk-medium { color: #ff9500; }
     .risk-high { color: #ff3b30; }
+    .unknown { color: #ff9500; font-style: italic; }
   </style>
 </head>
 <body>
@@ -316,8 +430,9 @@ function exportActionTable() {
     <thead>
       <tr>
         <th>Story</th>
+        <th>Developer</th>
+        <th>Story Commit</th>
         <th>Action</th>
-        <th>Why</th>
         <th>Risk</th>
         <th>Notes</th>
       </tr>
@@ -325,13 +440,18 @@ function exportActionTable() {
     <tbody>`;
 
   plan.sequences.forEach(seq => {
+    const devDisplay = seq.developerName === 'Unknown' 
+      ? '<span class="unknown">Unknown</span>' 
+      : escapeHtml(seq.developerName);
+    
     html += `
       <tr>
         <td>${escapeHtml(seq.storyId)}</td>
+        <td>${devDisplay}</td>
+        <td>${seq.storyCommit === 'Unknown' ? '<span class="unknown">Unknown</span>' : escapeHtml(seq.storyCommit)}</td>
         <td><span class="action-deploy">${seq.action}</span></td>
-        <td>${escapeHtml(seq.reason)}</td>
         <td><span class="risk-${getRiskLevel(seq.risk).toLowerCase()}">${seq.risk}/10</span></td>
-        <td>${seq.componentCount} components, ${seq.developerCount} developers</td>
+        <td>${seq.componentCount} components</td>
       </tr>
     `;
   });
@@ -339,11 +459,9 @@ function exportActionTable() {
   if (plan.conflicts.length > 0) {
     plan.conflicts.forEach(c => {
       html += `
-        <tr style="background: #fef3f2;">
+        <tr style="background: #fff3cd;">
           <td>${escapeHtml(c)}</td>
-          <td><span class="action-skip">DO NOT DEPLOY</span></td>
-          <td>Conflicts detected</td>
-          <td><span class="risk-high">HIGH</span></td>
+          <td colspan="4"><span class="action-skip">⚠️ DO NOT DEPLOY - CONFLICTS</span></td>
           <td>Resolve conflicts first</td>
         </tr>
       `;
@@ -353,11 +471,9 @@ function exportActionTable() {
   if (plan.behind.length > 0) {
     plan.behind.forEach(b => {
       html += `
-        <tr style="background: #f5f5f7;">
+        <tr style="background: #ffebee;">
           <td>${escapeHtml(b)}</td>
-          <td><span class="action-skip">SKIP THIS CYCLE</span></td>
-          <td>Behind production</td>
-          <td>N/A</td>
+          <td colspan="4"><span class="action-skip">🚫 SKIP THIS CYCLE - BEHIND PROD</span></td>
           <td>Rebase and include next cycle</td>
         </tr>
       `;
@@ -389,24 +505,34 @@ function generateHTMLReport(plan) {
     .summary-item { padding: 20px; background: #f5f5f7; border-radius: 8px; }
     .summary-label { font-size: 13px; color: #86868b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
     .summary-value { font-size: 28px; font-weight: 600; }
+    .summary-value.safe { color: #34c759; }
+    .summary-value.warning { color: #ff9500; }
+    .summary-value.danger { color: #ff3b30; }
     .sequences { margin: 60px 0; }
     .sequence-card { padding: 24px; background: #fff; border: 1px solid #e5e5e7; border-radius: 12px; margin-bottom: 20px; }
     .seq-header { display: flex; gap: 16px; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #f5f5f7; }
     .seq-number { font-weight: 600; font-size: 16px; }
     .seq-id { color: #007aff; font-weight: 500; flex: 1; }
     .seq-risk { font-size: 13px; color: #86868b; }
+    .seq-metadata { background: #f9f9fb; padding: 12px; border-radius: 6px; margin: 12px 0; font-size: 13px; line-height: 1.6; }
+    .seq-dev, .seq-commit { margin: 4px 0; }
+    .seq-dev { font-weight: 500; }
+    .warning-text { color: #ff9500; }
     .seq-reason { font-size: 14px; color: #555; margin: 12px 0; line-height: 1.5; }
     .seq-stats { display: flex; gap: 24px; font-size: 13px; color: #86868b; margin: 12px 0; }
     .components-title { font-size: 12px; font-weight: 600; color: #86868b; text-transform: uppercase; margin: 16px 0 8px 0; }
     .components-list { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
     .component-item { color: #555; padding-left: 16px; }
+    .component-item.unknown-comp { color: #ff9500; font-style: italic; }
     .component-more { color: #86868b; font-style: italic; }
     .seq-action { margin-top: 16px; padding-top: 12px; border-top: 1px solid #f5f5f7; font-weight: 600; color: #34c759; font-size: 13px; }
-    .conflicts, .behind { margin: 40px 0; padding: 24px; background: #fef3f2; border-radius: 8px; border-left: 3px solid #ff3b30; }
+    .conflicts { margin: 40px 0; padding: 24px; background: #fff3cd; border-radius: 8px; border-left: 3px solid #ff9500; }
+    .behind { margin: 40px 0; padding: 24px; background: #ffebee; border-radius: 8px; border-left: 3px solid #ff3b30; }
     .conflicts h3, .behind h3 { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
-    .conflicts p, .behind p { font-size: 13px; color: #86868b; margin-bottom: 12px; }
+    .conflicts p, .behind p { font-size: 13px; color: #555; margin-bottom: 12px; }
     .conflicts-list, .behind-list { display: flex; flex-wrap: wrap; gap: 8px; }
-    .conflict-item, .behind-item { padding: 6px 12px; background: #fff; border-radius: 6px; border: 1px solid #fecaca; font-size: 13px; }
+    .conflict-item { padding: 6px 12px; background: #fff; border-radius: 6px; border: 1px solid #ffc107; font-size: 13px; }
+    .behind-item { padding: 6px 12px; background: #fff; border-radius: 6px; border: 1px solid #f44336; font-size: 13px; }
     @media print { body { margin: 0; padding: 0; } .container { padding: 40px; } }
   </style>
 </head>
@@ -422,50 +548,68 @@ function generateHTMLReport(plan) {
       </div>
       <div class="summary-item">
         <div class="summary-label">Ready to Deploy</div>
-        <div class="summary-value">${plan.summary.safe}</div>
+        <div class="summary-value safe">${plan.summary.safe}</div>
       </div>
       <div class="summary-item">
         <div class="summary-label">Conflicts</div>
-        <div class="summary-value">${plan.summary.conflicted}</div>
+        <div class="summary-value ${plan.summary.conflicted > 0 ? 'warning' : ''}">${plan.summary.conflicted}</div>
       </div>
       <div class="summary-item">
         <div class="summary-label">Behind Production</div>
-        <div class="summary-value">${plan.summary.behind}</div>
+        <div class="summary-value ${plan.summary.behind > 0 ? 'danger' : ''}">${plan.summary.behind}</div>
       </div>
     </div>
 
     <div class="sequences">
       <h2 style="font-size: 20px; margin-bottom: 20px;">Deployment Sequence</h2>
-      ${plan.sequences.map(seq => `
+      ${plan.sequences.map(seq => {
+        const devInfo = seq.developerName && seq.developerName !== 'Unknown' 
+          ? `Developer: ${escapeHtml(seq.developerName)}` 
+          : '<span style="color: #ff9500;">Developer: Unknown</span>';
+        
+        const commitInfo = seq.storyCommit && seq.storyCommit !== 'Unknown'
+          ? `Story Commit: ${escapeHtml(seq.storyCommit)}`
+          : '<span style="color: #ff9500;">Story Commit: Unknown</span>';
+        
+        const prodInfo = seq.prodCommit && seq.prodCommit !== 'Unknown'
+          ? `Prod Commit: ${escapeHtml(seq.prodCommit)}`
+          : '';
+        
+        return `
         <div class="sequence-card">
           <div class="seq-header">
             <div class="seq-number">Sequence ${seq.sequence}</div>
             <div class="seq-id">${escapeHtml(seq.storyId)}</div>
             <div class="seq-risk">Risk: ${seq.risk}/10</div>
           </div>
+          <div class="seq-metadata">
+            <div class="seq-dev">${devInfo}</div>
+            <div class="seq-commit">${commitInfo}</div>
+            ${prodInfo ? `<div class="seq-commit">${prodInfo}</div>` : ''}
+          </div>
           <div class="seq-reason">${escapeHtml(seq.reason)}</div>
           <div class="seq-stats">
             <span>${seq.componentCount} Components</span>
-            <span>${seq.developerCount} Developer${seq.developerCount > 1 ? 's' : ''}</span>
           </div>
           <div class="components-title">Components</div>
           <div class="components-list">
             ${seq.components.slice(0, 10).map(c => {
               const name = c?.name || c?.fullName || 'Unknown';
               const type = c?.type || 'Component';
-              return `<div class="component-item">${escapeHtml(type)}: ${escapeHtml(name)}</div>`;
+              const isUnknown = name === 'Unknown';
+              return `<div class="component-item ${isUnknown ? 'unknown-comp' : ''}">${escapeHtml(type)}: ${escapeHtml(name)}</div>`;
             }).join('')}
             ${seq.components.length > 10 ? `<div class="component-more">+ ${seq.components.length - 10} more</div>` : ''}
           </div>
           <div class="seq-action">${seq.action}</div>
         </div>
-      `).join('')}
+      `}).join('')}
     </div>
 
     ${plan.conflicts.length > 0 ? `
       <div class="conflicts">
-        <h3>Cannot Deploy</h3>
-        <p>${plan.conflicts.length} story/stories have conflicts</p>
+        <h3>⚠️ Conflicts Detected</h3>
+        <p>${plan.conflicts.length} story/stories have conflicts - CANNOT DEPLOY</p>
         <div class="conflicts-list">
           ${plan.conflicts.map(c => `<div class="conflict-item">${escapeHtml(c)}</div>`).join('')}
         </div>
@@ -474,8 +618,8 @@ function generateHTMLReport(plan) {
 
     ${plan.behind.length > 0 ? `
       <div class="behind">
-        <h3>Excluded</h3>
-        <p>${plan.behind.length} story/stories behind production</p>
+        <h3>🚫 Behind Production</h3>
+        <p>${plan.behind.length} story/stories behind production - DO NOT DEPLOY</p>
         <div class="behind-list">
           ${plan.behind.map(b => `<div class="behind-item">${escapeHtml(b)}</div>`).join('')}
         </div>
@@ -512,7 +656,7 @@ function toast(msg) {
   setTimeout(() => t.remove(), 2600);
 }
 
-/* ─────────────── Styles ─────────────── */
+/* ─────────────────────────── Styles ─────────────────────────── */
 
 let cssInjected = false;
 function injectPlanCss() {
@@ -594,6 +738,10 @@ function injectPlanCss() {
     color: #34c759;
   }
 
+  .summary-value.warning {
+    color: #ff9500;
+  }
+
   .summary-value.danger {
     color: #ff3b30;
   }
@@ -643,6 +791,29 @@ function injectPlanCss() {
     color: #86868b;
   }
 
+  .seq-metadata {
+    background: #f9f9fb;
+    padding: 12px;
+    border-radius: 6px;
+    margin: 12px 0;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  .seq-dev {
+    font-weight: 500;
+    margin: 4px 0;
+  }
+
+  .seq-commit {
+    margin: 4px 0;
+  }
+
+  .warning-text {
+    color: #ff9500;
+    font-weight: 500;
+  }
+
   .seq-reason {
     font-size: 13px;
     color: #555;
@@ -679,6 +850,12 @@ function injectPlanCss() {
     padding-left: 12px;
   }
 
+  .component-item.unknown-comp {
+    color: #ff9500;
+    font-style: italic;
+    font-weight: 500;
+  }
+
   .component-more {
     font-size: 12px;
     color: #86868b;
@@ -694,21 +871,20 @@ function injectPlanCss() {
     font-size: 12px;
   }
 
-  .plan-conflicts, .plan-behind {
+  .plan-conflicts {
     margin: 30px 0;
     padding: 20px;
+    background: #fff3cd;
     border-radius: 8px;
-    border-left: 3px solid;
-  }
-
-  .plan-conflicts {
-    background: #fef3f2;
-    border-color: #ff3b30;
+    border-left: 3px solid #ff9500;
   }
 
   .plan-behind {
-    background: #f5f5f7;
-    border-color: #86868b;
+    margin: 30px 0;
+    padding: 20px;
+    background: #ffebee;
+    border-radius: 8px;
+    border-left: 3px solid #ff3b30;
   }
 
   .plan-conflicts h3, .plan-behind h3 {
@@ -719,7 +895,7 @@ function injectPlanCss() {
 
   .plan-conflicts p, .plan-behind p {
     font-size: 12px;
-    color: #86868b;
+    color: #555;
     margin-bottom: 12px;
   }
 
@@ -729,22 +905,22 @@ function injectPlanCss() {
     gap: 8px;
   }
 
-  .conflict-item, .behind-item {
+  .conflict-item {
     padding: 6px 10px;
     background: #fff;
     border-radius: 6px;
-    border: 1px solid;
+    border: 1px solid #ffc107;
     font-size: 12px;
-  }
-
-  .conflict-item {
-    border-color: #fecaca;
-    color: #7f1d1d;
+    color: #333;
   }
 
   .behind-item {
-    border-color: #d2d2d7;
-    color: #555;
+    padding: 6px 10px;
+    background: #fff;
+    border-radius: 6px;
+    border: 1px solid #f44336;
+    font-size: 12px;
+    color: #c62828;
   }
 
   @media (max-width: 768px) {

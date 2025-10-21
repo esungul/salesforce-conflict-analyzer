@@ -96,3 +96,41 @@ export async function checkProductionState({ components, branch = 'master' }) {
     }
   };
 }
+
+// Unified Analyze Stories API
+export async function analyzeStories({ userStoryNames, releaseNames, configJsonPath } = {}) {
+  const payload = {};
+  if (typeof userStoryNames !== 'undefined') {
+    payload.userStoryNames = Array.isArray(userStoryNames) ? userStoryNames : String(userStoryNames);
+  }
+  if (typeof releaseNames !== 'undefined') {
+    payload.releaseNames = Array.isArray(releaseNames) ? releaseNames : String(releaseNames);
+  }
+  if (typeof configJsonPath !== 'undefined') {
+    payload.configJsonPath = configJsonPath;
+  }
+
+  const res = await fetch(`${API_URL}/api/analyze-stories`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  let body, text = '';
+  try { body = await res.json(); } catch { try { text = await res.text(); } catch {} }
+
+  if (!res.ok) {
+    const msg = (body && (body.error || body.message)) || text || `HTTP ${res.status}`;
+    throw new Error(msg);
+  }
+
+  // Normalize a bit for downstream callers
+  const component_conflicts = Array.isArray(body?.component_conflicts) ? body.component_conflicts
+                               : Array.isArray(body?.conflicts) ? body.conflicts
+                               : [];
+  const story_conflicts     = Array.isArray(body?.story_conflicts) ? body.story_conflicts : [];
+  const summary             = body?.summary || {};
+
+  return { summary, component_conflicts, story_conflicts, raw: body };
+}
+

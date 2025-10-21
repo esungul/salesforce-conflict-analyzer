@@ -136,9 +136,9 @@ def sf_records_to_rows(records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     if rows:
         try:
             import json as _json
-            logger.debug("SF adapter sample row: %s", _json.dumps(rows[1], ensure_ascii=False)[:1200])
+            logger.debug("SF adapter sample row: %s", _json.dumps(rows[0], ensure_ascii=False)[:1200])
         except Exception as _e:
-            logger.debug("SF adapter sample row (repr): %r", rows[1])
+            logger.debug("SF adapter sample row (repr): %r", rows[0])
     return rows
 
 # --- END PATCH: sf_adapter.py ---

@@ -20,7 +20,8 @@ from production_analyzer import parse_production_state, check_regression
 from git_client import BitBucketClient 
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from config import get_config
-from typing import Optional, Tuple,Dict
+from typing import Optional, Tuple,Dict,List
+import copy
 from sf_adapter import sf_records_to_rows
 import csv
 from tempfile import NamedTemporaryFile
@@ -35,7 +36,8 @@ from salesforce_client import (
 import logging
 logging.basicConfig(level=logging.DEBUG)  # put once (e.g., in app.py main)
 logger = logging.getLogger(__name__)
-
+import json
+import re
 import logging
 import os
 
@@ -83,6 +85,746 @@ from flask import send_file
 
 
 
+
+############# Testing 
+
+# Add to app.py - NEW TRANSFORMER for story analysis
+
+import logging
+from datetime import datetime
+from typing import Dict, List, Tuple, Optional
+import copy
+import json
+import re
+
+logger = logging.getLogger(__name__)
+
+
+# Add to app.py - NEW TRANSFORMER for story analysis
+
+import logging
+from datetime import datetime
+from typing import Dict, List, Tuple, Optional
+import copy
+import json
+import re
+
+logger = logging.getLogger(__name__)
+
+# Add to app.py - NEW TRANSFORMER for story analysis
+
+import logging
+from datetime import datetime
+from typing import Dict, List, Tuple, Optional
+import copy
+import json
+import re
+
+logger = logging.getLogger(__name__)
+
+
+# Add to app.py - NEW TRANSFORMER for story analysis
+
+import logging
+from datetime import datetime
+from typing import Dict, List, Tuple, Optional
+import copy
+import json
+import re
+
+logger = logging.getLogger(__name__)
+
+
+
+
+# Add to app.py - NEW TRANSFORMER for story analysis
+
+import logging
+from datetime import datetime
+from typing import Dict, List, Tuple, Optional
+import copy
+import json
+import re
+
+logger = logging.getLogger(__name__)
+
+class StoryAnalyzerTransformer:
+    """
+    Transform raw SF Copado records into structured response with:
+    - Blocked stories (old commits + conflicts)
+    - Conflicting stories (same component, current commits)
+    - Safe stories (no conflicts, all current)
+    """
+    
+    def __init__(self):
+        self.stories = {}  # story_id -> story data
+        self.components = {}  # component_id -> component data
+        self.component_to_stories = {}  # api_name -> [story_ids]
+        self.conflicts_map = {}  # api_name -> list of story_ids
+        
+        logger.info("[INIT] StoryAnalyzerTransformer initialized")
+    
+    def parse_commit_url_from_json(self, json_blob: str) -> Optional[str]:
+        """Extract commit URL from copado__JsonInformation__c"""
+        try:
+            if not json_blob:
+                return None
+            
+            data = json.loads(json_blob) if isinstance(json_blob, str) else json_blob
+            
+            # Look for common patterns
+            if isinstance(data, dict):
+                # Direct URL field
+                for key in ["commit_url", "commitUrl", "url", "link", "href"]:
+                    if key in data and data[key]:
+                        return data[key]
+                
+                # Look in nested structures (commits, changes)
+                for key in ["commits", "changes", "commit", "change"]:
+                    if key in data:
+                        item = data[key]
+                        if isinstance(item, dict):
+                            for url_key in ["url", "link", "href"]:
+                                if url_key in item and item[url_key]:
+                                    return item[url_key]
+                        elif isinstance(item, list) and len(item) > 0:
+                            first = item[0]
+                            if isinstance(first, dict):
+                                for url_key in ["url", "link", "href"]:
+                                    if url_key in first and first[url_key]:
+                                        return first[url_key]
+            
+            # If JSON has HTML anchors, parse them
+            if isinstance(data, str):
+                match = re.search(r'href=["\']([^"\']+)["\']', data)
+                if match:
+                    return match.group(1)
+            
+            return None
+        except Exception as e:
+            logger.debug(f"[PARSE_URL] Error parsing JSON blob: {e}")
+            return None
+    
+    def parse_commit_hash_from_json(self, json_blob: str) -> Optional[str]:
+        """Extract commit hash/SHA from copado__JsonInformation__c"""
+        try:
+            if not json_blob:
+                return None
+            
+            data = json.loads(json_blob) if isinstance(json_blob, str) else json_blob
+            
+            # Look for common SHA patterns in dict
+            if isinstance(data, dict):
+                # Direct hash fields
+                for key in ["commit_hash", "commitHash", "hash", "sha", "commit_sha", "commitSha"]:
+                    if key in data and data[key]:
+                        val = str(data[key]).strip()
+                        if val and len(val) >= 7:  # Valid SHA should be at least 7 chars
+                            return val
+                
+                # Look in nested structures
+                for key in ["commits", "changes", "commit", "change"]:
+                    if key in data:
+                        item = data[key]
+                        if isinstance(item, dict):
+                            for hash_key in ["hash", "sha", "id", "commit_hash"]:
+                                if hash_key in item and item[hash_key]:
+                                    val = str(item[hash_key]).strip()
+                                    if val and len(val) >= 7:
+                                        return val
+                        elif isinstance(item, list) and len(item) > 0:
+                            first = item[0]
+                            if isinstance(first, dict):
+                                for hash_key in ["hash", "sha", "id", "commit_hash"]:
+                                    if hash_key in first and first[hash_key]:
+                                        val = str(first[hash_key]).strip()
+                                        if val and len(val) >= 7:
+                                            return val
+            
+            # If JSON is string with HTML, extract SHA from URL
+            if isinstance(data, str):
+                # Look for SHA patterns in URLs: /commits/abc123def456
+                match = re.search(r'/commits/([a-f0-9]{7,40})', data)
+                if match:
+                    return match.group(1)
+                
+                # Look for standalone SHA patterns
+                match = re.search(r'\b([a-f0-9]{7,40})\b', data)
+                if match:
+                    return match.group(1)
+            
+            return None
+        except Exception as e:
+            logger.debug(f"[PARSE_HASH] Error parsing JSON blob: {e}")
+            return None
+    
+    def transform(self, sf_records: List[Dict]) -> Dict:
+        """
+        Main transformation pipeline with detailed logging
+        
+        Args:
+            sf_records: Raw records from SF (from sf_records_to_rows or similar)
+        
+        Returns:
+            Structured response with blocked/conflicts/safe stories
+        """
+        
+        logger.info(f"[TRANSFORM] Starting with {len(sf_records)} SF records")
+        
+        # Step 1: Group records by story
+        stories_data = self._group_by_story(sf_records)
+        logger.info(f"[TRANSFORM] Step 1 complete: {len(stories_data)} unique stories")
+        
+        # Step 2: Extract and normalize component data
+        self._extract_components(stories_data, sf_records)
+        logger.info(f"[TRANSFORM] Step 2 complete: {len(self.components)} unique components extracted")
+        
+        # Step 3: Detect conflicts (same component in multiple stories)
+        self._detect_conflicts()
+        logger.info(f"[TRANSFORM] Step 3 complete: {len(self.conflicts_map)} components with conflicts")
+        
+        # Step 4: Classify stories
+        blocked, conflicts, safe = self._classify_stories()
+        logger.info(f"[TRANSFORM] Step 4 complete: blocked={len(blocked)}, conflicts={len(conflicts)}, safe={len(safe)}")
+        
+        # Step 5: Enrich with conflicting story details
+        blocked = self._enrich_with_conflicts(blocked, sf_records)
+        conflicts = self._enrich_with_conflicts(conflicts, sf_records)
+        safe = self._enrich_with_conflicts(safe, sf_records)
+        logger.info(f"[TRANSFORM] Step 5 complete: enriched all story groups")
+        
+        # Step 6: Calculate summary and validate counts
+        summary = self._build_summary(blocked, conflicts, safe)
+        logger.info(f"[TRANSFORM] Step 6 complete: summary={summary}")
+        
+        # Step 7: Validate counts match
+        self._validate_counts(summary, blocked, conflicts, safe)
+        
+        return {
+            "success": True,
+            "summary": summary,
+            "blocked": blocked,
+            "conflicts": conflicts,
+            "safe": safe
+        }
+    
+    def _group_by_story(self, sf_records: List[Dict]) -> Dict:
+        """Step 1: Group records by story ID"""
+        logger.info("[STEP1] Grouping records by story...")
+        
+        stories_data = {}
+        for i, record in enumerate(sf_records):
+            story_id = record.get("copado__User_Story__r.Name")
+            
+            if not story_id:
+                logger.warning(f"[STEP1] Record {i} has no story ID, skipping")
+                continue
+            
+            if story_id not in stories_data:
+                stories_data[story_id] = {
+                    "story_id": story_id,
+                    "title": record.get("copado__User_Story__r.copado__User_Story_Title__c"),
+                    "jira_key": record.get("jira_key"),
+                    "developer": record.get("developer"),
+                    "records": []
+                }
+            
+            stories_data[story_id]["records"].append(record)
+            logger.debug(f"[STEP1] Added record to story {story_id}, total records: {len(stories_data[story_id]['records'])}")
+        
+        logger.info(f"[STEP1] Complete: {len(stories_data)} unique stories found")
+        for sid, sdata in stories_data.items():
+            logger.debug(f"  {sid}: {len(sdata['records'])} records, dev={sdata['developer']}, jira={sdata['jira_key']}")
+        
+        return stories_data
+    
+    def _extract_components(self, stories_data: Dict, sf_records: List[Dict]):
+        """Step 2: Extract and normalize component data"""
+        logger.info("[STEP2] Extracting components...")
+        
+        comp_id = 0
+        for story_id, sdata in stories_data.items():
+            logger.debug(f"[STEP2] Processing story {story_id}...")
+            
+            for record in sdata["records"]:
+                api_name = record.get("copado__Metadata_API_Name__c")
+                comp_type = record.get("copado__Type__c")
+                
+                if not api_name or not comp_type:
+                    logger.warning(f"[STEP2] Skipping record - missing api_name or type")
+                    continue
+                
+                # Create unique component ID
+                comp_id += 1
+                cid = f"comp-{comp_id}"
+                
+                # Extract commit hash (may be null)
+                commit_hash = record.get("commit_hash")
+                if not commit_hash and record.get("copado__JsonInformation__c"):
+                    # Try to extract from JSON
+                    commit_hash = self.parse_commit_hash_from_json(record.get("copado__JsonInformation__c"))
+                    logger.debug(f"[STEP2] Extracted commit_hash from JSON for {api_name}: {commit_hash}")
+                
+                # Extract commit URL
+                commit_url = self.parse_commit_url_from_json(record.get("copado__JsonInformation__c"))
+                if commit_url:
+                    logger.debug(f"[STEP2] Extracted commit_url from JSON for {api_name}: {commit_url}")
+                
+                story_commit_date_str = record.get("copado__Last_Commit_Date__c")
+                prod_commit_date_str = record.get("production_commit_date")  # If available
+
+                
+                story_commit_date = self._parse_date(story_commit_date_str)
+                prod_commit_date = self._parse_date(prod_commit_date_str) if prod_commit_date_str else story_commit_date
+                
+                # Determine if component is old (story commit < production commit)
+                has_old_commit = False
+                if story_commit_date and prod_commit_date:
+                    has_old_commit = story_commit_date < prod_commit_date
+                    logger.debug(f"[STEP2] {api_name}: story_date={story_commit_date}, prod_date={prod_commit_date}, old={has_old_commit}")
+                
+                component = {
+                    "id": cid,
+                    "api_name": api_name,
+                    "type": comp_type,
+                    "status": record.get("copado__Status__c"),
+                    "action": record.get("copado__Action__c"),
+                    "story_id": story_id,
+                    "commit_hash": commit_hash,
+                    "commit_url": commit_url,
+                    "story_commit_date": story_commit_date_str,
+                    "production_commit_date": prod_commit_date_str,
+                    "production_story_id": record.get("production_story_id"),
+                    "production_story_title": record.get("production_story_title"),
+                    "has_old_commit": has_old_commit
+                }
+                
+                self.components[cid] = component
+                
+                # Track api_name -> stories mapping for conflict detection
+                if api_name not in self.component_to_stories:
+                    self.component_to_stories[api_name] = []
+                if story_id not in self.component_to_stories[api_name]:
+                    self.component_to_stories[api_name].append(story_id)
+                
+                logger.debug(f"[STEP2] Added component {cid}: {api_name} to story {story_id}")
+        
+        logger.info(f"[STEP2] Complete: {len(self.components)} components extracted")
+        logger.info(f"[STEP2] Unique api_names: {len(self.component_to_stories)}")
+
+    
+    def _detect_conflicts(self):
+        """Step 3: Detect conflicts (same api_name in multiple stories)"""
+        logger.info("[STEP3] Detecting conflicts...")
+        
+        for api_name, story_ids in self.component_to_stories.items():
+            if len(story_ids) > 1:
+                self.conflicts_map[api_name] = story_ids
+                logger.info(f"[STEP3] CONFLICT: {api_name} found in stories: {story_ids}")
+            else:
+                logger.debug(f"[STEP3] {api_name} unique to story {story_ids[0]}")
+        
+        logger.info(f"[STEP3] Complete: {len(self.conflicts_map)} components have conflicts")
+    
+    def _classify_stories(self) -> Tuple[List[str], List[str], List[str]]:
+        """Step 4: Classify stories into blocked/conflicts/safe"""
+        logger.info("[STEP4] Classifying stories...")
+        
+        blocked = []
+        conflicts = []
+        safe = []
+        
+        for story_id in self.stories.keys():
+            logger.debug(f"[STEP4] Classifying story {story_id}...")
+            
+            # Get all components for this story
+            story_components = [c for c in self.components.values() if c["story_id"] == story_id]
+            
+            # Check if any component has old commit (story < production)
+            has_old_component = any(c["has_old_commit"] for c in story_components)
+            
+            # Check if any component is in conflict (same api_name in multiple stories)
+            has_conflict_component = any(
+                c["api_name"] in self.conflicts_map 
+                for c in story_components
+            )
+            
+            logger.debug(f"[STEP4] {story_id}: has_old={has_old_component}, has_conflict={has_conflict_component}")
+            
+            # Classification logic
+            # BLOCKED: has old components AND has conflicts (worst case)
+            if has_old_component and has_conflict_component:
+                blocked.append(story_id)
+                logger.info(f"[STEP4] {story_id} → BLOCKED (old components + conflicts)")
+            
+            # CONFLICTING: has conflicts but components are all current/ahead
+            elif has_conflict_component and not has_old_component:
+                conflicts.append(story_id)
+                logger.info(f"[STEP4] {story_id} → CONFLICTS (conflicts but all components current)")
+            
+            # BLOCKED (no conflicts but has old components): Story behind production
+            elif has_old_component and not has_conflict_component:
+                blocked.append(story_id)
+                logger.info(f"[STEP4] {story_id} → BLOCKED (components behind production)")
+            
+            # SAFE: No conflicts AND all components are current or ahead
+            else:
+                safe.append(story_id)
+                logger.info(f"[STEP4] {story_id} → SAFE (no conflicts, all components current/ahead)")
+        
+        logger.info(f"[STEP4] Complete: blocked={len(blocked)}, conflicts={len(conflicts)}, safe={len(safe)}")
+        
+        return blocked, conflicts, safe
+    
+    def _enrich_with_conflicts(self, story_ids: List[str], sf_records: List[Dict]) -> List[Dict]:
+        """Step 5: Build full story objects with component and conflict details"""
+        logger.info(f"[STEP5] Enriching {len(story_ids)} stories with conflict details...")
+        
+        enriched_stories = []
+        
+        for story_id in story_ids:
+            logger.debug(f"[STEP5] Building story object for {story_id}...")
+            
+            # Get story data
+            story_info = self.stories[story_id]
+            
+            # Get components for this story
+            story_components_data = [c for c in self.components.values() if c["story_id"] == story_id]
+            
+            # Build component list with conflicts
+            components_list = []
+            for comp in story_components_data:
+                comp_copy = copy.deepcopy(comp)
+                
+                # Find conflicting stories for this component
+                if comp["api_name"] in self.conflicts_map:
+                    conflicting_story_ids = [
+                        sid for sid in self.conflicts_map[comp["api_name"]] 
+                        if sid != story_id
+                    ]
+                    
+                    # Get details of conflicting stories
+                    conflicting_details = []
+                    for conf_story_id in conflicting_story_ids:
+                        if conf_story_id in self.stories:
+                            conf_story = self.stories[conf_story_id]
+                            conflicting_details.append({
+                                "story_id": conf_story_id,
+                                "jira_key": conf_story.get("jira_key"),
+                                "developer": conf_story.get("developer"),
+                                "commit_date": conf_story.get("story_commit_date")
+                            })
+                            logger.debug(f"[STEP5] {story_id} component {comp['api_name']} conflicts with {conf_story_id}")
+                    
+                    comp_copy["conflicting_stories"] = conflicting_details
+                else:
+                    comp_copy["conflicting_stories"] = []
+                
+                components_list.append(comp_copy)
+            
+            story_obj = {
+                "story_id": story_id,
+                "jira_key": story_info.get("jira_key"),
+                "title": story_info.get("title"),
+                "developer": story_info.get("developer"),
+                "component_count": len(components_list),
+                "components": components_list
+            }
+            
+            enriched_stories.append(story_obj)
+            logger.debug(f"[STEP5] Completed story {story_id} with {len(components_list)} components")
+        
+        logger.info(f"[STEP5] Complete: {len(enriched_stories)} stories enriched")
+        
+        return enriched_stories
+    
+    def _build_summary(self, blocked: List[Dict], conflicts: List[Dict], safe: List[Dict]) -> Dict:
+        """Step 6: Build summary with counts"""
+        logger.info("[STEP6] Building summary...")
+        
+        total_stories = len(blocked) + len(conflicts) + len(safe)
+        total_components = len(self.components)
+        components_in_conflict = len(self.conflicts_map)
+        
+        summary = {
+            "total_stories": total_stories,
+            "total_unique_components": total_components,
+            "stories_blocked": len(blocked),
+            "stories_with_conflicts": len(conflicts),
+            "stories_safe": len(safe),
+            "components_with_conflicts": components_in_conflict,
+            "analyzed_at": datetime.now().isoformat()
+        }
+        
+        logger.info(f"[STEP6] Summary: total_stories={total_stories}, components={total_components}, " +
+                   f"blocked={len(blocked)}, conflicts={len(conflicts)}, safe={len(safe)}")
+        
+        return summary
+    
+    def _validate_counts(self, summary: Dict, blocked: List[Dict], conflicts: List[Dict], safe: List[Dict]):
+        """Step 7: Validate that counts match"""
+        logger.info("[STEP7] Validating counts...")
+        
+        total_from_summary = summary["total_stories"]
+        total_from_lists = len(blocked) + len(conflicts) + len(safe)
+        
+        if total_from_summary == total_from_lists:
+            logger.info(f"[STEP7] ✓ COUNT VALID: {total_from_summary} = {total_from_lists}")
+        else:
+            logger.error(f"[STEP7] ✗ COUNT MISMATCH: summary={total_from_summary}, lists={total_from_lists}")
+        
+        logger.info(f"[STEP7] Breakdown: blocked={len(blocked)}, conflicts={len(conflicts)}, safe={len(safe)}")
+        logger.info(f"[STEP7] Unique components: {summary['total_unique_components']}")
+        logger.info(f"[STEP7] Components with conflicts: {summary['components_with_conflicts']}")
+    
+    def _parse_date(self, date_str: Optional[str]) -> Optional[datetime]:
+        """Parse date string to datetime"""
+        if not date_str:
+            return None
+        
+        try:
+            return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
+        except Exception as e:
+            logger.debug(f"[PARSE_DATE] Error parsing '{date_str}': {e}")
+            return None
+
+
+# ============================================================
+# NEW ROUTE: Use the transformer
+# ============================================================
+
+@app.route('/api/analyze-stories', methods=['POST'])
+def analyze_stories():
+    """
+    Transform SF records into blocked/conflicts/safe stories
+    
+    Input:
+    {
+      "userStoryNames": "US-001,US-002" OR ["US-001", "US-002"],
+      "releaseNames": "Q1-2025" OR ["Q1-2025"]
+    }
+    """
+    
+    logger.info("=" * 80)
+    logger.info("[ROUTE] POST /api/analyze-stories")
+    logger.info("=" * 80)
+    
+    try:
+        payload = request.get_json(force=True, silent=True) or {}
+        logger.info(f"[ROUTE] Payload received: {payload}")
+        
+        # Normalize input
+        release_names = payload.get("releaseNames")
+        if isinstance(release_names, str):
+            release_names = [rn.strip() for rn in release_names.split(",") if rn.strip()] or [release_names]
+        
+        story_names = payload.get("userStoryNames")
+        if isinstance(story_names, str):
+            story_names = [sn.strip() for sn in story_names.split(",") if sn.strip()] or [story_names]
+        
+        if not release_names and not story_names:
+            logger.error("[ROUTE] Neither releaseNames nor userStoryNames provided")
+            return jsonify({"error": "Provide releaseNames or userStoryNames"}), 400
+        
+        logger.info(f"[ROUTE] Fetching from Salesforce Client...")
+        
+        # Fetch metadata, commits, AND production state from SF
+        try:
+            from salesforce_client import (
+                sf_login_from_config,
+                fetch_user_story_metadata_by_story_names,
+                fetch_story_commits,
+                fetch_production_component_state
+            )
+            from sf_adapter import sf_records_to_rows
+            
+            sf = sf_login_from_config(payload.get("configJsonPath"))
+            
+            # Fetch 1: Component metadata per story
+            logger.info(f"[ROUTE] Fetching story metadata for: {story_names}")
+            raw_metadata = fetch_user_story_metadata_by_story_names(sf, story_names or [])
+            logger.info(f"[ROUTE] Got {len(raw_metadata)} metadata records")
+            
+            # Fetch 2: Commit info per story
+            logger.info(f"[ROUTE] Fetching story commits for: {story_names}")
+            raw_commits = fetch_story_commits(sf, story_names or [])
+            logger.info(f"[ROUTE] Got {len(raw_commits)} commit records")
+            
+            # Convert metadata to normalized rows
+            sf_records = sf_records_to_rows(raw_metadata)
+            logger.info(f"[ROUTE] Normalized to {len(sf_records)} rows")
+            
+            # Fetch 3: Get unique components and their production state (BATCHED - single query)
+            unique_components = []
+            seen = set()
+            for row in sf_records:
+                api_name = row.get("copado__Metadata_API_Name__c")
+                comp_type = row.get("copado__Type__c")
+                
+                if api_name and comp_type and (api_name, comp_type) not in seen:
+                    seen.add((api_name, comp_type))
+                    unique_components.append({
+                        "api_name": api_name,
+                        "type": comp_type
+                    })
+            
+            logger.info(f"[ROUTE] Found {len(unique_components)} unique components")
+            
+            # Fetch production state for ALL components in ONE query
+            logger.info(f"[ROUTE] Fetching production state for {len(unique_components)} components (batched)")
+            production_records = fetch_production_component_state(sf, unique_components)
+            logger.info(f"[ROUTE] Got {len(production_records)} production records (may have duplicates)")
+            
+            # CRITICAL: Sort by commit date DESC to ensure latest is first
+            production_records.sort(
+                key=lambda r: r.get("copado__Last_Commit_Date__c") or "0000-01-01",
+                reverse=True
+            )
+            
+            logger.info(f"[ROUTE] Sorted {len(production_records)} records by copado__Last_Commit_Date__c DESC")
+            if production_records:
+                logger.debug(f"[ROUTE] First (latest): {production_records[0].get('copado__Metadata_API_Name__c')} | date={production_records[0].get('copado__Last_Commit_Date__c')}")
+                if len(production_records) > 1:
+                    logger.debug(f"[ROUTE] Last (oldest): {production_records[-1].get('copado__Metadata_API_Name__c')} | date={production_records[-1].get('copado__Last_Commit_Date__c')}")
+            
+            # Group production records by api_name and keep only the LATEST (first after sort)
+            prod_index = {}
+            duplicates_skipped = 0
+            
+            for i, prod_rec in enumerate(production_records):
+                api_name = prod_rec.get("copado__Metadata_API_Name__c")
+                
+                if not api_name:
+                    logger.warning(f"[ROUTE] Record {i} missing api_name, skipping")
+                    continue
+                
+                if api_name in prod_index:
+                    duplicates_skipped += 1
+                    logger.debug(f"[ROUTE] Skipping duplicate for {api_name} (already have latest)")
+                    continue
+                
+                # Handle nested SF response structure
+                user_story_rel = prod_rec.get("copado__User_Story__r") or {}
+                
+                story_id = (
+                    user_story_rel.get("Name") or 
+                    prod_rec.get("copado__User_Story__r.Name")
+                )
+                
+                story_title = (
+                    user_story_rel.get("copado__User_Story_Title__c") or
+                    prod_rec.get("copado__User_Story__r.copado__User_Story_Title__c")
+                )
+                
+                last_modified_by = (
+                    prod_rec.get("LastModifiedBy.Name") or
+                    (prod_rec.get("LastModifiedBy") or {}).get("Name")
+                )
+                
+                commit_date = prod_rec.get("copado__Last_Commit_Date__c")
+                
+                prod_index[api_name] = {
+                    "production_commit_date": commit_date,
+                    "production_story_id": story_id,
+                    "production_story_title": story_title,
+                    "production_modified_by": last_modified_by,
+                    "production_modified_date": prod_rec.get("LastModifiedDate")
+                }
+                
+                logger.debug(f"[ROUTE] [Index #{len(prod_index)}] {api_name} | commit_date={commit_date} | story={story_id}")
+            
+            logger.info(f"[ROUTE] Built production index: {len(prod_index)} unique | {duplicates_skipped} duplicates skipped")
+            
+            # Build commits index by story_name only (no environment filtering)
+            commits_index = {}
+            for commit_rec in raw_commits:
+                story_name = commit_rec.get("user_story_name")
+                
+                if story_name:
+                    commits_index[story_name] = {
+                        "commit_url": commit_rec.get("commit_url"),
+                        "commit_sha": commit_rec.get("commit_sha"),
+                        "snapshot_commit": commit_rec.get("snapshot_commit")
+                    }
+                    sha = commit_rec.get("commit_sha")
+                    sha_display = sha[:7] if sha else "None"
+                    logger.debug(f"[ROUTE] Indexed commit for {story_name}: sha={sha_display}...")
+            
+            logger.info(f"[ROUTE] Built commits index with {len(commits_index)} entries")
+            logger.debug(f"[ROUTE] Commits index keys: {list(commits_index.keys())}")
+            
+            # Enrich sf_records with BOTH commit data AND production state
+            enriched_count = 0
+            for row in sf_records:
+                story_name = row.get("copado__User_Story__r.Name")
+                api_name = row.get("copado__Metadata_API_Name__c")
+                
+                # Add commit data from commits_index (no environment filtering)
+                if story_name:
+                    if story_name in commits_index:
+                        commit_data = commits_index[story_name]
+                        row["commit_url"] = commit_data.get("commit_url")
+                        row["commit_hash"] = commit_data.get("commit_sha")
+                        logger.debug(f"[ROUTE] Enriched {story_name} with commit data: hash={commit_data.get('commit_sha')[:7] if commit_data.get('commit_sha') else 'None'}...")
+                    else:
+                        logger.debug(f"[ROUTE] No commit found for {story_name}")
+                
+                # Add production state from prod_index
+                if api_name and api_name in prod_index:
+                    prod_data = prod_index[api_name]
+                    
+                    # OVERWRITE production fields (don't touch commit_hash/commit_url)
+                    row["production_commit_date"] = prod_data.get("production_commit_date")
+                    row["production_story_id"] = prod_data.get("production_story_id")
+                    row["production_story_title"] = prod_data.get("production_story_title")
+                    row["production_modified_by"] = prod_data.get("production_modified_by")
+                    row["production_modified_date"] = prod_data.get("production_modified_date")
+                    
+                    enriched_count += 1
+                    logger.debug(f"[ROUTE] Enriched {api_name} with production state: story={prod_data.get('production_story_id')}, date={prod_data.get('production_commit_date')}")
+                else:
+                    if api_name:
+                        logger.debug(f"[ROUTE] {api_name} has NO production record (NEW component)")
+            
+            logger.info(f"[ROUTE] Enriched {enriched_count} rows with production state from prod_index")
+            
+        except Exception as e:
+            logger.error(f"[ROUTE] Error fetching SF data: {str(e)}", exc_info=True)
+            return jsonify({
+                "success": False,
+                "error": f"Failed to fetch SF records: {str(e)}"
+            }), 401
+        
+        # Pre-populate story info from rows
+        stories_info = {}
+        for row in sf_records:
+            sid = row.get("copado__User_Story__r.Name")
+            if sid and sid not in stories_info:
+                stories_info[sid] = {
+                    "story_id": sid,
+                    "title": row.get("copado__User_Story__r.copado__User_Story_Title__c"),
+                    "jira_key": row.get("jira_key"),
+                    "developer": row.get("developer"),
+                    "story_commit_date": row.get("copado__Last_Commit_Date__c")
+                }
+        
+        transformer = StoryAnalyzerTransformer()
+        transformer.stories = stories_info
+        logger.info(f"[ROUTE] Pre-populated {len(transformer.stories)} story info objects")
+        
+        result = transformer.transform(sf_records)
+        
+        logger.info("[ROUTE] Transformation complete, returning response")
+        logger.info("=" * 80)
+        
+        return jsonify(result), 200
+    
+    except Exception as e:
+        logger.error(f"[ROUTE] Exception: {str(e)}", exc_info=True)
+        return jsonify({
+            "success": False,
+            "error": str(e)
+        }), 500
 # === Component History Wrapper API ===
 # Returns last N commit IDs (and metadata) for each component on each org/branch.
 from flask import request, jsonify
@@ -636,6 +1378,8 @@ import component_registry as cr
 from urllib.parse import unquote
 from requests.exceptions import ReadTimeout, ConnectionError
 from config import get_config
+
+
 
 
 

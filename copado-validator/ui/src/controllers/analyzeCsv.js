@@ -1,5 +1,5 @@
 // ui/src/controllers/analyzeCsv.js
-import { openModal, buildForm } from '../ui/components/modal.js';
+import { openModal, buildForm } from '../ui/components/analyzeModal.js';
 import { analyzeFromCsv } from '../api/endpoints.js';
 
 /**

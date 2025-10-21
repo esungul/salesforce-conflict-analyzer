@@ -1,15 +1,17 @@
 // ui/src/main.js
-import { CONFIG, applyHeaderBadges, debugLog } from './config.js';
-import { openAnalyzeCsvFlow } from './controllers/analyzeCsv.js';
+import { CONFIG, applyHeaderBadges, debugLog, API_URL } from './config.js';
 import { openAnalyzeOnlineFlow } from './controllers/analyzeOnline.js';
-import { renderStoriesTab }   from './ui/tabs/stories.js';
-import { renderConflictsTab } from './ui/tabs/conflicts.js';
-import { renderEnforcementTab } from './ui/tabs/enforcement.js';
+
+// NEW: Import enhanced tab renderers
+import { renderOverviewTab } from './ui/tabs/overview.js';
+import { renderStoriesTab } from './ui/tabs/stories-enhanced.js';
+import { renderConflictsTab } from './ui/tabs/conflicts-enhanced.js';
+import { renderEnforcementTab } from './ui/tabs/enforcement-enhanced.js';
+import { createAnalyzeModal } from './ui/components/analyzeModal.js';
 import { renderDeploymentPlanTab } from './ui/tabs/deployment-plan.js';
 
-
 /* ---------- tiny DOM helpers ---------- */
-const $  = (s, r=document) => r.querySelector(s);
+const $ = (s, r=document) => r.querySelector(s);
 const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
 function el(tag, props={}, children=[]) {
   const node = Object.assign(document.createElement(tag), props);
@@ -19,26 +21,29 @@ function el(tag, props={}, children=[]) {
 
 /* ---------- state ---------- */
 const STATE = {
-  role: localStorage.getItem('ui.role') || 'Developer', // 'Developer' | 'DevOps'
-  source: '–', // 'CSV' | 'Live (SF)' | '–'
-  analysisId: null, // Track current analysis to detect when new analysis loads
+  role: localStorage.getItem('ui.role') || 'Developer',
+  source: '—',
+  analysisId: null,
+  isLocked: false,
+  batchProgress: {}
 };
-let ANALYSIS = null; // latest normalized analysis payload
-let ENFORCEMENT_RESULTS = []; // Track enforcement results for deployment plan
-let CONFLICTS_DATA = {}; // Track conflicts data for deployment plan
+
+let ANALYSIS = null;
+let STORIES_DATA = null;
+let CONFLICTS_DATA = null;
+let ENFORCEMENT_RESULTS = null;
 
 /* ---------- boot ---------- */
 document.addEventListener('DOMContentLoaded', () => {
   applyHeaderBadges();
   mountRoleSwitcher();
   mountThemeSwitcher();
-  wireAnalyzeMenu();
-  wireTabs();
+  wireAnalyzeMenuEnhanced();  // UPDATED
+  wireTabsEnhanced();         // UPDATED
   wireAnalysisEvents();
   renderOverviewLanding();
   debugLog('boot', CONFIG);
 });
-
 
 /* ---------- role switcher ---------- */
 function mountRoleSwitcher() {
@@ -63,209 +68,19 @@ function mountRoleSwitcher() {
   sync();
 }
 
-/* ---------- analyze menu ---------- */
-function wireAnalyzeMenu() {
-  const trigger = $('#analyze-trigger');
-  const menu = $('#analyze-menu');
-  if (!trigger || !menu) return;
-
-  trigger.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const open = menu.getAttribute('aria-hidden') === 'false';
-    menu.setAttribute('aria-hidden', open ? 'true' : 'false');
-    trigger.setAttribute('aria-expanded', open ? 'false' : 'true');
-  });
-
-  document.addEventListener('click', () => {
-    menu.setAttribute('aria-hidden', 'true');
-    trigger.setAttribute('aria-expanded', 'false');
-  });
-
-  menu.addEventListener('click', async (e) => {
-    const btn = e.target.closest('button[data-action]');
-    if (!btn) return;
-    const action = btn.dataset.action;
-
-    if (action === 'analyze-csv') {
-      await openAnalyzeCsvFlow();
-    } else if (action === 'analyze-online') {
-      await openAnalyzeOnlineFlow();
-    }
-  });
-}
-
-function updateSourceBadge() {
-  const sourceEl = document.getElementById('source-badge');
-  if (sourceEl) sourceEl.textContent = `Source: ${STATE.source}`;
-}
-
-/* ---------- tabs ---------- */
-function wireTabs() {
-  const buttons = $$('.tab-button');
-  const panels  = $$('.tab-panel');
-  if (!buttons.length || !panels.length) return;
-
-  buttons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const tab = btn.dataset.tab;
-
-      // aria states
-      buttons.forEach(b => b.setAttribute('aria-selected', b === btn ? 'true' : 'false'));
-      panels.forEach(p => p.toggleAttribute('hidden', p.id !== `tab-${tab}`));
-
-      // render per-tab content
-      if (tab === 'overview')  renderOverviewLanding();
-      if (tab === 'stories')   renderStoriesTab(ANALYSIS || {});
-      if (tab === 'conflicts') renderConflictsTab(ANALYSIS || {});
-      if (tab === 'enforcement') renderEnforcementTab(ANALYSIS || {});
-      if (tab === 'plan') renderDeploymentPlanTab(ANALYSIS || {}, ENFORCEMENT_RESULTS, CONFLICTS_DATA);
-    });
-  });
-}
-
-/* ---------- listen for analysis results ---------- */
-function wireAnalysisEvents() {
-  window.addEventListener('analysis:loaded', (ev) => {
-    const { source, data } = ev.detail || {};
-    
-    // Generate unique ID for this analysis
-    const newAnalysisId = `${source}-${data?.all_stories?.length || 0}-${Date.now()}`;
-    const analysisChanged = STATE.analysisId !== newAnalysisId;
-    
-    ANALYSIS = data;
-    STATE.source = source || STATE.source || '–';
-    STATE.analysisId = newAnalysisId;
-    
-    updateSourceBadge();
-    updateTabBadges(ANALYSIS);
-    toast(`Analysis loaded from ${STATE.source}.`);
-    
-    debugLog('analysis:loaded', { source: STATE.source, analysisChanged, analysisId: STATE.analysisId });
-
-    // Don't auto-switch tabs - let user stay in current tab
-    // If user is already on Enforcement, it will auto-run with new data
-    // If user is elsewhere, they can navigate to Enforcement manually
-    selectTab('overview');
-  });
-}
-
-function selectTab(name) {
-  const btn = $(`.tab-button[data-tab="${name}"]`);
-  if (!btn) return;
-  btn.click();
-}
-
-function updateTabBadges(analysis){
-  const sum = analysis?.summary || {};
-  const stories = Number(sum.stories || (analysis?.all_stories?.length || 0));
-  const conflicts = Number(sum.component_conflicts || (analysis?.conflicts?.length || analysis?.component_conflicts?.length || 0));
-  setTabBadge('Safe Stories', stories);
-  setTabBadge('Conflicts', conflicts);
-}
-
-function setTabBadge(tabName, count){
-  const tab = [...document.querySelectorAll('.tabs a')].find(a => a.textContent.trim() === tabName);
-  if (!tab) return;
-  let badge = tab.querySelector('.tab-badge');
-  if (!badge) {
-    badge = document.createElement('span');
-    badge.className = 'tab-badge';
-    tab.appendChild(badge);
-  }
-  badge.textContent = String(count);
-  badge.style.display = count ? 'inline-flex' : 'none';
-}
-
-// when analysis arrives, re-render the active tab
-document.addEventListener('analysis:loaded', (e) => {
-  ANALYSIS = e.detail?.analysis || ANALYSIS;
-  ENFORCEMENT_RESULTS = e.detail?.enforcementResults || ENFORCEMENT_RESULTS;
-  CONFLICTS_DATA = e.detail?.conflictsData || CONFLICTS_DATA;
-  
-  const activeBtn = document.querySelector('.tab-button.active');
-  const activeKey = activeBtn?.dataset.tab || 'stories';
-  if (activeKey === 'stories')     renderStoriesTab(ANALYSIS || {});
-  if (activeKey === 'conflicts')   renderConflictsTab(ANALYSIS || {});
-  if (activeKey === 'enforcement') renderEnforcementTab(ANALYSIS || {});
-  if (activeKey === 'plan')        renderDeploymentPlanTab(ANALYSIS || {}, ENFORCEMENT_RESULTS, CONFLICTS_DATA);
-});
-
-
-
-/* ---------- landing content ---------- */
-function renderOverviewLanding() {
-  const panel = $('#tab-overview');
-  if (!panel) return;
-
-  const role = STATE.role;
-  const roleCopy = role === 'Developer'
-    ? 'Compare UAT vs Prod, review diffs, resolve conflicts, and generate a deployment-ready plan.'
-    : 'Validate Production Regression Guard, review blocked items, and approve a safe deployment sequence.';
-
-  panel.innerHTML = '';
-  panel.append(
-    sectionHeader('Welcome', `${role} workspace`),
-    grid(
-      card('Get Started', `
-        • Choose <b>Analyze CSV</b> to upload your export CSV (single file).<br/>
-        • Or choose <b>Analyze Online</b> to fetch live metadata (Salesforce).<br/>
-        • Your current source: <b>${STATE.source}</b>.
-      `),
-      card('Your Focus', roleCopy),
-      card('Next Actions', `
-        1) Run <b>Analyze</b><br/>
-        2) Open <b>Enforcement</b> (Auto-runs on new data)<br/>
-        3) Review <b>Conflicts</b> to resolve items<br/>
-        4) Generate <b>Plan</b> and export
-      `)
-    ),
-  );
-}
-
-/* ---------- tiny UI helpers ---------- */
-function sectionHeader(title, subtitle='') {
-  const wrap = el('div', { className: 'section-header' });
-  wrap.append(
-    el('h2', { textContent: title }),
-    subtitle ? el('div', { className: 'muted', innerHTML: subtitle }) : ''
-  );
-  return wrap;
-}
-
-function card(title, html) {
-  const c = el('div', { className: 'card' });
-  c.append(
-    el('h3', { textContent: title }),
-    el('div', { innerHTML: html })
-  );
-  return c;
-}
-function grid(...children) {
-  const g = el('div', { className: 'grid' });
-  children.forEach(ch => g.append(ch));
-  return g;
-}
-
-function toast(msg) {
-  const region = $('#toast-region');
-  if (!region) return alert(msg);
-  const t = el('div', { className: 'toast', textContent: msg });
-  region.append(t);
-  setTimeout(() => t.remove(), 2500);
-}
-
+/* ---------- theme switcher ---------- */
 function mountThemeSwitcher() {
-  // Avoid duplicate
-  if (document.getElementById('theme-switch')) return;
-  const header = document.querySelector('#app-header .env');
-  if (!header) return;
+  const header = $('#app-header .env');
+  if (!header || $('#theme-switch')) return;
 
-  const wrap = el('div', { id:'theme-switch', className:'role-switch', role:'group', ariaLabel:'Select theme' });
-  const themes = ['Midnight','Quartz']; // Midnight = default (dark), Quartz = light
-  const btns = themes.map(t => el('button', { className:'btn role-btn', type:'button', textContent: t }));
+  const wrap = el('div', { id: 'theme-switch', className: 'theme-switch', role: 'group', ariaLabel: 'Select theme' });
+  const btns = [
+    el('button', { className: 'btn role-btn', type: 'button', textContent: 'Midnight' }),
+    el('button', { className: 'btn role-btn', type: 'button', textContent: 'Quartz' })
+  ];
 
   const apply = (name) => {
-    const value = (name === 'Quartz') ? 'quartz' : '';
+    const value = name === 'Quartz' ? 'quartz' : '';
     document.documentElement.dataset.theme = value;
     localStorage.setItem('ui.theme', value || 'midnight');
     btns.forEach(b => b.classList.toggle('btn-primary', b.textContent === name));
@@ -277,9 +92,353 @@ function mountThemeSwitcher() {
   wrap.append(...btns);
   header.parentElement.insertBefore(wrap, header.nextSibling);
 
-  // restore persisted theme
   const saved = localStorage.getItem('ui.theme');
   apply(saved === 'quartz' ? 'Quartz' : 'Midnight');
+}
+
+/* ---------- ENHANCED: analyze menu ---------- */
+function wireAnalyzeMenuEnhanced() {
+  const trigger = $('#analyze-trigger');
+  const menu = $('#analyze-menu');
+  if (!trigger || !menu) return;
+
+  trigger.addEventListener('click', (e) => {
+    if (STATE.isLocked) {
+      e.stopPropagation();
+      toast('Analysis in progress. Please wait.');
+      return;
+    }
+    
+    e.stopPropagation();
+    const open = menu.getAttribute('aria-hidden') === 'false';
+    menu.setAttribute('aria-hidden', open ? 'true' : 'false');
+    trigger.setAttribute('aria-expanded', open ? 'false' : 'true');
+  });
+
+  document.addEventListener('click', () => {
+    menu.setAttribute('aria-hidden', 'true');
+    trigger.setAttribute('aria-expanded', 'false');
+  });
+
+  // CSV Analysis
+  const csvBtn = menu.querySelector('[data-action="analyze-csv"]');
+  if (csvBtn) {
+    csvBtn.addEventListener('click', async () => {
+      menu.setAttribute('aria-hidden', 'true');
+      try {
+        await openAnalyzeCsvFlow();
+      } catch (err) {
+        console.error('CSV analysis error:', err);
+        toast(`Error: ${err.message}`);
+      }
+    });
+  }
+
+  // Online Analysis - NEW: Show Modal
+const onlineBtn = menu.querySelector('[data-action="analyze-online"]');
+if (onlineBtn) {
+  onlineBtn.addEventListener('click', async (e) => {
+    menu.setAttribute('aria-hidden', 'true');
+    
+    const input = prompt('Enter story names (comma-separated):\nExample: US-0033635, US-0033636');
+    if (!input) return;
+    
+    try {
+      STATE.isLocked = true;
+      updateAnalyzeButton();
+      toast('Analyzing...');
+      
+      const stories = input.split(',').map(s => s.trim()).filter(Boolean);
+      
+      const result = await openAnalyzeOnlineFlow({
+        userStoryNames: stories,
+        releaseNames: undefined
+      });
+      
+      // MAP API response to expected structure
+      ANALYSIS = {
+        summary: result.ANALYSIS.summary,
+        all_stories: result.ANALYSIS.safe || [],
+        component_conflicts: result.ANALYSIS.conflicts || [],
+        blocked_stories: result.ANALYSIS.blocked || []
+      };
+
+      STORIES_DATA = result.STORIES_DATA;
+      CONFLICTS_DATA = result.ANALYSIS.conflicts || [];
+      STATE.source = 'Online';
+      updateSourceBadge();
+      
+      console.log('Mapped ANALYSIS:', ANALYSIS);
+      toast('Analysis complete!');
+      
+      const overviewBtn = document.querySelector('[data-tab="overview"]');
+      if (overviewBtn) overviewBtn.click();
+      
+    } catch (err) {
+      console.error('Error:', err);
+      toast(`Error: ${err.message}`);
+    } finally {
+      STATE.isLocked = false;
+      updateAnalyzeButton();
+    }
+  });
+}
+
+}
+
+/* ---------- ENHANCED: wire tabs ---------- */
+function wireTabsEnhanced() {
+  const buttons = $$('.tab-button');
+  const panels = $$('.tab-panel');
+  if (!buttons.length || !panels.length) return;
+
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tab = btn.dataset.tab;
+
+      buttons.forEach(b => b.setAttribute('aria-selected', b === btn ? 'true' : 'false'));
+      panels.forEach(p => p.toggleAttribute('hidden', p.id !== `tab-${tab}`));
+
+      try {
+        if (tab === 'overview') {
+          if (ANALYSIS) {
+            console.log('ANALYSIS for overview:', ANALYSIS);
+            renderOverviewTab(ANALYSIS);
+          } else {
+            renderOverviewLanding();
+          }
+        }
+        if (tab === 'stories') {
+          if (ANALYSIS) renderStoriesTab(ANALYSIS);
+          else renderOverviewLanding();
+        }
+        if (tab === 'conflicts') {
+        if (ANALYSIS) {
+            console.log('ANALYSIS for conflicts:', ANALYSIS);
+            console.log('component_conflicts:', ANALYSIS.component_conflicts);
+            console.log('conflicts:', ANALYSIS.conflicts);
+            renderConflictsTab(ANALYSIS);
+        } else {
+            renderOverviewLanding();
+        }
+        }
+        
+if (tab === 'enforcement') {
+  if (ANALYSIS) {
+    console.log('ANALYSIS for enforcement:', ANALYSIS);
+    console.log('blocked_stories:', ANALYSIS.blocked_stories);
+    renderEnforcementTab(ANALYSIS);
+  } else {
+    renderOverviewLanding();
+  }
+}
+        if (tab === 'plan') {
+          if (ANALYSIS) renderDeploymentPlanTab(STORIES_DATA || {}, ENFORCEMENT_RESULTS || [], CONFLICTS_DATA || {});
+          else renderOverviewLanding();
+        }
+      } catch (err) {
+        console.error('Tab render error:', err);
+        toast('Error loading tab');
+      }
+    });
+  });
+}
+
+/* ---------- NEW: Helper - Toast Notification ---------- */
+export function toast(message, duration = 3000) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+
+  const toastEl = document.createElement('div');
+  toastEl.className = 'toast';
+  toastEl.textContent = message;
+  toastEl.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #1d1d1f;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    z-index: 999;
+    animation: slideInUp 0.3s ease;
+  `;
+
+  document.body.appendChild(toastEl);
+
+  setTimeout(() => {
+    toastEl.style.animation = 'slideInDown 0.3s ease';
+    setTimeout(() => toastEl.remove(), 300);
+  }, duration);
+}
+
+/* ---------- NEW: Helper - Update Analyze Button State ---------- */
+export function updateAnalyzeButton() {
+  const btn = $('#analyze-trigger');
+  if (!btn) return;
+  
+  if (STATE.isLocked) {
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+    btn.textContent = 'Analyzing...';
+  } else {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.textContent = 'Analyze';
+  }
+}
+
+function updateSourceBadge() {
+  const sourceEl = document.getElementById('source-badge');
+  if (sourceEl) sourceEl.textContent = `Source: ${STATE.source}`;
+}
+
+/* ---------- batch processing ---------- */
+function startBatchProcessing(analysis, source) {
+  STATE.isLocked = true;
+  STATE.batchProgress = {};
+  updateAnalyzeButton();
+  toast('Starting analysis batches...');
+  
+  debugLog('batch:start', { source });
+
+  renderEnforcementTab(analysis);
+}
+
+function onEnforcementComplete(enforcementResults) {
+  debugLog('api:analysis-structure', {
+    hasAllStories: !!ANALYSIS?.all_stories,
+    allStoriesCount: ANALYSIS?.all_stories?.length || 0,
+    summary: ANALYSIS?.summary || {},
+    allTopLevelKeys: ANALYSIS ? Object.keys(ANALYSIS) : []
+  });
+
+  const statusCounts = {};
+  (enforcementResults || []).forEach(r => {
+    statusCounts[r.status] = (statusCounts[r.status] || 0) + 1;
+  });
+  
+  debugLog('batch:enforcement:status-breakdown', statusCounts);
+  
+  const behindProdByStory = new Map();
+  (enforcementResults || []).forEach(result => {
+    if (result.status === 'BEHIND_PROD' && result.primaryStoryId) {
+      if (!behindProdByStory.has(result.primaryStoryId)) {
+        behindProdByStory.set(result.primaryStoryId, result);
+      }
+    }
+  });
+  
+  ENFORCEMENT_RESULTS = Array.from(behindProdByStory.values());
+  
+  STATE.batchProgress['enforcement'] = true;
+  
+  debugLog('batch:enforcement:complete', { 
+    totalComponentsInResults: enforcementResults.length,
+    uniqueBehindProdStories: ENFORCEMENT_RESULTS.length,
+    dedupDetails: {
+      storiesRemoved: enforcementResults.length - ENFORCEMENT_RESULTS.length,
+      behindProdStoryIds: ENFORCEMENT_RESULTS.map(r => r.primaryStoryId)
+    }
+  });
+
+  processBatchFilterStories(ANALYSIS, ENFORCEMENT_RESULTS);
+  processBatchConflicts(STORIES_DATA);
+}
+
+function processBatchFilterStories(analysis, enforcementResults) {
+  const behindProdStoryIds = new Set(
+    enforcementResults
+      .filter(r => r.status === 'BEHIND_PROD')
+      .map(r => r.primaryStoryId)
+      .filter(Boolean)
+  );
+
+  debugLog('batch:stories:filtering', {
+    totalEnforcementResults: enforcementResults.length,
+    uniqueBehindProdStories: behindProdStoryIds.size,
+    behindStories: Array.from(behindProdStoryIds)
+  });
+
+  const rawStories = analysis?.all_stories || [];
+  const deduped = new Map();
+  rawStories.forEach(s => {
+    const storyId = s?.id || s?.name || s?.key;
+    if (storyId && !deduped.has(storyId)) {
+      deduped.set(storyId, s);
+    }
+  });
+  
+  STATE.batchProgress['stories'] = true;
+  debugLog('batch:stories:complete', {
+    inputCount: rawStories.length,
+    uniqueCount: deduped.size
+  });
+}
+
+function processBatchConflicts(storiesData) {
+  const rawConflicts = storiesData?.all_stories || [];
+  const deduped = new Map();
+  rawConflicts.forEach(c => {
+    const conflictId = c?.id || c?.component_id;
+    if (conflictId && !deduped.has(conflictId)) {
+      deduped.set(conflictId, c);
+    }
+  });
+
+  STATE.batchProgress['conflicts'] = true;
+  debugLog('batch:conflicts:complete', {
+    inputCount: rawConflicts.length,
+    uniqueCount: deduped.size
+  });
+
+  STATE.isLocked = false;
+  updateAnalyzeButton();
+  toast('Analysis complete!');
+}
+
+function wireAnalysisEvents() {
+  if (typeof window.__analyzeStories !== 'function') return;
+
+  window.addEventListener('analysis-result', (e) => {
+    const { analysis, source } = e.detail || {};
+    
+    if (!analysis) {
+      console.error('No analysis data in event');
+      return;
+    }
+
+    ANALYSIS = analysis;
+    STATE.source = source || 'Online';
+    updateSourceBadge();
+
+    startBatchProcessing(analysis, source);
+    
+    setTimeout(() => {
+      onEnforcementComplete(ENFORCEMENT_RESULTS || []);
+      renderOverviewLanding();
+      
+      const overviewBtn = document.querySelector('[data-tab="overview"]');
+      if (overviewBtn) {
+        overviewBtn.click();
+      }
+    }, 500);
+  });
+}
+
+function renderOverviewLanding() {
+  const panel = $('#tab-overview');
+  if (!panel) return;
+
+  // Remove this check - always show landing
+  panel.innerHTML = `
+    <div style="text-align: center; padding: 60px 20px; color: #86868b;">
+      <div style="font-size: 48px; margin-bottom: 20px;">📊</div>
+      <h2 style="margin: 0 0 10px; font-size: 20px; font-weight: 600; color: #1d1d1f;">Welcome to Deployment Planner</h2>
+      <p style="margin: 0; font-size: 14px;">Click "Analyze" to get started with your deployment analysis</p>
+    </div>
+  `;
 }
 
 
@@ -290,14 +449,33 @@ const injectOnce = (() => {
     if (done) return; done = true;
     const css = `
       #role-switch{display:flex; gap:6px; align-items:center}
+      #theme-switch{display:flex; gap:6px; align-items:center}
       .role-btn{padding:.4rem .7rem}
       .section-header h2{margin:0 0 4px}
       .section-header .muted{color:var(--muted); margin-bottom:12px}
       .grid{display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(240px,1fr));}
       .card{padding:12px}
       .card h3{margin:0 0 6px}
+      .loading-message{padding: 40px; text-align: center; color: #86868b; font-size: 15px;}
+      @keyframes slideInUp {
+        from { transform: translateY(10px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+      }
+      @keyframes slideInDown {
+        from { transform: translateY(-10px); opacity: 1; }
+        to { transform: translateY(0); opacity: 0; }
+      }
     `;
     document.head.appendChild(el('style', { textContent: css }));
   };
 })();
 injectOnce();
+
+// Expose globally for debugging
+window.STATE = STATE;
+window.ANALYSIS = ANALYSIS;
+window.STORIES_DATA = STORIES_DATA;
+window.CONFLICTS_DATA = CONFLICTS_DATA;
+window.ENFORCEMENT_RESULTS = ENFORCEMENT_RESULTS;
+window.toast = toast;
+window.updateAnalyzeButton = updateAnalyzeButton;

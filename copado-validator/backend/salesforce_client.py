@@ -210,6 +210,8 @@ def fetch_story_commits(sf, user_story_names: List[str]) -> List[Dict]:
             WHERE copado__User_Story__r.Name IN {soql_in(batch)}
         """
         recs = sf.query_all(soql).get("records", [])
+        logger.debug(f"[SF] Haribooolllllll fetch_story_commits got {len(recs)} records")
+
         for r in recs:
             html = r.get("copado__View_in_Git__c")
             parsed = _parse_commit_from_view_in_git(html)
@@ -240,3 +242,61 @@ def ensure_required_fields(field_list):
     else:
         logger.debug("SOQL projection: all required fields present, total=%d", len(field_list))
     return field_list
+
+
+
+def fetch_production_component_state(sf, components: List[Dict]) -> List[Dict]:
+    if not components:
+        return []
+    
+    api_names = [comp.get("api_name") for comp in components if comp.get("api_name")]
+    logger.info(f"[SF] Running query with {len(api_names)} components")
+    
+    if not api_names:
+        return []
+    
+    soql = f"""
+        SELECT 
+            copado__Metadata_API_Name__c,
+            copado__Type__c,
+            copado__Last_Commit_Date__c,
+            copado__User_Story__r.Name,
+            copado__User_Story__r.copado__User_Story_Title__c,
+            LastModifiedDate,
+            LastModifiedBy.Name
+        FROM copado__User_Story_Metadata__c
+        WHERE copado__Metadata_API_Name__c IN {soql_in(api_names)}
+        AND copado__User_Story__r.copado__Environment__r.Name = 'production'
+        ORDER BY copado__Last_Commit_Date__c DESC
+    """
+    
+    logger.debug(f"[SF] SOQL: {soql}")
+    result = sf.query_all(soql)
+    records = result.get("records", [])
+    
+    logger.info(f"[SF] Got {len(records)} records")
+    if records:
+        logger.info(f"[SF] Sample record keys: {list(records[0].keys())}")
+        logger.debug(f"[SF] Sample record #1: {json.dumps(records[0], indent=2, default=str)}")
+        
+        # NORMALIZE: Convert SF format to consistent flat structure
+        normalized = []
+        for rec in records:
+            # Handle nested User Story relationship
+            user_story = rec.get("copado__User_Story__r") or {}
+            
+            normalized_rec = {
+                "copado__Metadata_API_Name__c": rec.get("copado__Metadata_API_Name__c"),
+                "copado__Type__c": rec.get("copado__Type__c"),
+                "copado__Last_Commit_Date__c": rec.get("copado__Last_Commit_Date__c"),
+                "copado__User_Story__r.Name": user_story.get("Name"),
+                "copado__User_Story__r.copado__User_Story_Title__c": user_story.get("copado__User_Story_Title__c"),
+                "LastModifiedDate": rec.get("LastModifiedDate"),
+                "LastModifiedBy.Name": rec.get("LastModifiedBy.Name") or (rec.get("LastModifiedBy") or {}).get("Name")
+            }
+            normalized.append(normalized_rec)
+            logger.debug(f"[SF] Normalized: {normalized_rec['copado__Metadata_API_Name__c']} → story={normalized_rec['copado__User_Story__r.Name']}")
+        
+        return normalized
+    
+    return records

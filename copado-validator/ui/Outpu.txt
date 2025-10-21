@@ -1,0 +1,4824 @@
+{
+  "conflicts": [
+    {
+      "component": {
+        "api_name": "ApexClass.PR_AssetPreValidation_tst",
+        "commit_hash": null,
+        "created_by": "Shivani Soni",
+        "last_commit_date": "2025-10-01T08:09:11",
+        "status": "AUTO_RESOLVED",
+        "type": "APEX_CLASS",
+        "unique_id": "aC2Pl000000EvZVKA0_ApexClass.PR_AssetPreValidation_tst",
+        "user_story_id": "US-0033553"
+      },
+      "involved_stories": [
+        {
+          "close_date": null,
+          "commit_sha": "df08c199d53e558dad2e238d2fe8ff8fe5b7ea5f",
+          "commit_url": "https://bitbucket.org/lla-dev/copado_lla/commits/df08c199d53e558dad2e238d2fe8ff8fe5b7ea5f",
+          "components": [
+            {
+              "api_name": "PermissionSet.PR_Sales_B2C_LimitedAccess",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "AUTO_RESOLVED",
+              "type": "PERMISSION_SET",
+              "unique_id": "aC2Pl000000EjIDKA0_PermissionSet.PR_Sales_B2C_LimitedAccess",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "CustomLabel.Asset_Line_Number_Validation",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000EjIDKA0_CustomLabel.Asset_Line_Number_Validation",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "CustomLabel.Asset_Disconnect_Reason_Validation",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000EjIDKA0_CustomLabel.Asset_Disconnect_Reason_Validation",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "CustomLabel.Asset_Disconnect_Datetime_Validation",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000EjIDKA0_CustomLabel.Asset_Disconnect_Datetime_Validation",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "CustomLabel.Asset_Billing_Account_Id_Validation",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000EjIDKA0_CustomLabel.Asset_Billing_Account_Id_Validation",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "ApexClass.PR_AssetPreValidation_tst",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "POTENTIAL_CONFLICT",
+              "type": "APEX_CLASS",
+              "unique_id": "aC2Pl000000EjIDKA0_ApexClass.PR_AssetPreValidation_tst",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "ApexClass.PR_AssetPreValidation",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "POTENTIAL_CONFLICT",
+              "type": "APEX_CLASS",
+              "unique_id": "aC2Pl000000EjIDKA0_ApexClass.PR_AssetPreValidation",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_addToCartWithDevicesIP",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "AUTO_RESOLVED",
+              "type": "INTEGRATION_PROCEDURE",
+              "unique_id": "aC2Pl000000EjIDKA0_IntegrationProcedure.PR_addToCartWithDevicesIP",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "OmniScript.PR_MobilePrepaidChangePlan_English",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "AUTO_RESOLVED",
+              "type": "OMNI_SCRIPT",
+              "unique_id": "aC2Pl000000EjIDKA0_OmniScript.PR_MobilePrepaidChangePlan_English",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_AddProductSelectToPostpaidchangeCartIP",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "POTENTIAL_CONFLICT",
+              "type": "INTEGRATION_PROCEDURE",
+              "unique_id": "aC2Pl000000EjIDKA0_IntegrationProcedure.PR_AddProductSelectToPostpaidchangeCartIP",
+              "user_story_id": "US-0033466"
+            }
+          ],
+          "created_by": null,
+          "created_date": null,
+          "developer": "Shivani Soni",
+          "environment": "Unknown",
+          "id": "US-0033466",
+          "jira_key": "SAL-83930",
+          "last_commit_date": null,
+          "last_modified_by": null,
+          "last_modified_date": null,
+          "module_directory": null,
+          "name": "US-0033466",
+          "project": "Unknown",
+          "story_points": null,
+          "title": "Development / SIT Deployment / QA Deployment - SAL-83930"
+        },
+        {
+          "close_date": null,
+          "commit_sha": "456f9c9aaecd8f34dd648126061e0bb838810b09",
+          "commit_url": "https://bitbucket.org/lla-dev/copado_lla/commits/456f9c9aaecd8f34dd648126061e0bb838810b09",
+          "components": [
+            {
+              "api_name": "ApexClass.PR_AssetPreValidation_tst",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-10-01T08:09:11",
+              "status": "AUTO_RESOLVED",
+              "type": "APEX_CLASS",
+              "unique_id": "aC2Pl000000EvZVKA0_ApexClass.PR_AssetPreValidation_tst",
+              "user_story_id": "US-0033553"
+            },
+            {
+              "api_name": "ApexClass.PR_AssetPreValidation",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-10-01T08:09:11",
+              "status": "AUTO_RESOLVED",
+              "type": "APEX_CLASS",
+              "unique_id": "aC2Pl000000EvZVKA0_ApexClass.PR_AssetPreValidation",
+              "user_story_id": "US-0033553"
+            },
+            {
+              "api_name": "DataRaptor.PR_TransformAddToCart",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-10-01T08:09:11",
+              "status": "UNKNOWN",
+              "type": "DATA_RAPTOR",
+              "unique_id": "aC2Pl000000EvZVKA0_DataRaptor.PR_TransformAddToCart",
+              "user_story_id": "US-0033553"
+            },
+            {
+              "api_name": "OmniScript.PR_DeviceChangeForInsuranceOS_English",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-10-01T08:09:11",
+              "status": "AUTO_RESOLVED",
+              "type": "OMNI_SCRIPT",
+              "unique_id": "aC2Pl000000EvZVKA0_OmniScript.PR_DeviceChangeForInsuranceOS_English",
+              "user_story_id": "US-0033553"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_AddProductSelectToPostpaidchangeCartIP",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-10-01T08:09:11",
+              "status": "AUTO_RESOLVED",
+              "type": "INTEGRATION_PROCEDURE",
+              "unique_id": "aC2Pl000000EvZVKA0_IntegrationProcedure.PR_AddProductSelectToPostpaidchangeCartIP",
+              "user_story_id": "US-0033553"
+            }
+          ],
+          "created_by": null,
+          "created_date": null,
+          "developer": "Shivani Soni",
+          "environment": "Unknown",
+          "id": "US-0033553",
+          "jira_key": "SAL-84094",
+          "last_commit_date": null,
+          "last_modified_by": null,
+          "last_modified_date": null,
+          "module_directory": null,
+          "name": "US-0033553",
+          "project": "Unknown",
+          "story_points": null,
+          "title": "CLONE - Development / SIT Deployment / QA Deployment - SAL-83930 - SAL-84094"
+        }
+      ],
+      "risk_factors": [
+        "Critical component type (ApexClass)",
+        "Copado flagged as Potential Conflict"
+      ],
+      "risk_score": 55,
+      "severity": "HIGH",
+      "stories_with_commit_info": [
+        {
+          "commit_sha": "df08c199d53e558dad2e238d2fe8ff8fe5b7ea5f",
+          "commit_url": "https://bitbucket.org/lla-dev/copado_lla/commits/df08c199d53e558dad2e238d2fe8ff8fe5b7ea5f",
+          "last_commit_date": null,
+          "name": "US-0033466"
+        },
+        {
+          "commit_sha": "456f9c9aaecd8f34dd648126061e0bb838810b09",
+          "commit_url": "https://bitbucket.org/lla-dev/copado_lla/commits/456f9c9aaecd8f34dd648126061e0bb838810b09",
+          "last_commit_date": null,
+          "name": "US-0033553"
+        }
+      ]
+    },
+    {
+      "component": {
+        "api_name": "ApexClass.PR_AssetPreValidation",
+        "commit_hash": null,
+        "created_by": "Shivani Soni",
+        "last_commit_date": "2025-10-01T08:09:11",
+        "status": "AUTO_RESOLVED",
+        "type": "APEX_CLASS",
+        "unique_id": "aC2Pl000000EvZVKA0_ApexClass.PR_AssetPreValidation",
+        "user_story_id": "US-0033553"
+      },
+      "involved_stories": [
+        {
+          "close_date": null,
+          "commit_sha": "df08c199d53e558dad2e238d2fe8ff8fe5b7ea5f",
+          "commit_url": "https://bitbucket.org/lla-dev/copado_lla/commits/df08c199d53e558dad2e238d2fe8ff8fe5b7ea5f",
+          "components": [
+            {
+              "api_name": "PermissionSet.PR_Sales_B2C_LimitedAccess",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "AUTO_RESOLVED",
+              "type": "PERMISSION_SET",
+              "unique_id": "aC2Pl000000EjIDKA0_PermissionSet.PR_Sales_B2C_LimitedAccess",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "CustomLabel.Asset_Line_Number_Validation",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000EjIDKA0_CustomLabel.Asset_Line_Number_Validation",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "CustomLabel.Asset_Disconnect_Reason_Validation",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000EjIDKA0_CustomLabel.Asset_Disconnect_Reason_Validation",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "CustomLabel.Asset_Disconnect_Datetime_Validation",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000EjIDKA0_CustomLabel.Asset_Disconnect_Datetime_Validation",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "CustomLabel.Asset_Billing_Account_Id_Validation",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000EjIDKA0_CustomLabel.Asset_Billing_Account_Id_Validation",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "ApexClass.PR_AssetPreValidation_tst",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "POTENTIAL_CONFLICT",
+              "type": "APEX_CLASS",
+              "unique_id": "aC2Pl000000EjIDKA0_ApexClass.PR_AssetPreValidation_tst",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "ApexClass.PR_AssetPreValidation",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "POTENTIAL_CONFLICT",
+              "type": "APEX_CLASS",
+              "unique_id": "aC2Pl000000EjIDKA0_ApexClass.PR_AssetPreValidation",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_addToCartWithDevicesIP",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "AUTO_RESOLVED",
+              "type": "INTEGRATION_PROCEDURE",
+              "unique_id": "aC2Pl000000EjIDKA0_IntegrationProcedure.PR_addToCartWithDevicesIP",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "OmniScript.PR_MobilePrepaidChangePlan_English",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "AUTO_RESOLVED",
+              "type": "OMNI_SCRIPT",
+              "unique_id": "aC2Pl000000EjIDKA0_OmniScript.PR_MobilePrepaidChangePlan_English",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_AddProductSelectToPostpaidchangeCartIP",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "POTENTIAL_CONFLICT",
+              "type": "INTEGRATION_PROCEDURE",
+              "unique_id": "aC2Pl000000EjIDKA0_IntegrationProcedure.PR_AddProductSelectToPostpaidchangeCartIP",
+              "user_story_id": "US-0033466"
+            }
+          ],
+          "created_by": null,
+          "created_date": null,
+          "developer": "Shivani Soni",
+          "environment": "Unknown",
+          "id": "US-0033466",
+          "jira_key": "SAL-83930",
+          "last_commit_date": null,
+          "last_modified_by": null,
+          "last_modified_date": null,
+          "module_directory": null,
+          "name": "US-0033466",
+          "project": "Unknown",
+          "story_points": null,
+          "title": "Development / SIT Deployment / QA Deployment - SAL-83930"
+        },
+        {
+          "close_date": null,
+          "commit_sha": "456f9c9aaecd8f34dd648126061e0bb838810b09",
+          "commit_url": "https://bitbucket.org/lla-dev/copado_lla/commits/456f9c9aaecd8f34dd648126061e0bb838810b09",
+          "components": [
+            {
+              "api_name": "ApexClass.PR_AssetPreValidation_tst",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-10-01T08:09:11",
+              "status": "AUTO_RESOLVED",
+              "type": "APEX_CLASS",
+              "unique_id": "aC2Pl000000EvZVKA0_ApexClass.PR_AssetPreValidation_tst",
+              "user_story_id": "US-0033553"
+            },
+            {
+              "api_name": "ApexClass.PR_AssetPreValidation",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-10-01T08:09:11",
+              "status": "AUTO_RESOLVED",
+              "type": "APEX_CLASS",
+              "unique_id": "aC2Pl000000EvZVKA0_ApexClass.PR_AssetPreValidation",
+              "user_story_id": "US-0033553"
+            },
+            {
+              "api_name": "DataRaptor.PR_TransformAddToCart",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-10-01T08:09:11",
+              "status": "UNKNOWN",
+              "type": "DATA_RAPTOR",
+              "unique_id": "aC2Pl000000EvZVKA0_DataRaptor.PR_TransformAddToCart",
+              "user_story_id": "US-0033553"
+            },
+            {
+              "api_name": "OmniScript.PR_DeviceChangeForInsuranceOS_English",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-10-01T08:09:11",
+              "status": "AUTO_RESOLVED",
+              "type": "OMNI_SCRIPT",
+              "unique_id": "aC2Pl000000EvZVKA0_OmniScript.PR_DeviceChangeForInsuranceOS_English",
+              "user_story_id": "US-0033553"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_AddProductSelectToPostpaidchangeCartIP",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-10-01T08:09:11",
+              "status": "AUTO_RESOLVED",
+              "type": "INTEGRATION_PROCEDURE",
+              "unique_id": "aC2Pl000000EvZVKA0_IntegrationProcedure.PR_AddProductSelectToPostpaidchangeCartIP",
+              "user_story_id": "US-0033553"
+            }
+          ],
+          "created_by": null,
+          "created_date": null,
+          "developer": "Shivani Soni",
+          "environment": "Unknown",
+          "id": "US-0033553",
+          "jira_key": "SAL-84094",
+          "last_commit_date": null,
+          "last_modified_by": null,
+          "last_modified_date": null,
+          "module_directory": null,
+          "name": "US-0033553",
+          "project": "Unknown",
+          "story_points": null,
+          "title": "CLONE - Development / SIT Deployment / QA Deployment - SAL-83930 - SAL-84094"
+        }
+      ],
+      "risk_factors": [
+        "Critical component type (ApexClass)",
+        "Copado flagged as Potential Conflict"
+      ],
+      "risk_score": 55,
+      "severity": "HIGH",
+      "stories_with_commit_info": [
+        {
+          "commit_sha": "df08c199d53e558dad2e238d2fe8ff8fe5b7ea5f",
+          "commit_url": "https://bitbucket.org/lla-dev/copado_lla/commits/df08c199d53e558dad2e238d2fe8ff8fe5b7ea5f",
+          "last_commit_date": null,
+          "name": "US-0033466"
+        },
+        {
+          "commit_sha": "456f9c9aaecd8f34dd648126061e0bb838810b09",
+          "commit_url": "https://bitbucket.org/lla-dev/copado_lla/commits/456f9c9aaecd8f34dd648126061e0bb838810b09",
+          "last_commit_date": null,
+          "name": "US-0033553"
+        }
+      ]
+    },
+    {
+      "component": {
+        "api_name": "IntegrationProcedure.PR_AddProductSelectToPostpaidchangeCartIP",
+        "commit_hash": null,
+        "created_by": "Shivani Soni",
+        "last_commit_date": "2025-10-01T08:09:11",
+        "status": "AUTO_RESOLVED",
+        "type": "INTEGRATION_PROCEDURE",
+        "unique_id": "aC2Pl000000EvZVKA0_IntegrationProcedure.PR_AddProductSelectToPostpaidchangeCartIP",
+        "user_story_id": "US-0033553"
+      },
+      "involved_stories": [
+        {
+          "close_date": null,
+          "commit_sha": "df08c199d53e558dad2e238d2fe8ff8fe5b7ea5f",
+          "commit_url": "https://bitbucket.org/lla-dev/copado_lla/commits/df08c199d53e558dad2e238d2fe8ff8fe5b7ea5f",
+          "components": [
+            {
+              "api_name": "PermissionSet.PR_Sales_B2C_LimitedAccess",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "AUTO_RESOLVED",
+              "type": "PERMISSION_SET",
+              "unique_id": "aC2Pl000000EjIDKA0_PermissionSet.PR_Sales_B2C_LimitedAccess",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "CustomLabel.Asset_Line_Number_Validation",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000EjIDKA0_CustomLabel.Asset_Line_Number_Validation",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "CustomLabel.Asset_Disconnect_Reason_Validation",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000EjIDKA0_CustomLabel.Asset_Disconnect_Reason_Validation",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "CustomLabel.Asset_Disconnect_Datetime_Validation",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000EjIDKA0_CustomLabel.Asset_Disconnect_Datetime_Validation",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "CustomLabel.Asset_Billing_Account_Id_Validation",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000EjIDKA0_CustomLabel.Asset_Billing_Account_Id_Validation",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "ApexClass.PR_AssetPreValidation_tst",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "POTENTIAL_CONFLICT",
+              "type": "APEX_CLASS",
+              "unique_id": "aC2Pl000000EjIDKA0_ApexClass.PR_AssetPreValidation_tst",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "ApexClass.PR_AssetPreValidation",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "POTENTIAL_CONFLICT",
+              "type": "APEX_CLASS",
+              "unique_id": "aC2Pl000000EjIDKA0_ApexClass.PR_AssetPreValidation",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_addToCartWithDevicesIP",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "AUTO_RESOLVED",
+              "type": "INTEGRATION_PROCEDURE",
+              "unique_id": "aC2Pl000000EjIDKA0_IntegrationProcedure.PR_addToCartWithDevicesIP",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "OmniScript.PR_MobilePrepaidChangePlan_English",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "AUTO_RESOLVED",
+              "type": "OMNI_SCRIPT",
+              "unique_id": "aC2Pl000000EjIDKA0_OmniScript.PR_MobilePrepaidChangePlan_English",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_AddProductSelectToPostpaidchangeCartIP",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "POTENTIAL_CONFLICT",
+              "type": "INTEGRATION_PROCEDURE",
+              "unique_id": "aC2Pl000000EjIDKA0_IntegrationProcedure.PR_AddProductSelectToPostpaidchangeCartIP",
+              "user_story_id": "US-0033466"
+            }
+          ],
+          "created_by": null,
+          "created_date": null,
+          "developer": "Shivani Soni",
+          "environment": "Unknown",
+          "id": "US-0033466",
+          "jira_key": "SAL-83930",
+          "last_commit_date": null,
+          "last_modified_by": null,
+          "last_modified_date": null,
+          "module_directory": null,
+          "name": "US-0033466",
+          "project": "Unknown",
+          "story_points": null,
+          "title": "Development / SIT Deployment / QA Deployment - SAL-83930"
+        },
+        {
+          "close_date": null,
+          "commit_sha": "456f9c9aaecd8f34dd648126061e0bb838810b09",
+          "commit_url": "https://bitbucket.org/lla-dev/copado_lla/commits/456f9c9aaecd8f34dd648126061e0bb838810b09",
+          "components": [
+            {
+              "api_name": "ApexClass.PR_AssetPreValidation_tst",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-10-01T08:09:11",
+              "status": "AUTO_RESOLVED",
+              "type": "APEX_CLASS",
+              "unique_id": "aC2Pl000000EvZVKA0_ApexClass.PR_AssetPreValidation_tst",
+              "user_story_id": "US-0033553"
+            },
+            {
+              "api_name": "ApexClass.PR_AssetPreValidation",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-10-01T08:09:11",
+              "status": "AUTO_RESOLVED",
+              "type": "APEX_CLASS",
+              "unique_id": "aC2Pl000000EvZVKA0_ApexClass.PR_AssetPreValidation",
+              "user_story_id": "US-0033553"
+            },
+            {
+              "api_name": "DataRaptor.PR_TransformAddToCart",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-10-01T08:09:11",
+              "status": "UNKNOWN",
+              "type": "DATA_RAPTOR",
+              "unique_id": "aC2Pl000000EvZVKA0_DataRaptor.PR_TransformAddToCart",
+              "user_story_id": "US-0033553"
+            },
+            {
+              "api_name": "OmniScript.PR_DeviceChangeForInsuranceOS_English",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-10-01T08:09:11",
+              "status": "AUTO_RESOLVED",
+              "type": "OMNI_SCRIPT",
+              "unique_id": "aC2Pl000000EvZVKA0_OmniScript.PR_DeviceChangeForInsuranceOS_English",
+              "user_story_id": "US-0033553"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_AddProductSelectToPostpaidchangeCartIP",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-10-01T08:09:11",
+              "status": "AUTO_RESOLVED",
+              "type": "INTEGRATION_PROCEDURE",
+              "unique_id": "aC2Pl000000EvZVKA0_IntegrationProcedure.PR_AddProductSelectToPostpaidchangeCartIP",
+              "user_story_id": "US-0033553"
+            }
+          ],
+          "created_by": null,
+          "created_date": null,
+          "developer": "Shivani Soni",
+          "environment": "Unknown",
+          "id": "US-0033553",
+          "jira_key": "SAL-84094",
+          "last_commit_date": null,
+          "last_modified_by": null,
+          "last_modified_date": null,
+          "module_directory": null,
+          "name": "US-0033553",
+          "project": "Unknown",
+          "story_points": null,
+          "title": "CLONE - Development / SIT Deployment / QA Deployment - SAL-83930 - SAL-84094"
+        }
+      ],
+      "risk_factors": [
+        "Critical component type (IntegrationProcedure)",
+        "Copado flagged as Potential Conflict"
+      ],
+      "risk_score": 55,
+      "severity": "HIGH",
+      "stories_with_commit_info": [
+        {
+          "commit_sha": "df08c199d53e558dad2e238d2fe8ff8fe5b7ea5f",
+          "commit_url": "https://bitbucket.org/lla-dev/copado_lla/commits/df08c199d53e558dad2e238d2fe8ff8fe5b7ea5f",
+          "last_commit_date": null,
+          "name": "US-0033466"
+        },
+        {
+          "commit_sha": "456f9c9aaecd8f34dd648126061e0bb838810b09",
+          "commit_url": "https://bitbucket.org/lla-dev/copado_lla/commits/456f9c9aaecd8f34dd648126061e0bb838810b09",
+          "last_commit_date": null,
+          "name": "US-0033553"
+        }
+      ]
+    },
+    {
+      "component": {
+        "api_name": "DataRaptor.PR_GetAccessoriesFromPlanDR",
+        "commit_hash": null,
+        "created_by": "Prabhat Gupta",
+        "last_commit_date": "2025-09-29T23:20:44",
+        "status": "BACK_PROMOTED",
+        "type": "DATA_RAPTOR",
+        "unique_id": "aC2Pl000000EsbdKAC_DataRaptor.PR_GetAccessoriesFromPlanDR",
+        "user_story_id": "US-0033536"
+      },
+      "involved_stories": [
+        {
+          "close_date": null,
+          "commit_sha": "2a9e993150fcc25556513dd27fb613c766282094",
+          "commit_url": "https://bitbucket.org/lla-dev/copado_lla/commits/2a9e993150fcc25556513dd27fb613c766282094",
+          "components": [
+            {
+              "api_name": "DataRaptor.PRDRFetchAssets",
+              "commit_hash": null,
+              "created_by": "Prabhat Gupta",
+              "last_commit_date": "2025-09-19T01:08:19",
+              "status": "POTENTIAL_CONFLICT",
+              "type": "DATA_RAPTOR",
+              "unique_id": "aC2Pl000000ERALKA4_DataRaptor.PRDRFetchAssets",
+              "user_story_id": "US-0033343"
+            },
+            {
+              "api_name": "CustomMetadata.PR_Generic.ValidateNonPayAsset",
+              "commit_hash": null,
+              "created_by": "Prabhat Gupta",
+              "last_commit_date": "2025-09-19T01:08:19",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000ERALKA4_CustomMetadata.PR_Generic.ValidateNonPayAsset",
+              "user_story_id": "US-0033343"
+            },
+            {
+              "api_name": "CustomField.PR_Generic__mdt.Type__c",
+              "commit_hash": null,
+              "created_by": "Prabhat Gupta",
+              "last_commit_date": "2025-09-19T01:08:19",
+              "status": "POTENTIAL_CONFLICT",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000ERALKA4_CustomField.PR_Generic__mdt.Type__c",
+              "user_story_id": "US-0033343"
+            },
+            {
+              "api_name": "ApexClass.PR_AccessoriesHelper_Test",
+              "commit_hash": null,
+              "created_by": "Prabhat Gupta",
+              "last_commit_date": "2025-09-19T01:08:19",
+              "status": "UNKNOWN",
+              "type": "APEX_CLASS",
+              "unique_id": "aC2Pl000000ERALKA4_ApexClass.PR_AccessoriesHelper_Test",
+              "user_story_id": "US-0033343"
+            },
+            {
+              "api_name": "ApexClass.PR_AccessoriesHelper",
+              "commit_hash": null,
+              "created_by": "Prabhat Gupta",
+              "last_commit_date": "2025-09-19T01:08:19",
+              "status": "UNKNOWN",
+              "type": "APEX_CLASS",
+              "unique_id": "aC2Pl000000ERALKA4_ApexClass.PR_AccessoriesHelper",
+              "user_story_id": "US-0033343"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_ValidateNonPayAssetsIP",
+              "commit_hash": null,
+              "created_by": "Prabhat Gupta",
+              "last_commit_date": "2025-09-19T01:08:19",
+              "status": "UNKNOWN",
+              "type": "INTEGRATION_PROCEDURE",
+              "unique_id": "aC2Pl000000ERALKA4_IntegrationProcedure.PR_ValidateNonPayAssetsIP",
+              "user_story_id": "US-0033343"
+            },
+            {
+              "api_name": "DataRaptor.PR_GetCompanionWearableDR",
+              "commit_hash": null,
+              "created_by": "Prabhat Gupta",
+              "last_commit_date": "2025-09-19T01:08:19",
+              "status": "POTENTIAL_CONFLICT",
+              "type": "DATA_RAPTOR",
+              "unique_id": "aC2Pl000000ERALKA4_DataRaptor.PR_GetCompanionWearableDR",
+              "user_story_id": "US-0033343"
+            },
+            {
+              "api_name": "DataRaptor.PR_GetAccessoriesFromPlanDR",
+              "commit_hash": null,
+              "created_by": "Prabhat Gupta",
+              "last_commit_date": "2025-09-19T01:08:19",
+              "status": "POTENTIAL_CONFLICT",
+              "type": "DATA_RAPTOR",
+              "unique_id": "aC2Pl000000ERALKA4_DataRaptor.PR_GetAccessoriesFromPlanDR",
+              "user_story_id": "US-0033343"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_DisconnectPostpaidLinesIP",
+              "commit_hash": null,
+              "created_by": "Prabhat Gupta",
+              "last_commit_date": "2025-09-19T01:08:19",
+              "status": "AUTO_RESOLVED",
+              "type": "INTEGRATION_PROCEDURE",
+              "unique_id": "aC2Pl000000ERALKA4_IntegrationProcedure.PR_DisconnectPostpaidLinesIP",
+              "user_story_id": "US-0033343"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_CancelAccessoryPlanIP",
+              "commit_hash": null,
+              "created_by": "Prabhat Gupta",
+              "last_commit_date": "2025-09-19T01:08:19",
+              "status": "UNKNOWN",
+              "type": "INTEGRATION_PROCEDURE",
+              "unique_id": "aC2Pl000000ERALKA4_IntegrationProcedure.PR_CancelAccessoryPlanIP",
+              "user_story_id": "US-0033343"
+            }
+          ],
+          "created_by": null,
+          "created_date": null,
+          "developer": "Prabhat Gupta",
+          "environment": "Unknown",
+          "id": "US-0033343",
+          "jira_key": "SAL-83585",
+          "last_commit_date": null,
+          "last_modified_by": null,
+          "last_modified_date": null,
+          "module_directory": null,
+          "name": "US-0033343",
+          "project": "Unknown",
+          "story_points": null,
+          "title": "CLONE - Development / SIT Deployment / QA Deployment - SAL-83585"
+        },
+        {
+          "close_date": null,
+          "commit_sha": "225299754c93a13637d42ec004590abfcce203a1",
+          "commit_url": "https://bitbucket.org/lla-dev/copado_lla/commits/225299754c93a13637d42ec004590abfcce203a1",
+          "components": [
+            {
+              "api_name": "DataRaptor.PR_GetAccessoriesFromPlanDR",
+              "commit_hash": null,
+              "created_by": "Prabhat Gupta",
+              "last_commit_date": "2025-09-29T23:20:44",
+              "status": "BACK_PROMOTED",
+              "type": "DATA_RAPTOR",
+              "unique_id": "aC2Pl000000EsbdKAC_DataRaptor.PR_GetAccessoriesFromPlanDR",
+              "user_story_id": "US-0033536"
+            }
+          ],
+          "created_by": null,
+          "created_date": null,
+          "developer": "Prabhat Gupta",
+          "environment": "Unknown",
+          "id": "US-0033536",
+          "jira_key": "QA-209707",
+          "last_commit_date": null,
+          "last_modified_by": null,
+          "last_modified_date": null,
+          "module_directory": null,
+          "name": "US-0033536",
+          "project": "Unknown",
+          "story_points": null,
+          "title": "Development - QA-209707"
+        }
+      ],
+      "risk_factors": [
+        "Copado flagged as Potential Conflict"
+      ],
+      "risk_score": 30,
+      "severity": "MEDIUM",
+      "stories_with_commit_info": [
+        {
+          "commit_sha": "2a9e993150fcc25556513dd27fb613c766282094",
+          "commit_url": "https://bitbucket.org/lla-dev/copado_lla/commits/2a9e993150fcc25556513dd27fb613c766282094",
+          "last_commit_date": null,
+          "name": "US-0033343"
+        },
+        {
+          "commit_sha": "225299754c93a13637d42ec004590abfcce203a1",
+          "commit_url": "https://bitbucket.org/lla-dev/copado_lla/commits/225299754c93a13637d42ec004590abfcce203a1",
+          "last_commit_date": null,
+          "name": "US-0033536"
+        }
+      ]
+    },
+    {
+      "component": {
+        "api_name": "OmniScript.PR_MobilePrepaidChangePlan_English",
+        "commit_hash": null,
+        "created_by": "Shivani Soni",
+        "last_commit_date": "2025-09-29T09:56:07",
+        "status": "AUTO_RESOLVED",
+        "type": "OMNI_SCRIPT",
+        "unique_id": "aC2Pl000000Eq1xKAC_OmniScript.PR_MobilePrepaidChangePlan_English",
+        "user_story_id": "US-0033526"
+      },
+      "involved_stories": [
+        {
+          "close_date": null,
+          "commit_sha": "df08c199d53e558dad2e238d2fe8ff8fe5b7ea5f",
+          "commit_url": "https://bitbucket.org/lla-dev/copado_lla/commits/df08c199d53e558dad2e238d2fe8ff8fe5b7ea5f",
+          "components": [
+            {
+              "api_name": "PermissionSet.PR_Sales_B2C_LimitedAccess",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "AUTO_RESOLVED",
+              "type": "PERMISSION_SET",
+              "unique_id": "aC2Pl000000EjIDKA0_PermissionSet.PR_Sales_B2C_LimitedAccess",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "CustomLabel.Asset_Line_Number_Validation",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000EjIDKA0_CustomLabel.Asset_Line_Number_Validation",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "CustomLabel.Asset_Disconnect_Reason_Validation",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000EjIDKA0_CustomLabel.Asset_Disconnect_Reason_Validation",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "CustomLabel.Asset_Disconnect_Datetime_Validation",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000EjIDKA0_CustomLabel.Asset_Disconnect_Datetime_Validation",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "CustomLabel.Asset_Billing_Account_Id_Validation",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000EjIDKA0_CustomLabel.Asset_Billing_Account_Id_Validation",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "ApexClass.PR_AssetPreValidation_tst",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "POTENTIAL_CONFLICT",
+              "type": "APEX_CLASS",
+              "unique_id": "aC2Pl000000EjIDKA0_ApexClass.PR_AssetPreValidation_tst",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "ApexClass.PR_AssetPreValidation",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "POTENTIAL_CONFLICT",
+              "type": "APEX_CLASS",
+              "unique_id": "aC2Pl000000EjIDKA0_ApexClass.PR_AssetPreValidation",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_addToCartWithDevicesIP",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "AUTO_RESOLVED",
+              "type": "INTEGRATION_PROCEDURE",
+              "unique_id": "aC2Pl000000EjIDKA0_IntegrationProcedure.PR_addToCartWithDevicesIP",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "OmniScript.PR_MobilePrepaidChangePlan_English",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "AUTO_RESOLVED",
+              "type": "OMNI_SCRIPT",
+              "unique_id": "aC2Pl000000EjIDKA0_OmniScript.PR_MobilePrepaidChangePlan_English",
+              "user_story_id": "US-0033466"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_AddProductSelectToPostpaidchangeCartIP",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-26T10:30:10",
+              "status": "POTENTIAL_CONFLICT",
+              "type": "INTEGRATION_PROCEDURE",
+              "unique_id": "aC2Pl000000EjIDKA0_IntegrationProcedure.PR_AddProductSelectToPostpaidchangeCartIP",
+              "user_story_id": "US-0033466"
+            }
+          ],
+          "created_by": null,
+          "created_date": null,
+          "developer": "Shivani Soni",
+          "environment": "Unknown",
+          "id": "US-0033466",
+          "jira_key": "SAL-83930",
+          "last_commit_date": null,
+          "last_modified_by": null,
+          "last_modified_date": null,
+          "module_directory": null,
+          "name": "US-0033466",
+          "project": "Unknown",
+          "story_points": null,
+          "title": "Development / SIT Deployment / QA Deployment - SAL-83930"
+        },
+        {
+          "close_date": null,
+          "commit_sha": "467d8c5d4f9f05db46fce3210c2222150279a77b",
+          "commit_url": "https://bitbucket.org/lla-dev/copado_lla/commits/467d8c5d4f9f05db46fce3210c2222150279a77b",
+          "components": [
+            {
+              "api_name": "OmniScript.PR_selectOffer_English",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "AUTO_RESOLVED",
+              "type": "OMNI_SCRIPT",
+              "unique_id": "aC2Pl000000Eq1xKAC_OmniScript.PR_selectOffer_English",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Day_Pass_Rng",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Day_Pass_Rng",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_DR_Bolt",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_DR_Bolt",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Calling_15",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Calling_15",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Assis_Roadside_5_99",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Assis_Roadside_5_99",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Assis_Home_4_50",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Assis_Home_4_50",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Assis_Home_4_5",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Assis_Home_4_5",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Assis_Bundle_7_99",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Assis_Bundle_7_99",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_getOffersIPDigital",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "INTEGRATION_PROCEDURE",
+              "unique_id": "aC2Pl000000Eq1xKAC_IntegrationProcedure.PR_getOffersIPDigital",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_getOffersIP",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "AUTO_RESOLVED",
+              "type": "INTEGRATION_PROCEDURE",
+              "unique_id": "aC2Pl000000Eq1xKAC_IntegrationProcedure.PR_getOffersIP",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "OmniScript.PR_NoAssetsAddline_English",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "AUTO_RESOLVED",
+              "type": "OMNI_SCRIPT",
+              "unique_id": "aC2Pl000000Eq1xKAC_OmniScript.PR_NoAssetsAddline_English",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "OmniScript.PR_MobilePrepaidChangePlan_English",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "AUTO_RESOLVED",
+              "type": "OMNI_SCRIPT",
+              "unique_id": "aC2Pl000000Eq1xKAC_OmniScript.PR_MobilePrepaidChangePlan_English",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "OmniScript.PR_MobilePostpaidExistingAdd_English",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "AUTO_RESOLVED",
+              "type": "OMNI_SCRIPT",
+              "unique_id": "aC2Pl000000Eq1xKAC_OmniScript.PR_MobilePostpaidExistingAdd_English",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_MobileGetOffersDetailsExistingCustAddIP",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "AUTO_RESOLVED",
+              "type": "INTEGRATION_PROCEDURE",
+              "unique_id": "aC2Pl000000Eq1xKAC_IntegrationProcedure.PR_MobileGetOffersDetailsExistingCustAddIP",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "DataRaptor.PRGetFMCCohortPortIn",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "DATA_RAPTOR",
+              "unique_id": "aC2Pl000000Eq1xKAC_DataRaptor.PRGetFMCCohortPortIn",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CalculationMatrixVersion.PRB2CAttributePricingMatrix v147",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CalculationMatrixVersion.PRB2CAttributePricingMatrix v147",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CalculationMatrix.PRB2CAttributePricingMatrix",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CalculationMatrix.PRB2CAttributePricingMatrix",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CalculationMatrixVersion.PRB2C Wearable Compatible Matrix v8",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CalculationMatrixVersion.PRB2C Wearable Compatible Matrix v8",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CalculationMatrix.PRB2C Wearable Compatible Matrix",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CalculationMatrix.PRB2C Wearable Compatible Matrix",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "PriceList.PRB2C Price List %28PRB2C_PL%29",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_PriceList.PRB2C Price List %28PRB2C_PL%29",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CalculationMatrixVersion.MobileOfferCFSMatrixLookup v47",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CalculationMatrixVersion.MobileOfferCFSMatrixLookup v47",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CalculationMatrix.MobileOfferCFSMatrixLookup",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CalculationMatrix.MobileOfferCFSMatrixLookup",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "Product2.Mobile Line Class %28PR_B2C_Mobile_Line_Class / fc67ef20-7844-ed25-6379-502178a5a9b8%29",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "POTENTIAL_CONFLICT",
+              "type": "PRODUCT",
+              "unique_id": "aC2Pl000000Eq1xKAC_Product2.Mobile Line Class %28PR_B2C_Mobile_Line_Class / fc67ef20-7844-ed25-6379-502178a5a9b8%29",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "Catalog.Liberty Mobile Mix",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_Catalog.Liberty Mobile Mix",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "Product2.Liberty Loop Mix More %28PR_B2C_Loop_Mix_More_MB_Line / 1f330049-d2db-4f7a-9e40-f19c4f8ee58e%29",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "POTENTIAL_CONFLICT",
+              "type": "PRODUCT",
+              "unique_id": "aC2Pl000000Eq1xKAC_Product2.Liberty Loop Mix More %28PR_B2C_Loop_Mix_More_MB_Line / 1f330049-d2db-4f7a-9e40-f19c4f8ee58e%29",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "Product2.Liberty Loop Mix Max %28PR_B2C_Loop_Mix_Max_MB_Line / 2580bf8d-2cbb-2e30-18c2-799877183283%29",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "POTENTIAL_CONFLICT",
+              "type": "PRODUCT",
+              "unique_id": "aC2Pl000000Eq1xKAC_Product2.Liberty Loop Mix Max %28PR_B2C_Loop_Mix_Max_MB_Line / 2580bf8d-2cbb-2e30-18c2-799877183283%29",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "Product2.Liberty Loop Mix Core %28PR_B2C_Loop_Mix_Core_MB_Line / 6d59e1c6-cbf1-1b11-32cd-da21eb4494ab%29",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "POTENTIAL_CONFLICT",
+              "type": "PRODUCT",
+              "unique_id": "aC2Pl000000Eq1xKAC_Product2.Liberty Loop Mix Core %28PR_B2C_Loop_Mix_Core_MB_Line / 6d59e1c6-cbf1-1b11-32cd-da21eb4494ab%29",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Day_Pass_Rng",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Day_Pass_Rng",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_DR_Bolt",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_DR_Bolt",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Calling_15",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Calling_15",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Assis_Roadside_5_99",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Assis_Roadside_5_99",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Assis_Home_4_50",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Assis_Home_4_50",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Assis_Home_4_5",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Assis_Home_4_5",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Assis_Bundle_7_99",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Assis_Bundle_7_99",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Day_Pass_Rng",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Day_Pass_Rng",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_DR_Bolt",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_DR_Bolt",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Calling_15",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Calling_15",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Assis_Roadside_5_99",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Assis_Roadside_5_99",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Assis_Home_4_50",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Assis_Home_4_50",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Assis_Home_4_5",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Assis_Home_4_5",
+              "user_story_id": "US-0033526"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Assis_Bundle_7_99",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-09-29T09:56:07",
+              "status": "UNKNOWN",
+              "type": "UNKNOWN",
+              "unique_id": "aC2Pl000000Eq1xKAC_CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Assis_Bundle_7_99",
+              "user_story_id": "US-0033526"
+            }
+          ],
+          "created_by": null,
+          "created_date": null,
+          "developer": "ankush guleria",
+          "environment": "Unknown",
+          "id": "US-0033526",
+          "jira_key": "SAL-84025",
+          "last_commit_date": null,
+          "last_modified_by": null,
+          "last_modified_date": null,
+          "module_directory": null,
+          "name": "US-0033526",
+          "project": "Unknown",
+          "story_points": null,
+          "title": "PIR-1950 Development and Deployment - SAL-84025"
+        }
+      ],
+      "risk_factors": [],
+      "risk_score": 0,
+      "severity": "LOW",
+      "stories_with_commit_info": [
+        {
+          "commit_sha": "df08c199d53e558dad2e238d2fe8ff8fe5b7ea5f",
+          "commit_url": "https://bitbucket.org/lla-dev/copado_lla/commits/df08c199d53e558dad2e238d2fe8ff8fe5b7ea5f",
+          "last_commit_date": null,
+          "name": "US-0033466"
+        },
+        {
+          "commit_sha": "467d8c5d4f9f05db46fce3210c2222150279a77b",
+          "commit_url": "https://bitbucket.org/lla-dev/copado_lla/commits/467d8c5d4f9f05db46fce3210c2222150279a77b",
+          "last_commit_date": null,
+          "name": "US-0033526"
+        }
+      ]
+    },
+    {
+      "component": {
+        "api_name": "OmniScript.PR_DeviceChangeForInsuranceOS_English",
+        "commit_hash": null,
+        "created_by": "Murugeshan Balaji",
+        "last_commit_date": "2025-10-06T10:32:22",
+        "status": "AUTO_RESOLVED",
+        "type": "OMNI_SCRIPT",
+        "unique_id": "aC2Pl000000F92zKAC_OmniScript.PR_DeviceChangeForInsuranceOS_English",
+        "user_story_id": "US-0033608"
+      },
+      "involved_stories": [
+        {
+          "close_date": null,
+          "commit_sha": "456f9c9aaecd8f34dd648126061e0bb838810b09",
+          "commit_url": "https://bitbucket.org/lla-dev/copado_lla/commits/456f9c9aaecd8f34dd648126061e0bb838810b09",
+          "components": [
+            {
+              "api_name": "ApexClass.PR_AssetPreValidation_tst",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-10-01T08:09:11",
+              "status": "AUTO_RESOLVED",
+              "type": "APEX_CLASS",
+              "unique_id": "aC2Pl000000EvZVKA0_ApexClass.PR_AssetPreValidation_tst",
+              "user_story_id": "US-0033553"
+            },
+            {
+              "api_name": "ApexClass.PR_AssetPreValidation",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-10-01T08:09:11",
+              "status": "AUTO_RESOLVED",
+              "type": "APEX_CLASS",
+              "unique_id": "aC2Pl000000EvZVKA0_ApexClass.PR_AssetPreValidation",
+              "user_story_id": "US-0033553"
+            },
+            {
+              "api_name": "DataRaptor.PR_TransformAddToCart",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-10-01T08:09:11",
+              "status": "UNKNOWN",
+              "type": "DATA_RAPTOR",
+              "unique_id": "aC2Pl000000EvZVKA0_DataRaptor.PR_TransformAddToCart",
+              "user_story_id": "US-0033553"
+            },
+            {
+              "api_name": "OmniScript.PR_DeviceChangeForInsuranceOS_English",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-10-01T08:09:11",
+              "status": "AUTO_RESOLVED",
+              "type": "OMNI_SCRIPT",
+              "unique_id": "aC2Pl000000EvZVKA0_OmniScript.PR_DeviceChangeForInsuranceOS_English",
+              "user_story_id": "US-0033553"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_AddProductSelectToPostpaidchangeCartIP",
+              "commit_hash": null,
+              "created_by": "Shivani Soni",
+              "last_commit_date": "2025-10-01T08:09:11",
+              "status": "AUTO_RESOLVED",
+              "type": "INTEGRATION_PROCEDURE",
+              "unique_id": "aC2Pl000000EvZVKA0_IntegrationProcedure.PR_AddProductSelectToPostpaidchangeCartIP",
+              "user_story_id": "US-0033553"
+            }
+          ],
+          "created_by": null,
+          "created_date": null,
+          "developer": "Shivani Soni",
+          "environment": "Unknown",
+          "id": "US-0033553",
+          "jira_key": "SAL-84094",
+          "last_commit_date": null,
+          "last_modified_by": null,
+          "last_modified_date": null,
+          "module_directory": null,
+          "name": "US-0033553",
+          "project": "Unknown",
+          "story_points": null,
+          "title": "CLONE - Development / SIT Deployment / QA Deployment - SAL-83930 - SAL-84094"
+        },
+        {
+          "close_date": null,
+          "commit_sha": "0634e8b29a7713b286dd90d844e939a3ded827ae",
+          "commit_url": "https://bitbucket.org/lla-dev/copado_lla/commits/0634e8b29a7713b286dd90d844e939a3ded827ae",
+          "components": [
+            {
+              "api_name": "IntegrationProcedure.PR_UpdateOrderStatusBYOD",
+              "commit_hash": null,
+              "created_by": "Murugeshan Balaji",
+              "last_commit_date": "2025-10-06T10:32:22",
+              "status": "POTENTIAL_CONFLICT",
+              "type": "INTEGRATION_PROCEDURE",
+              "unique_id": "aC2Pl000000F92zKAC_IntegrationProcedure.PR_UpdateOrderStatusBYOD",
+              "user_story_id": "US-0033608"
+            },
+            {
+              "api_name": "DataRaptor.PRDRUpdateOrderStatus",
+              "commit_hash": null,
+              "created_by": "Murugeshan Balaji",
+              "last_commit_date": "2025-10-06T10:32:22",
+              "status": "UNKNOWN",
+              "type": "DATA_RAPTOR",
+              "unique_id": "aC2Pl000000F92zKAC_DataRaptor.PRDRUpdateOrderStatus",
+              "user_story_id": "US-0033608"
+            },
+            {
+              "api_name": "OmniScript.PR_DeviceChangeForInsuranceOS_English",
+              "commit_hash": null,
+              "created_by": "Murugeshan Balaji",
+              "last_commit_date": "2025-10-06T10:32:22",
+              "status": "AUTO_RESOLVED",
+              "type": "OMNI_SCRIPT",
+              "unique_id": "aC2Pl000000F92zKAC_OmniScript.PR_DeviceChangeForInsuranceOS_English",
+              "user_story_id": "US-0033608"
+            }
+          ],
+          "created_by": null,
+          "created_date": null,
+          "developer": "Murugeshan Balaji",
+          "environment": "Unknown",
+          "id": "US-0033608",
+          "jira_key": "QA-211654",
+          "last_commit_date": null,
+          "last_modified_by": null,
+          "last_modified_date": null,
+          "module_directory": null,
+          "name": "US-0033608",
+          "project": "Unknown",
+          "story_points": null,
+          "title": "Deployment - QA-206767-1 - QA-211654"
+        }
+      ],
+      "risk_factors": [],
+      "risk_score": 0,
+      "severity": "LOW",
+      "stories_with_commit_info": [
+        {
+          "commit_sha": "456f9c9aaecd8f34dd648126061e0bb838810b09",
+          "commit_url": "https://bitbucket.org/lla-dev/copado_lla/commits/456f9c9aaecd8f34dd648126061e0bb838810b09",
+          "last_commit_date": null,
+          "name": "US-0033553"
+        },
+        {
+          "commit_sha": "0634e8b29a7713b286dd90d844e939a3ded827ae",
+          "commit_url": "https://bitbucket.org/lla-dev/copado_lla/commits/0634e8b29a7713b286dd90d844e939a3ded827ae",
+          "last_commit_date": null,
+          "name": "US-0033608"
+        }
+      ]
+    }
+  ],
+  "for_generate_plan": {
+    "blocked_stories": [],
+    "conflicting_stories": [],
+    "deployment_order_hint": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "stories": [
+    {
+      "component_count": 41,
+      "components": [
+        {
+          "api_name": "OmniScript.PR_selectOffer_English",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Auto-resolved",
+          "type": "OmniScript"
+        },
+        {
+          "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Day_Pass_Rng",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_DR_Bolt",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Calling_15",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Assis_Roadside_5_99",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Assis_Home_4_50",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Assis_Home_4_5",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Assis_Bundle_7_99",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "IntegrationProcedure.PR_getOffersIPDigital",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "IntegrationProcedure"
+        },
+        {
+          "api_name": "IntegrationProcedure.PR_getOffersIP",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Auto-resolved",
+          "type": "IntegrationProcedure"
+        },
+        {
+          "api_name": "OmniScript.PR_NoAssetsAddline_English",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Auto-resolved",
+          "type": "OmniScript"
+        },
+        {
+          "api_name": "OmniScript.PR_MobilePrepaidChangePlan_English",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Auto-resolved",
+          "type": "OmniScript"
+        },
+        {
+          "api_name": "OmniScript.PR_MobilePostpaidExistingAdd_English",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Auto-resolved",
+          "type": "OmniScript"
+        },
+        {
+          "api_name": "IntegrationProcedure.PR_MobileGetOffersDetailsExistingCustAddIP",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Auto-resolved",
+          "type": "IntegrationProcedure"
+        },
+        {
+          "api_name": "DataRaptor.PRGetFMCCohortPortIn",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "DataRaptor"
+        },
+        {
+          "api_name": "CalculationMatrixVersion.PRB2CAttributePricingMatrix v147",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CalculationMatrix.PRB2CAttributePricingMatrix",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CalculationMatrixVersion.PRB2C Wearable Compatible Matrix v8",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CalculationMatrix.PRB2C Wearable Compatible Matrix",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "PriceList.PRB2C Price List %28PRB2C_PL%29",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CalculationMatrixVersion.MobileOfferCFSMatrixLookup v47",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CalculationMatrix.MobileOfferCFSMatrixLookup",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "Product2.Mobile Line Class %28PR_B2C_Mobile_Line_Class / fc67ef20-7844-ed25-6379-502178a5a9b8%29",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Potential Conflict",
+          "type": "Product2"
+        },
+        {
+          "api_name": "Catalog.Liberty Mobile Mix",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "Product2.Liberty Loop Mix More %28PR_B2C_Loop_Mix_More_MB_Line / 1f330049-d2db-4f7a-9e40-f19c4f8ee58e%29",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Potential Conflict",
+          "type": "Product2"
+        },
+        {
+          "api_name": "Product2.Liberty Loop Mix Max %28PR_B2C_Loop_Mix_Max_MB_Line / 2580bf8d-2cbb-2e30-18c2-799877183283%29",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Potential Conflict",
+          "type": "Product2"
+        },
+        {
+          "api_name": "Product2.Liberty Loop Mix Core %28PR_B2C_Loop_Mix_Core_MB_Line / 6d59e1c6-cbf1-1b11-32cd-da21eb4494ab%29",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Potential Conflict",
+          "type": "Product2"
+        },
+        {
+          "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Day_Pass_Rng",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_DR_Bolt",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Calling_15",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Assis_Roadside_5_99",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Assis_Home_4_50",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Assis_Home_4_5",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Assis_Bundle_7_99",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Day_Pass_Rng",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_DR_Bolt",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Calling_15",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Assis_Roadside_5_99",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Assis_Home_4_50",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Assis_Home_4_5",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Assis_Bundle_7_99",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        }
+      ],
+      "developer": "ankush guleria",
+      "hasConflict": true,
+      "id": "US-0033526",
+      "jira_key": "SAL-84025",
+      "last_commit_date": "2025-09-29T09:56:07.000+0000",
+      "risk_reason": null,
+      "status": "SAFE",
+      "status_label": "Ready to Deploy",
+      "title": "PIR-1950 Development and Deployment - SAL-84025"
+    },
+    {
+      "component_count": 10,
+      "components": [
+        {
+          "api_name": "DataRaptor.PRDRFetchAssets",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Potential Conflict",
+          "type": "DataRaptor"
+        },
+        {
+          "api_name": "CustomMetadata.PR_Generic.ValidateNonPayAsset",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CustomField.PR_Generic__mdt.Type__c",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Potential Conflict",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "ApexClass.PR_AccessoriesHelper_Test",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "ApexClass"
+        },
+        {
+          "api_name": "ApexClass.PR_AccessoriesHelper",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "ApexClass"
+        },
+        {
+          "api_name": "IntegrationProcedure.PR_ValidateNonPayAssetsIP",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "IntegrationProcedure"
+        },
+        {
+          "api_name": "DataRaptor.PR_GetCompanionWearableDR",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Potential Conflict",
+          "type": "DataRaptor"
+        },
+        {
+          "api_name": "DataRaptor.PR_GetAccessoriesFromPlanDR",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Potential Conflict",
+          "type": "DataRaptor"
+        },
+        {
+          "api_name": "IntegrationProcedure.PR_DisconnectPostpaidLinesIP",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Auto-resolved",
+          "type": "IntegrationProcedure"
+        },
+        {
+          "api_name": "IntegrationProcedure.PR_CancelAccessoryPlanIP",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "IntegrationProcedure"
+        }
+      ],
+      "developer": "Prabhat Gupta",
+      "hasConflict": true,
+      "id": "US-0033343",
+      "jira_key": "SAL-83585",
+      "last_commit_date": "2025-09-19T01:08:19.000+0000",
+      "risk_reason": null,
+      "status": "SAFE",
+      "status_label": "Ready to Deploy",
+      "title": "CLONE - Development / SIT Deployment / QA Deployment - SAL-83585"
+    },
+    {
+      "component_count": 10,
+      "components": [
+        {
+          "api_name": "PermissionSet.PR_Sales_B2C_LimitedAccess",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Auto-resolved",
+          "type": "PermissionSet"
+        },
+        {
+          "api_name": "CustomLabel.Asset_Line_Number_Validation",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CustomLabel.Asset_Disconnect_Reason_Validation",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CustomLabel.Asset_Disconnect_Datetime_Validation",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CustomLabel.Asset_Billing_Account_Id_Validation",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "ApexClass.PR_AssetPreValidation_tst",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Potential Conflict",
+          "type": "ApexClass"
+        },
+        {
+          "api_name": "ApexClass.PR_AssetPreValidation",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Potential Conflict",
+          "type": "ApexClass"
+        },
+        {
+          "api_name": "IntegrationProcedure.PR_addToCartWithDevicesIP",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Auto-resolved",
+          "type": "IntegrationProcedure"
+        },
+        {
+          "api_name": "OmniScript.PR_MobilePrepaidChangePlan_English",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Auto-resolved",
+          "type": "OmniScript"
+        },
+        {
+          "api_name": "IntegrationProcedure.PR_AddProductSelectToPostpaidchangeCartIP",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Potential Conflict",
+          "type": "IntegrationProcedure"
+        }
+      ],
+      "developer": "Shivani Soni",
+      "hasConflict": true,
+      "id": "US-0033466",
+      "jira_key": "SAL-83930",
+      "last_commit_date": "2025-09-26T10:30:10.000+0000",
+      "risk_reason": null,
+      "status": "SAFE",
+      "status_label": "Ready to Deploy",
+      "title": "Development / SIT Deployment / QA Deployment - SAL-83930"
+    },
+    {
+      "component_count": 7,
+      "components": [
+        {
+          "api_name": "ApexClass.AriaNonpayInvokeQueueable",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "ApexClass"
+        },
+        {
+          "api_name": "IntegrationProcedure.PR_dunningAsset2Order",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "IntegrationProcedure"
+        },
+        {
+          "api_name": "IntegrationProcedure.PR_changeOrderIP",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Back Promoted",
+          "type": "IntegrationProcedure"
+        },
+        {
+          "api_name": "DataRaptor.PR_DRUpdateSuspendLostStolenResumeLoad",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Back Promoted",
+          "type": "DataRaptor"
+        },
+        {
+          "api_name": "ApexClass.PR_OrderTriggerHelper",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Back Promoted",
+          "type": "ApexClass"
+        },
+        {
+          "api_name": "ApexClass.PR_OrderTriggerHelperTest",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Back Promoted",
+          "type": "ApexClass"
+        },
+        {
+          "api_name": "ApexClass.AriaNonpayInvokeQueueableTest",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "ApexClass"
+        }
+      ],
+      "developer": "Shubham Mehta",
+      "hasConflict": false,
+      "id": "US-0033519",
+      "jira_key": "SAL-84015",
+      "last_commit_date": "2025-09-30T08:17:02.000+0000",
+      "risk_reason": null,
+      "status": "SAFE",
+      "status_label": "Ready to Deploy",
+      "title": "Development / SIT Deployment / QA Deployment : OM Refactor for Non-Pay Ready to submit Orders - SAL-84015"
+    },
+    {
+      "component_count": 6,
+      "components": [
+        {
+          "api_name": "ApexClass.PR_UserGroupCheckerTest",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Potential Conflict",
+          "type": "ApexClass"
+        },
+        {
+          "api_name": "ApexClass.PR_UserGroupChecker",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Potential Conflict",
+          "type": "ApexClass"
+        },
+        {
+          "api_name": "Group.PR_GroupSAC",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "Group.PR_GroupRetention",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "Group.PR_GroupBOT",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "LightningComponentBundle.prMobilePostpaidAdjustment_lwc",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Potential Conflict",
+          "type": "Unknown"
+        }
+      ],
+      "developer": "Shivani Soni",
+      "hasConflict": false,
+      "id": "US-0033563",
+      "jira_key": "SAL-84112",
+      "last_commit_date": "2025-10-01T12:36:55.000+0000",
+      "risk_reason": null,
+      "status": "SAFE",
+      "status_label": "Ready to Deploy",
+      "title": "Development / SIT Deployment / QA Deployment - SAL-84112"
+    },
+    {
+      "component_count": 5,
+      "components": [
+        {
+          "api_name": "ApexClass.PR_AssetPreValidation_tst",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Auto-resolved",
+          "type": "ApexClass"
+        },
+        {
+          "api_name": "ApexClass.PR_AssetPreValidation",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Auto-resolved",
+          "type": "ApexClass"
+        },
+        {
+          "api_name": "DataRaptor.PR_TransformAddToCart",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "DataRaptor"
+        },
+        {
+          "api_name": "OmniScript.PR_DeviceChangeForInsuranceOS_English",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Auto-resolved",
+          "type": "OmniScript"
+        },
+        {
+          "api_name": "IntegrationProcedure.PR_AddProductSelectToPostpaidchangeCartIP",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Auto-resolved",
+          "type": "IntegrationProcedure"
+        }
+      ],
+      "developer": "Shivani Soni",
+      "hasConflict": true,
+      "id": "US-0033553",
+      "jira_key": "SAL-84094",
+      "last_commit_date": "2025-10-01T08:09:11.000+0000",
+      "risk_reason": null,
+      "status": "SAFE",
+      "status_label": "Ready to Deploy",
+      "title": "CLONE - Development / SIT Deployment / QA Deployment - SAL-83930 - SAL-84094"
+    },
+    {
+      "component_count": 4,
+      "components": [
+        {
+          "api_name": "ApexClass.AriaOrderProductTmfJsonHelperTest",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Back Promoted",
+          "type": "ApexClass"
+        },
+        {
+          "api_name": "ApexClass.Tmf622JsonAbstractTest",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Back Promoted",
+          "type": "ApexClass"
+        },
+        {
+          "api_name": "ApexClass.Tmf622JsonAbstract",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Back Promoted",
+          "type": "ApexClass"
+        },
+        {
+          "api_name": "ApexClass.AriaOrderProductTmfJsonHelper",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Back Promoted",
+          "type": "ApexClass"
+        }
+      ],
+      "developer": "Shubham Mehta",
+      "hasConflict": false,
+      "id": "US-0033397",
+      "jira_key": "SAL-83717",
+      "last_commit_date": "2025-09-22T16:11:01.000+0000",
+      "risk_reason": null,
+      "status": "SAFE",
+      "status_label": "Ready to Deploy",
+      "title": "Development / SIT Deployment / QA Deployment : SObject row was retrieved via SOQL without querying the requested field: Account.BillingPostalCode - SAL-83717"
+    },
+    {
+      "component_count": 4,
+      "components": [
+        {
+          "api_name": "IntegrationProcedure.PR_InteliquentPortOutIP",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Auto-resolved",
+          "type": "IntegrationProcedure"
+        },
+        {
+          "api_name": "DataRaptor.PR_DRIntelliquentCreateStaggingLogFW",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "DataRaptor"
+        },
+        {
+          "api_name": "DataRaptor.PR_DRFetchAssetDetailsFromMSISDN",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Auto-resolved",
+          "type": "DataRaptor"
+        },
+        {
+          "api_name": "DataRaptor.PR_CheckDuplicateOrder",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "DataRaptor"
+        }
+      ],
+      "developer": "felipe santos",
+      "hasConflict": false,
+      "id": "US-0033495",
+      "jira_key": "SAL-83973",
+      "last_commit_date": "2025-09-26T16:33:33.000+0000",
+      "risk_reason": null,
+      "status": "SAFE",
+      "status_label": "Ready to Deploy",
+      "title": "Development / Deployment Task - SAL-83973"
+    },
+    {
+      "component_count": 3,
+      "components": [
+        {
+          "api_name": "CustomMetadata.PR_CloneProductSetting.OrderItem",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Auto-resolved",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "CustomObject.PR_CloneProductSetting__mdt",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        },
+        {
+          "api_name": "DataRaptor.PRRetriveFullyFinancedFromAssetDR",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Back Promoted",
+          "type": "DataRaptor"
+        }
+      ],
+      "developer": "Shivani Soni",
+      "hasConflict": false,
+      "id": "US-0033550",
+      "jira_key": "QA-210013",
+      "last_commit_date": "2025-09-30T14:02:38.000+0000",
+      "risk_reason": null,
+      "status": "SAFE",
+      "status_label": "Ready to Deploy",
+      "title": "QA deployment - QA-210013"
+    },
+    {
+      "component_count": 3,
+      "components": [
+        {
+          "api_name": "IntegrationProcedure.PR_UpdateOrderStatusBYOD",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Potential Conflict",
+          "type": "IntegrationProcedure"
+        },
+        {
+          "api_name": "DataRaptor.PRDRUpdateOrderStatus",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "DataRaptor"
+        },
+        {
+          "api_name": "OmniScript.PR_DeviceChangeForInsuranceOS_English",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Auto-resolved",
+          "type": "OmniScript"
+        }
+      ],
+      "developer": "Murugeshan Balaji",
+      "hasConflict": true,
+      "id": "US-0033608",
+      "jira_key": "QA-211654",
+      "last_commit_date": "2025-10-06T10:32:22.000+0000",
+      "risk_reason": null,
+      "status": "SAFE",
+      "status_label": "Ready to Deploy",
+      "title": "Deployment - QA-206767-1 - QA-211654"
+    },
+    {
+      "component_count": 2,
+      "components": [
+        {
+          "api_name": "ApexClass.PR_622GetPOSRefactorTest",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "ApexClass"
+        },
+        {
+          "api_name": "ApexClass.PR_622GetPOSRefactor",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Auto-resolved",
+          "type": "ApexClass"
+        }
+      ],
+      "developer": "Murugeshan Balaji",
+      "hasConflict": false,
+      "id": "US-0033385",
+      "jira_key": "QA-207214",
+      "last_commit_date": "2025-09-22T10:05:00.000+0000",
+      "risk_reason": null,
+      "status": "SAFE",
+      "status_label": "Ready to Deploy",
+      "title": "Deployment - QA-207038-1 - QA-207214"
+    },
+    {
+      "component_count": 2,
+      "components": [
+        {
+          "api_name": "ApexClass.OrderSubmitHelperTest",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Back Promoted",
+          "type": "ApexClass"
+        },
+        {
+          "api_name": "ApexClass.OrderSubmitHelper",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Back Promoted",
+          "type": "ApexClass"
+        }
+      ],
+      "developer": "Shubham Mehta",
+      "hasConflict": false,
+      "id": "US-0033407",
+      "jira_key": "SAL-83749",
+      "last_commit_date": "2025-09-23T09:32:46.000+0000",
+      "risk_reason": null,
+      "status": "SAFE",
+      "status_label": "Ready to Deploy",
+      "title": "Development / SIT Deployment / QA Deployment : order submit helper Fix - SAL-83749"
+    },
+    {
+      "component_count": 1,
+      "components": [
+        {
+          "api_name": "CustomMetadata.PR_Generic.OLSPForUSMainlandNumber",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        }
+      ],
+      "developer": "Haripriya S",
+      "hasConflict": false,
+      "id": "US-0033327",
+      "jira_key": "SAL-83613",
+      "last_commit_date": "2025-09-22T13:50:06.000+0000",
+      "risk_reason": null,
+      "status": "SAFE",
+      "status_label": "Ready to Deploy",
+      "title": "Development / SIT Deployment / QA Deployment - SAL-83613"
+    },
+    {
+      "component_count": 1,
+      "components": [
+        {
+          "api_name": "DataRaptor.PR_DRTMF622AsurionPayload",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Auto-resolved",
+          "type": "DataRaptor"
+        }
+      ],
+      "developer": "Haripriya S",
+      "hasConflict": false,
+      "id": "US-0033472",
+      "jira_key": "SAL-83941",
+      "last_commit_date": "2025-09-26T10:40:32.000+0000",
+      "risk_reason": null,
+      "status": "SAFE",
+      "status_label": "Ready to Deploy",
+      "title": "Development / SIT Deployment / QA Deployment - SAL-83941"
+    },
+    {
+      "component_count": 1,
+      "components": [
+        {
+          "api_name": "DataRaptor.PR_GetAccessoriesFromPlanDR",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Back Promoted",
+          "type": "DataRaptor"
+        }
+      ],
+      "developer": "Prabhat Gupta",
+      "hasConflict": true,
+      "id": "US-0033536",
+      "jira_key": "QA-209707",
+      "last_commit_date": "2025-09-29T23:20:44.000+0000",
+      "risk_reason": null,
+      "status": "SAFE",
+      "status_label": "Ready to Deploy",
+      "title": "Development - QA-209707"
+    },
+    {
+      "component_count": 1,
+      "components": [
+        {
+          "api_name": "OrchestrationDependencyDefinition.Installment String Validation -- Sync Plan Info From ARIA (69ed2f6c-d7e3-a1f4-2eeb-3057b155676b)",
+          "commit_hash": null,
+          "conflicting_stories_detail": [],
+          "conflicting_story_ids": [],
+          "status": "Unknown",
+          "type": "Unknown"
+        }
+      ],
+      "developer": "Shubham Mehta",
+      "hasConflict": false,
+      "id": "US-0033539",
+      "jira_key": "SAL-84065",
+      "last_commit_date": "2025-09-30T06:28:50.000+0000",
+      "risk_reason": null,
+      "status": "SAFE",
+      "status_label": "Ready to Deploy",
+      "title": "Development / SIT Deployment / QA Deployment : Parallel Orchestration Step Causing Row LOCK Issue - SAL-84065"
+    }
+  ],
+  "story_conflicts": [
+    {
+      "needs_coordination": false,
+      "shared_components": [
+        "ApexClass.PR_AssetPreValidation",
+        "ApexClass.PR_AssetPreValidation_tst",
+        "IntegrationProcedure.PR_AddProductSelectToPostpaidchangeCartIP"
+      ],
+      "shared_count": 3,
+      "story1_developer": "Shivani Soni",
+      "story1_id": "US-0033466",
+      "story1_jira_key": "SAL-83930",
+      "story1_title": "Development / SIT Deployment / QA Deployment - SAL-83930",
+      "story2_developer": "Shivani Soni",
+      "story2_id": "US-0033553",
+      "story2_jira_key": "SAL-84094",
+      "story2_title": "CLONE - Development / SIT Deployment / QA Deployment - SAL-83930 - SAL-84094"
+    },
+    {
+      "needs_coordination": false,
+      "shared_components": [
+        "DataRaptor.PR_GetAccessoriesFromPlanDR"
+      ],
+      "shared_count": 1,
+      "story1_developer": "Prabhat Gupta",
+      "story1_id": "US-0033343",
+      "story1_jira_key": "SAL-83585",
+      "story1_title": "CLONE - Development / SIT Deployment / QA Deployment - SAL-83585",
+      "story2_developer": "Prabhat Gupta",
+      "story2_id": "US-0033536",
+      "story2_jira_key": "QA-209707",
+      "story2_title": "Development - QA-209707"
+    },
+    {
+      "needs_coordination": false,
+      "shared_components": [
+        "OmniScript.PR_MobilePrepaidChangePlan_English"
+      ],
+      "shared_count": 1,
+      "story1_developer": "Shivani Soni",
+      "story1_id": "US-0033466",
+      "story1_jira_key": "SAL-83930",
+      "story1_title": "Development / SIT Deployment / QA Deployment - SAL-83930",
+      "story2_developer": "ankush guleria",
+      "story2_id": "US-0033526",
+      "story2_jira_key": "SAL-84025",
+      "story2_title": "PIR-1950 Development and Deployment - SAL-84025"
+    },
+    {
+      "needs_coordination": false,
+      "shared_components": [
+        "OmniScript.PR_DeviceChangeForInsuranceOS_English"
+      ],
+      "shared_count": 1,
+      "story1_developer": "Shivani Soni",
+      "story1_id": "US-0033553",
+      "story1_jira_key": "SAL-84094",
+      "story1_title": "CLONE - Development / SIT Deployment / QA Deployment - SAL-83930 - SAL-84094",
+      "story2_developer": "Murugeshan Balaji",
+      "story2_id": "US-0033608",
+      "story2_jira_key": "QA-211654",
+      "story2_title": "Deployment - QA-206767-1 - QA-211654"
+    }
+  ],
+  "success": true,
+  "summary": {
+    "analyzed_at": "2025-10-20T11:53:04.578574+00:00",
+    "components_outdated": 0,
+    "stories_by_status": {
+      "BLOCKED": 0,
+      "OUTDATED": 0,
+      "RISKY": 0,
+      "SAFE": 16
+    },
+    "stories_need_attention": 0,
+    "stories_safe_to_deploy": 16,
+    "stories_with_conflicts": 0,
+    "total_components": 101,
+    "total_stories": 16
+  },
+  "tabs": {
+    "enforcement": {
+      "count": 0,
+      "label": "Blocked - Cannot Deploy",
+      "stories": []
+    },
+    "needs_attention": {
+      "count": 0,
+      "stories": []
+    },
+    "safe": {
+      "count": 16,
+      "stories": [
+        {
+          "component_count": 41,
+          "components": [
+            {
+              "api_name": "OmniScript.PR_selectOffer_English",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "OmniScript"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Day_Pass_Rng",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_DR_Bolt",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Calling_15",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Assis_Roadside_5_99",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Assis_Home_4_50",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Assis_Home_4_5",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Assis_Bundle_7_99",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_getOffersIPDigital",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "IntegrationProcedure"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_getOffersIP",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "IntegrationProcedure"
+            },
+            {
+              "api_name": "OmniScript.PR_NoAssetsAddline_English",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "OmniScript"
+            },
+            {
+              "api_name": "OmniScript.PR_MobilePrepaidChangePlan_English",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "OmniScript"
+            },
+            {
+              "api_name": "OmniScript.PR_MobilePostpaidExistingAdd_English",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "OmniScript"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_MobileGetOffersDetailsExistingCustAddIP",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "IntegrationProcedure"
+            },
+            {
+              "api_name": "DataRaptor.PRGetFMCCohortPortIn",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "DataRaptor"
+            },
+            {
+              "api_name": "CalculationMatrixVersion.PRB2CAttributePricingMatrix v147",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CalculationMatrix.PRB2CAttributePricingMatrix",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CalculationMatrixVersion.PRB2C Wearable Compatible Matrix v8",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CalculationMatrix.PRB2C Wearable Compatible Matrix",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "PriceList.PRB2C Price List %28PRB2C_PL%29",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CalculationMatrixVersion.MobileOfferCFSMatrixLookup v47",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CalculationMatrix.MobileOfferCFSMatrixLookup",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "Product2.Mobile Line Class %28PR_B2C_Mobile_Line_Class / fc67ef20-7844-ed25-6379-502178a5a9b8%29",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "Product2"
+            },
+            {
+              "api_name": "Catalog.Liberty Mobile Mix",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "Product2.Liberty Loop Mix More %28PR_B2C_Loop_Mix_More_MB_Line / 1f330049-d2db-4f7a-9e40-f19c4f8ee58e%29",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "Product2"
+            },
+            {
+              "api_name": "Product2.Liberty Loop Mix Max %28PR_B2C_Loop_Mix_Max_MB_Line / 2580bf8d-2cbb-2e30-18c2-799877183283%29",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "Product2"
+            },
+            {
+              "api_name": "Product2.Liberty Loop Mix Core %28PR_B2C_Loop_Mix_Core_MB_Line / 6d59e1c6-cbf1-1b11-32cd-da21eb4494ab%29",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "Product2"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Day_Pass_Rng",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_DR_Bolt",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Calling_15",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Assis_Roadside_5_99",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Assis_Home_4_50",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Assis_Home_4_5",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Assis_Bundle_7_99",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Day_Pass_Rng",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_DR_Bolt",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Calling_15",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Assis_Roadside_5_99",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Assis_Home_4_50",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Assis_Home_4_5",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Assis_Bundle_7_99",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            }
+          ],
+          "developer": "ankush guleria",
+          "hasConflict": true,
+          "id": "US-0033526",
+          "jira_key": "SAL-84025",
+          "last_commit_date": "2025-09-29T09:56:07.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "PIR-1950 Development and Deployment - SAL-84025"
+        },
+        {
+          "component_count": 10,
+          "components": [
+            {
+              "api_name": "DataRaptor.PRDRFetchAssets",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "DataRaptor"
+            },
+            {
+              "api_name": "CustomMetadata.PR_Generic.ValidateNonPayAsset",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomField.PR_Generic__mdt.Type__c",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "ApexClass.PR_AccessoriesHelper_Test",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "ApexClass.PR_AccessoriesHelper",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_ValidateNonPayAssetsIP",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "IntegrationProcedure"
+            },
+            {
+              "api_name": "DataRaptor.PR_GetCompanionWearableDR",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "DataRaptor"
+            },
+            {
+              "api_name": "DataRaptor.PR_GetAccessoriesFromPlanDR",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "DataRaptor"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_DisconnectPostpaidLinesIP",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "IntegrationProcedure"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_CancelAccessoryPlanIP",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "IntegrationProcedure"
+            }
+          ],
+          "developer": "Prabhat Gupta",
+          "hasConflict": true,
+          "id": "US-0033343",
+          "jira_key": "SAL-83585",
+          "last_commit_date": "2025-09-19T01:08:19.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "CLONE - Development / SIT Deployment / QA Deployment - SAL-83585"
+        },
+        {
+          "component_count": 10,
+          "components": [
+            {
+              "api_name": "PermissionSet.PR_Sales_B2C_LimitedAccess",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "PermissionSet"
+            },
+            {
+              "api_name": "CustomLabel.Asset_Line_Number_Validation",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomLabel.Asset_Disconnect_Reason_Validation",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomLabel.Asset_Disconnect_Datetime_Validation",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomLabel.Asset_Billing_Account_Id_Validation",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "ApexClass.PR_AssetPreValidation_tst",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "ApexClass.PR_AssetPreValidation",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_addToCartWithDevicesIP",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "IntegrationProcedure"
+            },
+            {
+              "api_name": "OmniScript.PR_MobilePrepaidChangePlan_English",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "OmniScript"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_AddProductSelectToPostpaidchangeCartIP",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "IntegrationProcedure"
+            }
+          ],
+          "developer": "Shivani Soni",
+          "hasConflict": true,
+          "id": "US-0033466",
+          "jira_key": "SAL-83930",
+          "last_commit_date": "2025-09-26T10:30:10.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "Development / SIT Deployment / QA Deployment - SAL-83930"
+        },
+        {
+          "component_count": 7,
+          "components": [
+            {
+              "api_name": "ApexClass.AriaNonpayInvokeQueueable",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_dunningAsset2Order",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "IntegrationProcedure"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_changeOrderIP",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Back Promoted",
+              "type": "IntegrationProcedure"
+            },
+            {
+              "api_name": "DataRaptor.PR_DRUpdateSuspendLostStolenResumeLoad",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Back Promoted",
+              "type": "DataRaptor"
+            },
+            {
+              "api_name": "ApexClass.PR_OrderTriggerHelper",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Back Promoted",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "ApexClass.PR_OrderTriggerHelperTest",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Back Promoted",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "ApexClass.AriaNonpayInvokeQueueableTest",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "ApexClass"
+            }
+          ],
+          "developer": "Shubham Mehta",
+          "hasConflict": false,
+          "id": "US-0033519",
+          "jira_key": "SAL-84015",
+          "last_commit_date": "2025-09-30T08:17:02.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "Development / SIT Deployment / QA Deployment : OM Refactor for Non-Pay Ready to submit Orders - SAL-84015"
+        },
+        {
+          "component_count": 6,
+          "components": [
+            {
+              "api_name": "ApexClass.PR_UserGroupCheckerTest",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "ApexClass.PR_UserGroupChecker",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "Group.PR_GroupSAC",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "Group.PR_GroupRetention",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "Group.PR_GroupBOT",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "LightningComponentBundle.prMobilePostpaidAdjustment_lwc",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "Unknown"
+            }
+          ],
+          "developer": "Shivani Soni",
+          "hasConflict": false,
+          "id": "US-0033563",
+          "jira_key": "SAL-84112",
+          "last_commit_date": "2025-10-01T12:36:55.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "Development / SIT Deployment / QA Deployment - SAL-84112"
+        },
+        {
+          "component_count": 5,
+          "components": [
+            {
+              "api_name": "ApexClass.PR_AssetPreValidation_tst",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "ApexClass.PR_AssetPreValidation",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "DataRaptor.PR_TransformAddToCart",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "DataRaptor"
+            },
+            {
+              "api_name": "OmniScript.PR_DeviceChangeForInsuranceOS_English",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "OmniScript"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_AddProductSelectToPostpaidchangeCartIP",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "IntegrationProcedure"
+            }
+          ],
+          "developer": "Shivani Soni",
+          "hasConflict": true,
+          "id": "US-0033553",
+          "jira_key": "SAL-84094",
+          "last_commit_date": "2025-10-01T08:09:11.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "CLONE - Development / SIT Deployment / QA Deployment - SAL-83930 - SAL-84094"
+        },
+        {
+          "component_count": 4,
+          "components": [
+            {
+              "api_name": "ApexClass.AriaOrderProductTmfJsonHelperTest",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Back Promoted",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "ApexClass.Tmf622JsonAbstractTest",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Back Promoted",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "ApexClass.Tmf622JsonAbstract",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Back Promoted",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "ApexClass.AriaOrderProductTmfJsonHelper",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Back Promoted",
+              "type": "ApexClass"
+            }
+          ],
+          "developer": "Shubham Mehta",
+          "hasConflict": false,
+          "id": "US-0033397",
+          "jira_key": "SAL-83717",
+          "last_commit_date": "2025-09-22T16:11:01.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "Development / SIT Deployment / QA Deployment : SObject row was retrieved via SOQL without querying the requested field: Account.BillingPostalCode - SAL-83717"
+        },
+        {
+          "component_count": 4,
+          "components": [
+            {
+              "api_name": "IntegrationProcedure.PR_InteliquentPortOutIP",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "IntegrationProcedure"
+            },
+            {
+              "api_name": "DataRaptor.PR_DRIntelliquentCreateStaggingLogFW",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "DataRaptor"
+            },
+            {
+              "api_name": "DataRaptor.PR_DRFetchAssetDetailsFromMSISDN",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "DataRaptor"
+            },
+            {
+              "api_name": "DataRaptor.PR_CheckDuplicateOrder",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "DataRaptor"
+            }
+          ],
+          "developer": "felipe santos",
+          "hasConflict": false,
+          "id": "US-0033495",
+          "jira_key": "SAL-83973",
+          "last_commit_date": "2025-09-26T16:33:33.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "Development / Deployment Task - SAL-83973"
+        },
+        {
+          "component_count": 3,
+          "components": [
+            {
+              "api_name": "CustomMetadata.PR_CloneProductSetting.OrderItem",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomObject.PR_CloneProductSetting__mdt",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "DataRaptor.PRRetriveFullyFinancedFromAssetDR",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Back Promoted",
+              "type": "DataRaptor"
+            }
+          ],
+          "developer": "Shivani Soni",
+          "hasConflict": false,
+          "id": "US-0033550",
+          "jira_key": "QA-210013",
+          "last_commit_date": "2025-09-30T14:02:38.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "QA deployment - QA-210013"
+        },
+        {
+          "component_count": 3,
+          "components": [
+            {
+              "api_name": "IntegrationProcedure.PR_UpdateOrderStatusBYOD",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "IntegrationProcedure"
+            },
+            {
+              "api_name": "DataRaptor.PRDRUpdateOrderStatus",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "DataRaptor"
+            },
+            {
+              "api_name": "OmniScript.PR_DeviceChangeForInsuranceOS_English",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "OmniScript"
+            }
+          ],
+          "developer": "Murugeshan Balaji",
+          "hasConflict": true,
+          "id": "US-0033608",
+          "jira_key": "QA-211654",
+          "last_commit_date": "2025-10-06T10:32:22.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "Deployment - QA-206767-1 - QA-211654"
+        },
+        {
+          "component_count": 2,
+          "components": [
+            {
+              "api_name": "ApexClass.PR_622GetPOSRefactorTest",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "ApexClass.PR_622GetPOSRefactor",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "ApexClass"
+            }
+          ],
+          "developer": "Murugeshan Balaji",
+          "hasConflict": false,
+          "id": "US-0033385",
+          "jira_key": "QA-207214",
+          "last_commit_date": "2025-09-22T10:05:00.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "Deployment - QA-207038-1 - QA-207214"
+        },
+        {
+          "component_count": 2,
+          "components": [
+            {
+              "api_name": "ApexClass.OrderSubmitHelperTest",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Back Promoted",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "ApexClass.OrderSubmitHelper",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Back Promoted",
+              "type": "ApexClass"
+            }
+          ],
+          "developer": "Shubham Mehta",
+          "hasConflict": false,
+          "id": "US-0033407",
+          "jira_key": "SAL-83749",
+          "last_commit_date": "2025-09-23T09:32:46.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "Development / SIT Deployment / QA Deployment : order submit helper Fix - SAL-83749"
+        },
+        {
+          "component_count": 1,
+          "components": [
+            {
+              "api_name": "CustomMetadata.PR_Generic.OLSPForUSMainlandNumber",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            }
+          ],
+          "developer": "Haripriya S",
+          "hasConflict": false,
+          "id": "US-0033327",
+          "jira_key": "SAL-83613",
+          "last_commit_date": "2025-09-22T13:50:06.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "Development / SIT Deployment / QA Deployment - SAL-83613"
+        },
+        {
+          "component_count": 1,
+          "components": [
+            {
+              "api_name": "DataRaptor.PR_DRTMF622AsurionPayload",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "DataRaptor"
+            }
+          ],
+          "developer": "Haripriya S",
+          "hasConflict": false,
+          "id": "US-0033472",
+          "jira_key": "SAL-83941",
+          "last_commit_date": "2025-09-26T10:40:32.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "Development / SIT Deployment / QA Deployment - SAL-83941"
+        },
+        {
+          "component_count": 1,
+          "components": [
+            {
+              "api_name": "DataRaptor.PR_GetAccessoriesFromPlanDR",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Back Promoted",
+              "type": "DataRaptor"
+            }
+          ],
+          "developer": "Prabhat Gupta",
+          "hasConflict": true,
+          "id": "US-0033536",
+          "jira_key": "QA-209707",
+          "last_commit_date": "2025-09-29T23:20:44.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "Development - QA-209707"
+        },
+        {
+          "component_count": 1,
+          "components": [
+            {
+              "api_name": "OrchestrationDependencyDefinition.Installment String Validation -- Sync Plan Info From ARIA (69ed2f6c-d7e3-a1f4-2eeb-3057b155676b)",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            }
+          ],
+          "developer": "Shubham Mehta",
+          "hasConflict": false,
+          "id": "US-0033539",
+          "jira_key": "SAL-84065",
+          "last_commit_date": "2025-09-30T06:28:50.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "Development / SIT Deployment / QA Deployment : Parallel Orchestration Step Causing Row LOCK Issue - SAL-84065"
+        }
+      ]
+    },
+    "total": {
+      "count": 16,
+      "stories": [
+        {
+          "component_count": 41,
+          "components": [
+            {
+              "api_name": "OmniScript.PR_selectOffer_English",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "OmniScript"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Day_Pass_Rng",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_DR_Bolt",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Calling_15",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Assis_Roadside_5_99",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Assis_Home_4_50",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Assis_Home_4_5",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Core_Assis_Bundle_7_99",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_getOffersIPDigital",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "IntegrationProcedure"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_getOffersIP",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "IntegrationProcedure"
+            },
+            {
+              "api_name": "OmniScript.PR_NoAssetsAddline_English",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "OmniScript"
+            },
+            {
+              "api_name": "OmniScript.PR_MobilePrepaidChangePlan_English",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "OmniScript"
+            },
+            {
+              "api_name": "OmniScript.PR_MobilePostpaidExistingAdd_English",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "OmniScript"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_MobileGetOffersDetailsExistingCustAddIP",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "IntegrationProcedure"
+            },
+            {
+              "api_name": "DataRaptor.PRGetFMCCohortPortIn",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "DataRaptor"
+            },
+            {
+              "api_name": "CalculationMatrixVersion.PRB2CAttributePricingMatrix v147",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CalculationMatrix.PRB2CAttributePricingMatrix",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CalculationMatrixVersion.PRB2C Wearable Compatible Matrix v8",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CalculationMatrix.PRB2C Wearable Compatible Matrix",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "PriceList.PRB2C Price List %28PRB2C_PL%29",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CalculationMatrixVersion.MobileOfferCFSMatrixLookup v47",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CalculationMatrix.MobileOfferCFSMatrixLookup",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "Product2.Mobile Line Class %28PR_B2C_Mobile_Line_Class / fc67ef20-7844-ed25-6379-502178a5a9b8%29",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "Product2"
+            },
+            {
+              "api_name": "Catalog.Liberty Mobile Mix",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "Product2.Liberty Loop Mix More %28PR_B2C_Loop_Mix_More_MB_Line / 1f330049-d2db-4f7a-9e40-f19c4f8ee58e%29",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "Product2"
+            },
+            {
+              "api_name": "Product2.Liberty Loop Mix Max %28PR_B2C_Loop_Mix_Max_MB_Line / 2580bf8d-2cbb-2e30-18c2-799877183283%29",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "Product2"
+            },
+            {
+              "api_name": "Product2.Liberty Loop Mix Core %28PR_B2C_Loop_Mix_Core_MB_Line / 6d59e1c6-cbf1-1b11-32cd-da21eb4494ab%29",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "Product2"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Day_Pass_Rng",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_DR_Bolt",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Calling_15",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Assis_Roadside_5_99",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Assis_Home_4_50",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Assis_Home_4_5",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_More_Assis_Bundle_7_99",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Day_Pass_Rng",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_DR_Bolt",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Calling_15",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Assis_Roadside_5_99",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Assis_Home_4_50",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Assis_Home_4_5",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomMetadata.PRB2C_Add_On_Matrix.Liberty_Loop_Max_Assis_Bundle_7_99",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            }
+          ],
+          "developer": "ankush guleria",
+          "hasConflict": true,
+          "id": "US-0033526",
+          "jira_key": "SAL-84025",
+          "last_commit_date": "2025-09-29T09:56:07.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "PIR-1950 Development and Deployment - SAL-84025"
+        },
+        {
+          "component_count": 10,
+          "components": [
+            {
+              "api_name": "DataRaptor.PRDRFetchAssets",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "DataRaptor"
+            },
+            {
+              "api_name": "CustomMetadata.PR_Generic.ValidateNonPayAsset",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomField.PR_Generic__mdt.Type__c",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "ApexClass.PR_AccessoriesHelper_Test",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "ApexClass.PR_AccessoriesHelper",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_ValidateNonPayAssetsIP",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "IntegrationProcedure"
+            },
+            {
+              "api_name": "DataRaptor.PR_GetCompanionWearableDR",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "DataRaptor"
+            },
+            {
+              "api_name": "DataRaptor.PR_GetAccessoriesFromPlanDR",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "DataRaptor"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_DisconnectPostpaidLinesIP",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "IntegrationProcedure"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_CancelAccessoryPlanIP",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "IntegrationProcedure"
+            }
+          ],
+          "developer": "Prabhat Gupta",
+          "hasConflict": true,
+          "id": "US-0033343",
+          "jira_key": "SAL-83585",
+          "last_commit_date": "2025-09-19T01:08:19.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "CLONE - Development / SIT Deployment / QA Deployment - SAL-83585"
+        },
+        {
+          "component_count": 10,
+          "components": [
+            {
+              "api_name": "PermissionSet.PR_Sales_B2C_LimitedAccess",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "PermissionSet"
+            },
+            {
+              "api_name": "CustomLabel.Asset_Line_Number_Validation",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomLabel.Asset_Disconnect_Reason_Validation",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomLabel.Asset_Disconnect_Datetime_Validation",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomLabel.Asset_Billing_Account_Id_Validation",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "ApexClass.PR_AssetPreValidation_tst",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "ApexClass.PR_AssetPreValidation",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_addToCartWithDevicesIP",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "IntegrationProcedure"
+            },
+            {
+              "api_name": "OmniScript.PR_MobilePrepaidChangePlan_English",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "OmniScript"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_AddProductSelectToPostpaidchangeCartIP",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "IntegrationProcedure"
+            }
+          ],
+          "developer": "Shivani Soni",
+          "hasConflict": true,
+          "id": "US-0033466",
+          "jira_key": "SAL-83930",
+          "last_commit_date": "2025-09-26T10:30:10.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "Development / SIT Deployment / QA Deployment - SAL-83930"
+        },
+        {
+          "component_count": 7,
+          "components": [
+            {
+              "api_name": "ApexClass.AriaNonpayInvokeQueueable",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_dunningAsset2Order",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "IntegrationProcedure"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_changeOrderIP",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Back Promoted",
+              "type": "IntegrationProcedure"
+            },
+            {
+              "api_name": "DataRaptor.PR_DRUpdateSuspendLostStolenResumeLoad",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Back Promoted",
+              "type": "DataRaptor"
+            },
+            {
+              "api_name": "ApexClass.PR_OrderTriggerHelper",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Back Promoted",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "ApexClass.PR_OrderTriggerHelperTest",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Back Promoted",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "ApexClass.AriaNonpayInvokeQueueableTest",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "ApexClass"
+            }
+          ],
+          "developer": "Shubham Mehta",
+          "hasConflict": false,
+          "id": "US-0033519",
+          "jira_key": "SAL-84015",
+          "last_commit_date": "2025-09-30T08:17:02.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "Development / SIT Deployment / QA Deployment : OM Refactor for Non-Pay Ready to submit Orders - SAL-84015"
+        },
+        {
+          "component_count": 6,
+          "components": [
+            {
+              "api_name": "ApexClass.PR_UserGroupCheckerTest",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "ApexClass.PR_UserGroupChecker",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "Group.PR_GroupSAC",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "Group.PR_GroupRetention",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "Group.PR_GroupBOT",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "LightningComponentBundle.prMobilePostpaidAdjustment_lwc",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "Unknown"
+            }
+          ],
+          "developer": "Shivani Soni",
+          "hasConflict": false,
+          "id": "US-0033563",
+          "jira_key": "SAL-84112",
+          "last_commit_date": "2025-10-01T12:36:55.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "Development / SIT Deployment / QA Deployment - SAL-84112"
+        },
+        {
+          "component_count": 5,
+          "components": [
+            {
+              "api_name": "ApexClass.PR_AssetPreValidation_tst",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "ApexClass.PR_AssetPreValidation",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "DataRaptor.PR_TransformAddToCart",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "DataRaptor"
+            },
+            {
+              "api_name": "OmniScript.PR_DeviceChangeForInsuranceOS_English",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "OmniScript"
+            },
+            {
+              "api_name": "IntegrationProcedure.PR_AddProductSelectToPostpaidchangeCartIP",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "IntegrationProcedure"
+            }
+          ],
+          "developer": "Shivani Soni",
+          "hasConflict": true,
+          "id": "US-0033553",
+          "jira_key": "SAL-84094",
+          "last_commit_date": "2025-10-01T08:09:11.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "CLONE - Development / SIT Deployment / QA Deployment - SAL-83930 - SAL-84094"
+        },
+        {
+          "component_count": 4,
+          "components": [
+            {
+              "api_name": "ApexClass.AriaOrderProductTmfJsonHelperTest",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Back Promoted",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "ApexClass.Tmf622JsonAbstractTest",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Back Promoted",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "ApexClass.Tmf622JsonAbstract",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Back Promoted",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "ApexClass.AriaOrderProductTmfJsonHelper",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Back Promoted",
+              "type": "ApexClass"
+            }
+          ],
+          "developer": "Shubham Mehta",
+          "hasConflict": false,
+          "id": "US-0033397",
+          "jira_key": "SAL-83717",
+          "last_commit_date": "2025-09-22T16:11:01.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "Development / SIT Deployment / QA Deployment : SObject row was retrieved via SOQL without querying the requested field: Account.BillingPostalCode - SAL-83717"
+        },
+        {
+          "component_count": 4,
+          "components": [
+            {
+              "api_name": "IntegrationProcedure.PR_InteliquentPortOutIP",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "IntegrationProcedure"
+            },
+            {
+              "api_name": "DataRaptor.PR_DRIntelliquentCreateStaggingLogFW",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "DataRaptor"
+            },
+            {
+              "api_name": "DataRaptor.PR_DRFetchAssetDetailsFromMSISDN",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "DataRaptor"
+            },
+            {
+              "api_name": "DataRaptor.PR_CheckDuplicateOrder",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "DataRaptor"
+            }
+          ],
+          "developer": "felipe santos",
+          "hasConflict": false,
+          "id": "US-0033495",
+          "jira_key": "SAL-83973",
+          "last_commit_date": "2025-09-26T16:33:33.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "Development / Deployment Task - SAL-83973"
+        },
+        {
+          "component_count": 3,
+          "components": [
+            {
+              "api_name": "CustomMetadata.PR_CloneProductSetting.OrderItem",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "CustomObject.PR_CloneProductSetting__mdt",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            },
+            {
+              "api_name": "DataRaptor.PRRetriveFullyFinancedFromAssetDR",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Back Promoted",
+              "type": "DataRaptor"
+            }
+          ],
+          "developer": "Shivani Soni",
+          "hasConflict": false,
+          "id": "US-0033550",
+          "jira_key": "QA-210013",
+          "last_commit_date": "2025-09-30T14:02:38.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "QA deployment - QA-210013"
+        },
+        {
+          "component_count": 3,
+          "components": [
+            {
+              "api_name": "IntegrationProcedure.PR_UpdateOrderStatusBYOD",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Potential Conflict",
+              "type": "IntegrationProcedure"
+            },
+            {
+              "api_name": "DataRaptor.PRDRUpdateOrderStatus",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "DataRaptor"
+            },
+            {
+              "api_name": "OmniScript.PR_DeviceChangeForInsuranceOS_English",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "OmniScript"
+            }
+          ],
+          "developer": "Murugeshan Balaji",
+          "hasConflict": true,
+          "id": "US-0033608",
+          "jira_key": "QA-211654",
+          "last_commit_date": "2025-10-06T10:32:22.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "Deployment - QA-206767-1 - QA-211654"
+        },
+        {
+          "component_count": 2,
+          "components": [
+            {
+              "api_name": "ApexClass.PR_622GetPOSRefactorTest",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "ApexClass.PR_622GetPOSRefactor",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "ApexClass"
+            }
+          ],
+          "developer": "Murugeshan Balaji",
+          "hasConflict": false,
+          "id": "US-0033385",
+          "jira_key": "QA-207214",
+          "last_commit_date": "2025-09-22T10:05:00.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "Deployment - QA-207038-1 - QA-207214"
+        },
+        {
+          "component_count": 2,
+          "components": [
+            {
+              "api_name": "ApexClass.OrderSubmitHelperTest",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Back Promoted",
+              "type": "ApexClass"
+            },
+            {
+              "api_name": "ApexClass.OrderSubmitHelper",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Back Promoted",
+              "type": "ApexClass"
+            }
+          ],
+          "developer": "Shubham Mehta",
+          "hasConflict": false,
+          "id": "US-0033407",
+          "jira_key": "SAL-83749",
+          "last_commit_date": "2025-09-23T09:32:46.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "Development / SIT Deployment / QA Deployment : order submit helper Fix - SAL-83749"
+        },
+        {
+          "component_count": 1,
+          "components": [
+            {
+              "api_name": "CustomMetadata.PR_Generic.OLSPForUSMainlandNumber",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            }
+          ],
+          "developer": "Haripriya S",
+          "hasConflict": false,
+          "id": "US-0033327",
+          "jira_key": "SAL-83613",
+          "last_commit_date": "2025-09-22T13:50:06.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "Development / SIT Deployment / QA Deployment - SAL-83613"
+        },
+        {
+          "component_count": 1,
+          "components": [
+            {
+              "api_name": "DataRaptor.PR_DRTMF622AsurionPayload",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Auto-resolved",
+              "type": "DataRaptor"
+            }
+          ],
+          "developer": "Haripriya S",
+          "hasConflict": false,
+          "id": "US-0033472",
+          "jira_key": "SAL-83941",
+          "last_commit_date": "2025-09-26T10:40:32.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "Development / SIT Deployment / QA Deployment - SAL-83941"
+        },
+        {
+          "component_count": 1,
+          "components": [
+            {
+              "api_name": "DataRaptor.PR_GetAccessoriesFromPlanDR",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Back Promoted",
+              "type": "DataRaptor"
+            }
+          ],
+          "developer": "Prabhat Gupta",
+          "hasConflict": true,
+          "id": "US-0033536",
+          "jira_key": "QA-209707",
+          "last_commit_date": "2025-09-29T23:20:44.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "Development - QA-209707"
+        },
+        {
+          "component_count": 1,
+          "components": [
+            {
+              "api_name": "OrchestrationDependencyDefinition.Installment String Validation -- Sync Plan Info From ARIA (69ed2f6c-d7e3-a1f4-2eeb-3057b155676b)",
+              "commit_hash": null,
+              "conflicting_stories_detail": [],
+              "conflicting_story_ids": [],
+              "status": "Unknown",
+              "type": "Unknown"
+            }
+          ],
+          "developer": "Shubham Mehta",
+          "hasConflict": false,
+          "id": "US-0033539",
+          "jira_key": "SAL-84065",
+          "last_commit_date": "2025-09-30T06:28:50.000+0000",
+          "risk_reason": null,
+          "status": "SAFE",
+          "status_label": "Ready to Deploy",
+          "title": "Development / SIT Deployment / QA Deployment : Parallel Orchestration Step Causing Row LOCK Issue - SAL-84065"
+        }
+      ]
+    }
+  }
+}
