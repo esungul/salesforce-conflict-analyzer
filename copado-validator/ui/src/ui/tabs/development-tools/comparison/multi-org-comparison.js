@@ -1,10 +1,13 @@
 // src/ui/tabs/development-tools/multi-org-comparison.js
-// Multi-Org Component Comparison Tool — v2 API adaptation (complete file)
+// Multi-Org Component Comparison Tool — v2 API adaptation (complete drop-in)
+//
 // - Uses centralized endpoints: compareOrgsV2Status / compareOrgsV2Diff
-// - Reads branches from COMPONENT_CONFIG environments (master, prep, uatsfdc, qasales)
-// - Keeps your inline styles; no CSS framework changes
-// - Adds spinners where needed
-// - Adds console logs for payloads, timings, and result shapes
+// - Reads environments from COMPONENT_CONFIG (master, prep, uatsfdc, qasales)
+// - Env selector: Prod/master preselected, 2–4 max, no radios or free text
+// - Spinners are informative & dynamic (and sit above result modal via z-index)
+// - Results: component sections, per-env columns, baseline selector, filter, "Show only changed", fullscreen toggle
+// - View Details: server hunks modal; spinner shows behind-the-scenes steps
+// - Export: downloads a standalone HTML file with green/red highlights
 
 import COMPONENT_CONFIG from '../../../../config/component-config.js';
 import { compareOrgsV2Status, compareOrgsV2Diff } from '../../../../api/endpoints.js';
@@ -13,23 +16,32 @@ import { compareOrgsV2Status, compareOrgsV2Diff } from '../../../../api/endpoint
    Utilities (spinner + helpers)
 ------------------------------*/
 
-// REPLACE your old createLoadingModal with this richer, informative spinner:
-function createLoadingModal(title, lines = []) {
+/**
+ * Informative loading modal with step dots and dynamic updates.
+ * Returns the modal element augmented with:
+ *   setState(idx, 'idle'|'running'|'done'), setText(idx, text)
+ */
+function createLoadingModal(title, lines = [], { zIndex = 20000 } = {}) {
   const modal = document.createElement('div');
   const modalId = 'loading-modal-' + Date.now();
   modal.id = modalId;
   modal.style.cssText = `
     position: fixed; inset: 0; background: rgba(0,0,0,.35);
-    display: flex; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(2px);
+    display: flex; align-items: center; justify-content: center; z-index: ${zIndex}; backdrop-filter: blur(2px);
   `;
-  const items = lines.map(l => `<li style="margin:6px 0;">${l}</li>`).join('');
+  const items = lines.map((l, i) =>
+    `<li data-step="${i}" style="margin:6px 0; display:flex; gap:8px; align-items:center;">
+       <span class="dot" style="width:8px;height:8px;border-radius:50%;background:#d2d2d7;display:inline-block;"></span>
+       <span class="text">${l}</span>
+     </li>`
+  ).join('');
   modal.innerHTML = `
     <div style="background: white; border-radius: 18px; padding: 28px 32px; text-align: left; box-shadow: 0 20px 60px rgba(0,0,0,.3); animation: slideUp .25s ease-out; min-width: 360px; max-width: 520px;">
       <div style="display:flex; gap:14px; align-items:center; margin-bottom:12px;">
         <div style="width: 44px; height: 44px; border: 4px solid #e5e5e7; border-top-color: #0071e3; border-radius: 50%; animation: spin 1s linear infinite;"></div>
         <div>
           <h3 style="font-size: 18px; font-weight: 700; margin: 0 0 4px 0; color: #1d1d1f;">${title}</h3>
-          ${items ? `<ul style="padding-left:18px; margin: 8px 0 0 0; font-size: 13px; color:#444;">${items}</ul>` : ''}
+          ${items ? `<ul id="pm-steps" style="padding-left:18px; margin: 8px 0 0 0; font-size: 13px; color:#444;">${items}</ul>` : ''}
         </div>
       </div>
     </div>
@@ -38,11 +50,142 @@ function createLoadingModal(title, lines = []) {
       @keyframes slideUp { from { opacity: 0; transform: translateY(18px) } to { opacity: 1; transform: translateY(0) } }
     </style>
   `;
-  return modal;
+
+  const setState = (idx, state /* 'idle' | 'running' | 'done' */) => {
+    const li = modal.querySelector(`li[data-step="${idx}"]`);
+    if (!li) return;
+    const dot = li.querySelector('.dot');
+    if (state === 'running') { dot.style.background = '#0071e3'; dot.style.boxShadow = '0 0 0 3px rgba(0,113,227,.15)'; }
+    else if (state === 'done') { dot.style.background = '#34c759'; dot.style.boxShadow = 'none'; }
+    else { dot.style.background = '#d2d2d7'; dot.style.boxShadow = 'none'; }
+  };
+  const setText = (idx, text) => {
+    const li = modal.querySelector(`li[data-step="${idx}"] .text`);
+    if (li) li.textContent = text;
+  };
+  return Object.assign(modal, { setState, setText });
 }
 
-
+/** Simple HTML escape */
 function esc(s){ const d=document.createElement('div'); d.textContent=String(s??''); return d.innerHTML; }
+
+/** Fullscreen helper toggling shell size */
+function toggleFullscreen(container, on) {
+  if (on) {
+    container.style.maxWidth = '100vw';
+    container.style.width = '100vw';
+    container.style.maxHeight = '100vh';
+    container.style.height = '100vh';
+    container.style.borderRadius = '0';
+  } else {
+    container.style.maxWidth = '1200px';
+    container.style.width = '95%';
+    container.style.maxHeight = '90vh';
+    container.style.height = '';
+    container.style.borderRadius = '18px';
+  }
+}
+
+/** Download a text blob as a file */
+function downloadBlob(filename, text, mime = 'text/html;charset=utf-8') {
+  const blob = new Blob([text], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.style.display = 'none';
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+    a.remove();
+  }, 0);
+}
+
+/** Build a standalone HTML with green/red diff from diffObj (server hunks/tokens) */
+function buildDiffHTML(path, diffObj, meta = {}) {
+  const title = `Diff – ${path}`;
+  const now = new Date().toLocaleString();
+  const orgs = (meta.orgs || []).map(o => `${o.org}/${o.branch}`).join(' · ');
+  const baseline = meta.diff_base_org || '';
+  const safe = s => (s ?? '').toString().replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  const renderUnified = (hunks=[]) => hunks.map(h => {
+    const header = h.header ? `<div class="hunk-h">${safe(h.header)}</div>` : '';
+    const lines  = (h.lines||[]).map(ln => {
+      let cls = 'line';
+      if (ln.startsWith('+')) cls += ' add';
+      else if (ln.startsWith('-')) cls += ' del';
+      else if (ln.startsWith('--- ') || ln.startsWith('+++ ')) cls += ' meta';
+      return `<div class="${cls}">${safe(ln)}</div>`;
+    }).join('');
+    return header + lines;
+  }).join('');
+  const renderTokens = (chunks=[]) => {
+    return `<div class="word-block">${
+      (chunks||[]).map(t => {
+        if (t.type === 'add') return `<span class="tok-add">${safe(t.text)}</span>`;
+        if (t.type === 'del') return `<span class="tok-del">${safe(t.text)}</span>`;
+        return `<span>${safe(t.text)}</span>`;
+      }).join('')
+    }</div>`;
+  };
+  const blocks = (diffObj?.items || []).map(it => {
+    if (it.format === 'git_unified') return renderUnified(it.hunks);
+    if (it.format === 'git_word_porcelain') return renderTokens(it.chunks);
+    if (it.lines) return renderUnified([it]); // legacy
+    return '';
+  }).join('<hr>');
+
+  return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>${safe(title)}</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; margin: 24px; color:#1d1d1f; }
+  .header { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; margin-bottom:16px; }
+  .title { font-size:20px; font-weight:700; }
+  .meta  { font-size:12px; color:#666; }
+  .legend { display:flex; gap:12px; font-size:12px; color:#666; margin:12px 0 20px 0; }
+  .legend .chip { padding:6px 10px; border-radius:10px; border:1px solid #e5e5e7; background:#f8f8f8; }
+  .panel { border:1px solid #e5e5e7; border-radius:12px; overflow:hidden; }
+  .content { background:#fafafa; padding:12px 16px; }
+  .hunk-h { color:#8c8c8c; margin:8px 0; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  .line { white-space:pre; font-family: ui-monospace, Menlo, Consolas, monospace; border-bottom:1px solid #f0f0f0; padding:2px 6px; }
+  .line.add { background:#e8f5e9; }
+  .line.del { background:#ffebee; text-decoration:none; }
+  .line.meta { color:#8c8c8c; background:#fff; }
+  .word-block { white-space: pre-wrap; font-family: ui-monospace, Menlo, Consolas, monospace; border:1px solid #e5e5e7; border-radius:8px; padding:8px; background:#fff; }
+  .tok-add { background:#e8f5e9; }
+  .tok-del { background:#ffebee; text-decoration: line-through; }
+  hr { border: none; border-top:1px solid #eee; margin:16px 0; }
+  .badge { display:inline-block; padding:6px 10px; border-radius:12px; border:1px solid #e5e5e7; background:#f5f5f7; font-size:12px; font-weight:600; margin-right:8px; }
+  @media print { body{margin:0} .panel{border:none} .content{background:#fff} }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <div class="title">Diff • ${safe(path)}</div>
+      <div class="meta">Generated ${safe(now)} • Baseline: ${safe(baseline)}</div>
+      <div class="meta">Environments: ${safe(orgs || '—')}</div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span class="chip">Green = additions (+)</span>
+    <span class="chip">Red = deletions (−)</span>
+  </div>
+
+  <div class="panel">
+    <div class="content">
+      ${blocks || '<div class="meta">No diff content.</div>'}
+    </div>
+  </div>
+</body>
+</html>`;
+}
 
 /* ---------------------------------
    Step 1: Add Components (unchanged)
@@ -125,14 +268,10 @@ async function showComponentInputUI() {
 }
 
 /* -------------------------------------
-   Step 2: Select Orgs (2–4) + Baseline
-   - Reads branches from COMPONENT_CONFIG.getEnvironmentsArray()
+   Step 2: Select Environments (2–4)
+   - No radios, no free text
+   - Prod/master preselected
 --------------------------------------*/
-
-// REPLACE your showOrgSelectionUI with this version.
-// It uses your COMPONENT_CONFIG environments and auto-maps to {org, branch}.
-// "Prod/master" is preselected. Users can toggle other envs (2–4 total).
-
 async function showOrgSelectionUI() {
   return new Promise((resolve) => {
     const modal = document.createElement('div');
@@ -143,27 +282,19 @@ async function showOrgSelectionUI() {
       display: flex; align-items: center; justify-content: center; z-index: 10000; backdrop-filter: blur(4px);
     `;
 
-    const ENVS = COMPONENT_CONFIG.getEnvironmentsArray(); // e.g., master, prep, uatsfdc, qasales
+    const ENVS = COMPONENT_CONFIG.getEnvironmentsArray(); // master, prep, uatsfdc, qasales
+    const ORG_BY_ENV = { master: 'Prod', prep: 'Prep', uatsfdc: 'UAT', qasales: 'QAorg' };
 
-    // Stable org-display mapping (no free text)
-    const ORG_BY_ENV = {
-      master:  'Prod',
-      prep:    'Prep',
-      uatsfdc: 'UAT',
-      qasales: 'QAorg'
-    };
-
-    // Pre-select Prod/master
-    const preselected = new Set(['master']); // env.value
-    const selected = new Set(preselected);   // working set
+    const preselected = new Set(['master']);
+    const selected = new Set(preselected);
 
     const submit = () => {
       const rows = modal.querySelectorAll('.env-checkbox');
       const chosen = [];
       rows.forEach(cb => {
         if (!cb.checked) return;
-        const branch = cb.value;                         // env.value (branch)
-        const org = ORG_BY_ENV[branch] || branch;       // org label from mapping
+        const branch = cb.value;
+        const org = ORG_BY_ENV[branch] || branch;
         chosen.push({ org, branch });
       });
 
@@ -173,10 +304,12 @@ async function showOrgSelectionUI() {
         error.style.display = 'block';
         return;
       }
+      console.groupCollapsed('[UI] Environments selected');
+      console.table(chosen);
+      console.groupEnd();
 
-      // Baseline is always Prod at launch; can be changed later in results
       modal.remove();
-      resolve({ orgs: chosen, baseline: 'Prod' });
+      resolve({ orgs: chosen, baseline: 'Prod' }); // baseline can be changed later in results
     };
 
     modal.innerHTML = `
@@ -204,7 +337,7 @@ async function showOrgSelectionUI() {
         </div>
         <div id="error" style="margin-top:12px; padding:8px 12px; background:#ffebee; color:#d32f2f; border-radius:6px; font-size:13px; display:none;"></div>
       </div>
-      <style>@keyframes slideUp { from { opacity:0; transform: translateY(20px) } to { opacity:1; transform: translateY(0) } }</style>
+      <style>@keyframes slideUp { from { opacity:0; transform: translateY(20px) } to { opacity: 1; transform: translateY(0) } }</style>
     `;
     document.body.appendChild(modal);
 
@@ -227,6 +360,8 @@ async function showOrgSelectionUI() {
 ----------------------------------------*/
 async function runMultiOrgComparison() {
   try {
+    console.log('🔄 Opening Multi-Org Component Comparison Tool');
+
     const components = await showComponentInputUI();
     if (!components) return;
 
@@ -244,23 +379,25 @@ async function runMultiOrgComparison() {
     console.dir(payload1);
     console.groupEnd();
 
-   const loading = createLoadingModal(
-  'Comparing environments…',
-  [
-    'Fetching component file lists from each environment',
-    'Computing fast content hashes per file',
-    `Evaluating differences vs baseline: ${orgSel.baseline}`,
-    'No code diffs yet — this is status & metadata only'
-  ]
-);
-document.body.appendChild(loading);
-
+    // Dynamic informative spinner for Phase 1
+    const pm = createLoadingModal(
+      'Comparing environments…',
+      [
+        'Dispatching request to server',
+        `Server processing (baseline: ${orgSel.baseline})`,
+        'Rendering results'
+      ]
+    );
+    document.body.appendChild(pm);
+    pm.setState(0, 'running');
 
     console.time('[API] compareOrgsV2Status');
     const resp = await compareOrgsV2Status(payload1);
     console.timeEnd('[API] compareOrgsV2Status');
 
-    loading.remove();
+    pm.setState(0, 'done');
+    pm.setState(1, 'done');
+    pm.setState(2, 'running'); // render step
 
     console.groupCollapsed('[API] Phase 1 response (v2 status)');
     console.log('meta:', resp.meta);
@@ -269,6 +406,9 @@ document.body.appendChild(loading);
     console.groupEnd();
 
     displayComparisonResultsV2(resp);
+    pm.setState(2, 'done');
+    pm.remove();
+
   } catch (e) {
     document.querySelectorAll('[id^="loading-modal-"]').forEach(m => m.remove());
     console.error('[ERR] runMultiOrgComparison', e);
@@ -276,10 +416,14 @@ document.body.appendChild(loading);
   }
 }
 
-
-
+/* ---------------------------------------
+   v2 Results Table + View Details (modal)
+----------------------------------------*/
 function displayComparisonResultsV2(data) {
   const meta = data.meta || {};
+  // Save meta globally so export can include org list / baseline
+  window.__lastCompareMeta = meta;
+
   const comps = (data.components || []).slice();
   let baseline = meta.diff_base_org || (meta.orgs?.[0]?.org);
 
@@ -300,7 +444,6 @@ function displayComparisonResultsV2(data) {
     display: flex; align-items: center; justify-content: center; z-index: 10000; backdrop-filter: blur(4px); overflow-y: auto; padding: 20px;
   `;
 
-  // build outer container (we reference it for fullscreen)
   const headerChips = (meta.orgs||[]).map(o=> `<span style="padding:8px 12px; background:#f5f5f7; border:1px solid #e5e5e7; border-radius:12px; font-size:12px; font-weight:600;">${esc(o.org)}/${esc(o.branch)}</span>`).join('');
 
   modal.innerHTML = `
@@ -338,8 +481,14 @@ function displayComparisonResultsV2(data) {
         </div>
       </div>
 
-      <!-- Stats -->
+      <!-- Legend / Stats -->
       <div style="padding: 0 24px 16px;">
+        <div style="display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin-bottom: 8px; font-size:12px; color:#666;">
+          <span>Legend:</span>
+          <span>🟢 Same</span>
+          <span>🟡 Diff</span>
+          <span>⚪️ Missing</span>
+        </div>
         <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px;">
           <div style="padding:20px; background:#fff3e0; border-left:4px solid #f57c00; border-radius:8px;">
             <div style="font-size:28px; font-weight:700; color:#f57c00; margin-bottom:4px;">${changedFiles}</div>
@@ -472,7 +621,7 @@ function displayComparisonResultsV2(data) {
     }
     container.innerHTML = html;
 
-    // wire "View Details" buttons (Phase 2 trigger + logs)
+    // wire "View Details" buttons (Phase 2 trigger + informative spinner)
     container.querySelectorAll('.view-details').forEach(btn => {
       btn.addEventListener('click', async () => {
         const type = btn.getAttribute('data-type');
@@ -490,32 +639,41 @@ function displayComparisonResultsV2(data) {
         console.dir(payload2);
         console.groupEnd();
 
-        const loading = createLoadingModal(
-  `Preparing diffs for ${type}/${name}`,
-  [
-    'Requesting server-side git diff',
-    `Baseline: ${baseline}`,
-    'Building unified hunks & word-level tokens',
-    'Sending results to viewer'
-  ]
-);
-document.body.appendChild(loading);
+        const pm2 = createLoadingModal(
+          `Preparing diffs for ${type}/${name}`,
+          [
+            'Requesting server-side git diff',
+            `Baseline: ${baseline}`,
+            'Building unified hunks & word-level tokens',
+            'Sending results to viewer'
+          ],
+          { zIndex: 20000 }
+        );
+        document.body.appendChild(pm2);
+        pm2.setState(0, 'running');
 
         try {
           console.time('[API] compareOrgsV2Diff');
           const compResp = await compareOrgsV2Diff(payload2);
           console.timeEnd('[API] compareOrgsV2Diff');
-          loading.remove();
+
+          pm2.setState(0, 'done');
+          pm2.setState(1, 'done');
+          pm2.setState(2, 'running'); // preparing DOM
 
           const comp = (compResp.components||[])[0];
-          if (!comp) return alert('No component data');
+          if (!comp) { pm2.remove(); return alert('No component data'); }
           const path = decodeURIComponent(encodedPath);
           const f = (comp.files||[]).find(x => x.path === path);
-          if (!f || !f.diff) return alert('No diff available for this file');
+          if (!f || !f.diff) { pm2.remove(); return alert('No diff available for this file'); }
+
+          pm2.setState(2, 'done');
+          pm2.setState(3, 'done');
+          pm2.remove();
 
           showDiffModalV2(path, f.diff);
         } catch (e) {
-          loading.remove();
+          pm2.remove();
           console.error('[ERR] viewDetailsV2', e);
           alert('Error: ' + e.message);
         }
@@ -556,24 +714,8 @@ document.body.appendChild(loading);
   });
 }
 
-function toggleFullscreen(container, on) {
-  if (on) {
-    container.style.maxWidth = '100vw';
-    container.style.width = '100vw';
-    container.style.maxHeight = '100vh';
-    container.style.height = '100vh';
-    container.style.borderRadius = '0';
-  } else {
-    container.style.maxWidth = '1200px';
-    container.style.width = '95%';
-    container.style.maxHeight = '90vh';
-    container.style.height = '';
-    container.style.borderRadius = '18px';
-  }
-}
-
 /* ---------------------------------------
-   Diff modal (renders backend hunks/tokens)
+   Diff modal (renders backend hunks/tokens) + Export
 ----------------------------------------*/
 function showDiffModalV2(path, diffObj) {
   const modal = document.createElement('div');
@@ -614,12 +756,15 @@ function showDiffModalV2(path, diffObj) {
 
   modal.innerHTML = `
     <div style="background:white; border-radius:18px; max-width: 1200px; width:95%; max-height:90vh; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.3); animation: slideUp .3s ease-out; display:grid; grid-template-rows:auto 1fr;">
-      <div style="padding: 16px 20px; border-bottom:1px solid #e5e5e7; display:flex; justify-content:space-between; align-items:center;">
+      <div style="padding: 16px 20px; border-bottom:1px solid #e5e5e7; display:flex; justify-content:space-between; align-items:center; gap:8px;">
         <div>
           <div style="font-size: 16px; font-weight: 700; color:#1d1d1f;">Diff • ${esc(path)}</div>
           <div style="font-size: 12px; color:#666;">(server-side hunks)</div>
         </div>
-        <button onclick="document.getElementById('${modalId}').remove()" style="padding:8px 12px; border:1px solid #d2d2d7; background:white; border-radius:6px; font-size:13px; font-weight:600; color:#1d1d1f; cursor:pointer;">✕ Close</button>
+        <div style="display:flex; gap:8px;">
+          <button id="export-diff" style="padding:8px 12px; border:1px solid #d2d2d7; background:white; border-radius:6px; font-size:13px; font-weight:600; color:#1d1d1f; cursor:pointer;">⬇︎ Export</button>
+          <button onclick="document.getElementById('${modalId}').remove()" style="padding:8px 12px; border:1px solid #d2d2d7; background:white; border-radius:6px; font-size:13px; font-weight:600; color:#1d1d1f; cursor:pointer;">✕ Close</button>
+        </div>
       </div>
       <div style="overflow:auto; padding: 12px 16px; background:#fafafa;">
         ${blocks || '<div style="color:#666; padding:20px;">No diff content.</div>'}
@@ -629,7 +774,22 @@ function showDiffModalV2(path, diffObj) {
   `;
   document.body.appendChild(modal);
 
-  // Log a quick glance of diff object to verify format seen
+  // Export button: build HTML and download
+  const exportBtn = modal.querySelector('#export-diff');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', () => {
+      try {
+        const html = buildDiffHTML(path, diffObj, window.__lastCompareMeta || {});
+        const filename = (path.split('/').pop() || 'diff') + '.html';
+        downloadBlob(filename, html, 'text/html;charset=utf-8');
+      } catch (e) {
+        console.error('[ERR] export diff', e);
+        alert('Export failed: ' + e.message);
+      }
+    });
+  }
+
+  // quick log
   try {
     const formats = (diffObj.items || []).map(i => i.format || (i.lines ? 'unified' : 'unknown'));
     console.groupCollapsed('[UI] Diff formats in modal');
