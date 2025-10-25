@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="./style-apple-theme.css" />
   <!-- Enhanced safe styles -->
   <link rel="stylesheet" href="./style-enhanced-safe.css" />
+  <link rel="stylesheet" href="./style-apple-mywork.css" />
 </head>
 <body>
   <!-- App Header -->
@@ -26,12 +27,24 @@
 
   <!-- Tabs Navigation -->
   <nav id="tabs" class="tabs" role="tablist" aria-label="Main sections">
+    <!-- Shared Tabs -->
     <button class="tab-button" role="tab" aria-selected="true" data-tab="overview">Overview</button>
+    
+    <!-- Developer-Focused Tabs (NEW) -->
+    <button class="tab-button" role="tab" aria-selected="false" data-tab="my-work">My Work</button>
+    <button class="tab-button" role="tab" aria-selected="false" data-tab="conflict-radar">Conflict Radar</button>
+    <button class="tab-button" role="tab" aria-selected="false" data-tab="production-guard">Production Guard</button>
+    
+    <!-- Existing Tabs (Preserved for backward compatibility) -->
     <button class="tab-button" role="tab" aria-selected="false" data-tab="stories">Safe Stories</button>
     <button class="tab-button" role="tab" aria-selected="false" data-tab="conflicts">Conflicts</button>
     <button class="tab-button" role="tab" aria-selected="false" data-tab="enforcement">Enforcement</button>
+    
+    <!-- DevOps-Focused Tabs -->
     <button class="tab-button" role="tab" aria-selected="false" data-tab="decisions">Decisions</button>
     <button class="tab-button" role="tab" aria-selected="false" data-tab="plan">Plan</button>
+    
+    <!-- Shared Tab -->
     <button class="tab-button" role="tab" aria-selected="false" data-tab="reports">Reports</button>
   </nav>
 
@@ -41,19 +54,27 @@
     <section id="tab-overview" class="tab-panel" role="tabpanel" aria-labelledby="tab-overview">
     </section>
 
-    <!-- Safe Stories Tab -->
+    <!-- NEW: Developer-Focused Tabs -->
+    <section id="tab-my-work" class="tab-panel" role="tabpanel" aria-labelledby="tab-my-work" hidden>
+    </section>
+
+    <section id="tab-conflict-radar" class="tab-panel" role="tabpanel" aria-labelledby="tab-conflict-radar" hidden>
+    </section>
+
+    <section id="tab-production-guard" class="tab-panel" role="tabpanel" aria-labelledby="tab-production-guard" hidden>
+    </section>
+
+    <!-- Existing Tabs (Preserved for backward compatibility) -->
     <section id="tab-stories" class="tab-panel" role="tabpanel" aria-labelledby="tab-stories" hidden>
     </section>
 
-    <!-- Conflicts Tab -->
     <section id="tab-conflicts" class="tab-panel" role="tabpanel" aria-labelledby="tab-conflicts" hidden>
     </section>
 
-    <!-- Enforcement/Blocked Tab -->
     <section id="tab-enforcement" class="tab-panel" role="tabpanel" aria-labelledby="tab-enforcement" hidden>
     </section>
 
-    <!-- Decisions Tab -->
+    <!-- DevOps-Focused Tabs -->
     <section id="tab-decisions" class="tab-panel" role="tabpanel" aria-labelledby="tab-decisions" hidden>
       <div class="section-header">
         <h2>Decisions</h2>
@@ -62,16 +83,32 @@
       <div class="loading-message">Content for Decisions tab</div>
     </section>
 
-    <!-- Deployment Plan Tab -->
     <section id="tab-plan" class="tab-panel" role="tabpanel" aria-labelledby="tab-plan" hidden>
     </section>
 
-    <!-- Reports Tab -->
+    <!-- Shared Tab -->
     <section id="tab-reports" class="tab-panel" role="tabpanel" aria-labelledby="tab-reports" hidden>
     </section>
   </main>
 
+  <script>
+  console.log('=== HTML DEBUG: Script loading test ===');
+  console.log('Window object available:', typeof window !== 'undefined');
+  console.log('Document ready:', document.readyState);
+  
+  // Test basic function attachment
+  window.htmlTestFunction = function() {
+    console.log('HTML test function works!');
+    return 'SUCCESS';
+  };
+  </script>
+  
   <!-- Main JS Bundle -->
+    <script src="https://unpkg.com/diff@5/dist/diff.min.js"></script>
+
+  <!-- Enhanced Diff Viewer (module we added on canvas) -->
+  <script type="module" src="./src/ui/components/diff-viewer.js"></script>
+
   <script type="module" src="./src/main.js"></script>
 </body>
 </html>

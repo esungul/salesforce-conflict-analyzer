@@ -1,0 +1,759 @@
+{
+  "components": [
+    {
+      "files": [
+        {
+          "base_org": "Prod",
+          "diff": {
+            "format": "mixed",
+            "items": [
+              {
+                "header": "",
+                "lines": [
+                  "--- Prod:master:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_DataPack.json",
+                  "+++ QAorg:qasales:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_DataPack.json"
+                ]
+              },
+              {
+                "header": "@@ -1,5 +1,5 @@",
+                "lines": [
+                  " {",
+                  "-    \"%vlocity_namespace%__AdditionalInformation__c\": \"This IP is being used to add upgrade fee for accessories in remorse flow.\",",
+                  "+    \"%vlocity_namespace%__AdditionalInformation__c\": \"This IP is being used to add upgrade fee for accessories in remorse flow, Added Price override step & added input in updateFeeDetails step QA-215703\",",
+                  "     \"%vlocity_namespace%__CustomJavaScript__c\": \"PR_AddUpgradeFeeAccessoryIP_SampleInput.json\",",
+                  "     \"%vlocity_namespace%__DisableMetadataCache__c\": false,",
+                  "     \"%vlocity_namespace%__ElementTypeToHTMLTemplateList__c\": \"{\\\"ElementTypeToHTMLTemplateList\\\":[]}\","
+                ]
+              },
+              {
+                "header": "@@ -10,6 +10,7 @@",
+                "lines": [
+                  "         \"PR_AddUpgradeFeeAccessoryIP_Element_setUpgradeInput.json\",",
+                  "         \"PR_AddUpgradeFeeAccessoryIP_Element_postCartItems.json\",",
+                  "         \"PR_AddUpgradeFeeAccessoryIP_Element_updateFeeDetails.json\",",
+                  "+        \"PR_AddUpgradeFeeAccessoryIP_Element_OneTimePriceOverride.json\",",
+                  "         \"PR_AddUpgradeFeeAccessoryIP_Element_responseAction.json\"",
+                  "     ],",
+                  "     \"%vlocity_namespace%__IsLwcEnabled__c\": false,"
+                ]
+              },
+              {
+                "header": "",
+                "lines": [
+                  "--- Prod:master:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_DataPack.json",
+                  "+++ UAT:uatsfdc:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_DataPack.json"
+                ]
+              },
+              {
+                "header": "@@ -1,5 +1,5 @@",
+                "lines": [
+                  " {",
+                  "-    \"%vlocity_namespace%__AdditionalInformation__c\": \"This IP is being used to add upgrade fee for accessories in remorse flow.\",",
+                  "+    \"%vlocity_namespace%__AdditionalInformation__c\": \"This IP is being used to add upgrade fee for accessories in remorse flow, Added Price override step & added input in updateFeeDetails step QA-215703\",",
+                  "     \"%vlocity_namespace%__CustomJavaScript__c\": \"PR_AddUpgradeFeeAccessoryIP_SampleInput.json\",",
+                  "     \"%vlocity_namespace%__DisableMetadataCache__c\": false,",
+                  "     \"%vlocity_namespace%__ElementTypeToHTMLTemplateList__c\": \"{\\\"ElementTypeToHTMLTemplateList\\\":[]}\","
+                ]
+              },
+              {
+                "header": "@@ -10,6 +10,7 @@",
+                "lines": [
+                  "         \"PR_AddUpgradeFeeAccessoryIP_Element_setUpgradeInput.json\",",
+                  "         \"PR_AddUpgradeFeeAccessoryIP_Element_postCartItems.json\",",
+                  "         \"PR_AddUpgradeFeeAccessoryIP_Element_updateFeeDetails.json\",",
+                  "+        \"PR_AddUpgradeFeeAccessoryIP_Element_OneTimePriceOverride.json\",",
+                  "         \"PR_AddUpgradeFeeAccessoryIP_Element_responseAction.json\"",
+                  "     ],",
+                  "     \"%vlocity_namespace%__IsLwcEnabled__c\": false,"
+                ]
+              }
+            ]
+          },
+          "path": "vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_DataPack.json",
+          "per_org_meta": [
+            {
+              "branch": "qasales",
+              "exists": true,
+              "line_count": 31,
+              "org": "QAorg",
+              "sha256": "7ca74364bfea6a491b105e36924d88acf3a029a771dcec5520edde1c8a4bcac6"
+            },
+            {
+              "branch": "uatsfdc",
+              "exists": true,
+              "line_count": 31,
+              "org": "UAT",
+              "sha256": "7ca74364bfea6a491b105e36924d88acf3a029a771dcec5520edde1c8a4bcac6"
+            },
+            {
+              "branch": "master",
+              "exists": true,
+              "line_count": 30,
+              "org": "Prod",
+              "sha256": "c7bf51671cd8f56e46fead34ef350a92c869c64db66099632bb2896368ebd4ec"
+            }
+          ],
+          "status": "DIFF"
+        },
+        {
+          "base_org": "Prod",
+          "diff": {
+            "format": "mixed",
+            "items": [
+              {
+                "header": "",
+                "lines": [
+                  "--- Prod:master:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_Element_updateFeeDetails.json",
+                  "+++ QAorg:qasales:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_Element_updateFeeDetails.json"
+                ]
+              },
+              {
+                "header": "@@ -9,6 +9,8 @@",
+                "lines": [
+                  "     \"%vlocity_namespace%__PropertySet__c\": {",
+                  "         \"actionMessage\": \"\",",
+                  "         \"additionalInput\": {",
+                  "+            \"FeeType\": \"%UpgradeFeeType%\",",
+                  "+            \"isOverrideFee\": \"%UpgradeOverrideFee%\"",
+                  "         },",
+                  "         \"additionalOutput\": {",
+                  "         },"
+                ]
+              },
+              {
+                "header": "",
+                "lines": [
+                  "--- Prod:master:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_Element_updateFeeDetails.json",
+                  "+++ UAT:uatsfdc:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_Element_updateFeeDetails.json"
+                ]
+              },
+              {
+                "header": "@@ -9,6 +9,8 @@",
+                "lines": [
+                  "     \"%vlocity_namespace%__PropertySet__c\": {",
+                  "         \"actionMessage\": \"\",",
+                  "         \"additionalInput\": {",
+                  "+            \"FeeType\": \"%UpgradeFeeType%\",",
+                  "+            \"isOverrideFee\": \"%UpgradeOverrideFee%\"",
+                  "         },",
+                  "         \"additionalOutput\": {",
+                  "         },"
+                ]
+              }
+            ]
+          },
+          "path": "vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_Element_updateFeeDetails.json",
+          "per_org_meta": [
+            {
+              "branch": "qasales",
+              "exists": true,
+              "line_count": 43,
+              "org": "QAorg",
+              "sha256": "fc13dbb8cf29865e1d62c05377cd050c6e43a4513ee660bd48113775a7b93693"
+            },
+            {
+              "branch": "uatsfdc",
+              "exists": true,
+              "line_count": 43,
+              "org": "UAT",
+              "sha256": "fc13dbb8cf29865e1d62c05377cd050c6e43a4513ee660bd48113775a7b93693"
+            },
+            {
+              "branch": "master",
+              "exists": true,
+              "line_count": 41,
+              "org": "Prod",
+              "sha256": "c8b3a82541ecd4e30be13b88d85981cd8989354c49db5e3b842ba5875bd0fe99"
+            }
+          ],
+          "status": "DIFF"
+        },
+        {
+          "base_org": "Prod",
+          "diff": {
+            "format": "mixed",
+            "items": [
+              {
+                "header": "",
+                "lines": [
+                  "--- Prod:master:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_ParentKeys.json",
+                  "+++ QAorg:qasales:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_ParentKeys.json"
+                ]
+              },
+              {
+                "header": "@@ -1,3 +1,5 @@",
+                "lines": [
+                  " [",
+                  "-    \"DataRaptor/PR_GetAccessoryOrderItemsDR\"",
+                  "+    \"DataRaptor/PR_GetAccessoryOrderItemsDR\",",
+                  "+    \"DataRaptor/PR_GetPriceBookEntryIdAddOnDR\",",
+                  "+    \"DataRaptor/PR_UpdateFeeTypeDR\"",
+                  " ]"
+                ]
+              },
+              {
+                "header": "",
+                "lines": [
+                  "--- Prod:master:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_ParentKeys.json",
+                  "+++ UAT:uatsfdc:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_ParentKeys.json"
+                ]
+              },
+              {
+                "header": "@@ -1,3 +1,5 @@",
+                "lines": [
+                  " [",
+                  "-    \"DataRaptor/PR_GetAccessoryOrderItemsDR\"",
+                  "+    \"DataRaptor/PR_GetAccessoryOrderItemsDR\",",
+                  "+    \"DataRaptor/PR_GetPriceBookEntryIdAddOnDR\",",
+                  "+    \"DataRaptor/PR_UpdateFeeTypeDR\"",
+                  " ]"
+                ]
+              }
+            ]
+          },
+          "path": "vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_ParentKeys.json",
+          "per_org_meta": [
+            {
+              "branch": "qasales",
+              "exists": true,
+              "line_count": 5,
+              "org": "QAorg",
+              "sha256": "3a1630440764af230c7985289d9c082c151d4fe7c63cf0e5d4d0d8ae5af6b837"
+            },
+            {
+              "branch": "uatsfdc",
+              "exists": true,
+              "line_count": 5,
+              "org": "UAT",
+              "sha256": "3a1630440764af230c7985289d9c082c151d4fe7c63cf0e5d4d0d8ae5af6b837"
+            },
+            {
+              "branch": "master",
+              "exists": true,
+              "line_count": 3,
+              "org": "Prod",
+              "sha256": "0a99f9c2ab88d969c813256b614001bdeee5ddc5482698f1920efc2aff576f23"
+            }
+          ],
+          "status": "DIFF"
+        },
+        {
+          "base_org": "Prod",
+          "diff": {
+            "format": "mixed",
+            "items": [
+              {
+                "header": "",
+                "lines": [
+                  "--- Prod:master:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_PropertySet.json",
+                  "+++ QAorg:qasales:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_PropertySet.json"
+                ]
+              },
+              {
+                "header": "@@ -1,31 +0,0 @@",
+                "lines": [
+                  "-{",
+                  "-    \"additionalChainableResponse\": {",
+                  "-    },",
+                  "-    \"chainableActualTimeLimit\": null,",
+                  "-    \"chainableCpuLimit\": 2000,",
+                  "-    \"chainableDMLRowsLimit\": null,",
+                  "-    \"chainableDMLStatementsLimit\": null,",
+                  "-    \"chainableHeapSizeLimit\": null,",
+                  "-    \"chainableQueriesLimit\": 50,",
+                  "-    \"chainableQueryRowsLimit\": null,",
+                  "-    \"chainableSoslQueriesLimit\": null,",
+                  "-    \"columnsPropertyMap\": [",
+                  "-    ],",
+                  "-    \"description\": \"\",",
+                  "-    \"includeAllActionsInResponse\": false,",
+                  "-    \"labelPlural\": \"\",",
+                  "-    \"labelSingular\": \"\",",
+                  "-    \"linkToExternalObject\": \"\",",
+                  "-    \"mockResponseMap\": {",
+                  "-    },",
+                  "-    \"nameColumn\": \"\",",
+                  "-    \"queueableChainableCpuLimit\": 40000,",
+                  "-    \"queueableChainableHeapSizeLimit\": 6,",
+                  "-    \"queueableChainableQueriesLimit\": 120,",
+                  "-    \"relationshipFieldsMap\": [",
+                  "-    ],",
+                  "-    \"rollbackOnError\": false,",
+                  "-    \"trackingCustomData\": {",
+                  "-    },",
+                  "-    \"ttlMinutes\": 5",
+                  "-}"
+                ]
+              },
+              {
+                "header": "",
+                "lines": [
+                  "--- Prod:master:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_PropertySet.json",
+                  "+++ UAT:uatsfdc:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_PropertySet.json"
+                ]
+              },
+              {
+                "header": "@@ -1,31 +0,0 @@",
+                "lines": [
+                  "-{",
+                  "-    \"additionalChainableResponse\": {",
+                  "-    },",
+                  "-    \"chainableActualTimeLimit\": null,",
+                  "-    \"chainableCpuLimit\": 2000,",
+                  "-    \"chainableDMLRowsLimit\": null,",
+                  "-    \"chainableDMLStatementsLimit\": null,",
+                  "-    \"chainableHeapSizeLimit\": null,",
+                  "-    \"chainableQueriesLimit\": 50,",
+                  "-    \"chainableQueryRowsLimit\": null,",
+                  "-    \"chainableSoslQueriesLimit\": null,",
+                  "-    \"columnsPropertyMap\": [",
+                  "-    ],",
+                  "-    \"description\": \"\",",
+                  "-    \"includeAllActionsInResponse\": false,",
+                  "-    \"labelPlural\": \"\",",
+                  "-    \"labelSingular\": \"\",",
+                  "-    \"linkToExternalObject\": \"\",",
+                  "-    \"mockResponseMap\": {",
+                  "-    },",
+                  "-    \"nameColumn\": \"\",",
+                  "-    \"queueableChainableCpuLimit\": 40000,",
+                  "-    \"queueableChainableHeapSizeLimit\": 6,",
+                  "-    \"queueableChainableQueriesLimit\": 120,",
+                  "-    \"relationshipFieldsMap\": [",
+                  "-    ],",
+                  "-    \"rollbackOnError\": false,",
+                  "-    \"trackingCustomData\": {",
+                  "-    },",
+                  "-    \"ttlMinutes\": 5",
+                  "-}"
+                ]
+              }
+            ]
+          },
+          "path": "vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_PropertySet.json",
+          "per_org_meta": [
+            {
+              "branch": "qasales",
+              "exists": false,
+              "line_count": null,
+              "org": "QAorg",
+              "sha256": null
+            },
+            {
+              "branch": "uatsfdc",
+              "exists": false,
+              "line_count": null,
+              "org": "UAT",
+              "sha256": null
+            },
+            {
+              "branch": "master",
+              "exists": true,
+              "line_count": 31,
+              "org": "Prod",
+              "sha256": "dd0a9e88be2a76fc359045fba07878738620cfdf1e3e03b9c3bea0d22dd9618e"
+            }
+          ],
+          "status": "NEW"
+        }
+      ],
+      "name": "PR_AddUpgradeFeeAccessoryIP",
+      "summary": {
+        "files_changed": 4,
+        "files_total": 11,
+        "files_unchanged": 7
+      },
+      "type": "IntegrationProcedure"
+    },
+    {
+      "files": [
+        {
+          "base_org": "Prod",
+          "diff": {
+            "format": "mixed",
+            "items": [
+              {
+                "header": "",
+                "lines": [
+                  "--- Prod:master:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_DataPack.json",
+                  "+++ QAorg:qasales:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_DataPack.json"
+                ]
+              },
+              {
+                "header": "@@ -1,5 +1,5 @@",
+                "lines": [
+                  " {",
+                  "-    \"%vlocity_namespace%__AdditionalInformation__c\": \"This IP is being used to add upgrade fee for accessories in remorse flow.\",",
+                  "+    \"%vlocity_namespace%__AdditionalInformation__c\": \"This IP is being used to add upgrade fee for accessories in remorse flow, Added Price override step & added input in updateFeeDetails step QA-215703\",",
+                  "     \"%vlocity_namespace%__CustomJavaScript__c\": \"PR_AddUpgradeFeeAccessoryIP_SampleInput.json\",",
+                  "     \"%vlocity_namespace%__DisableMetadataCache__c\": false,",
+                  "     \"%vlocity_namespace%__ElementTypeToHTMLTemplateList__c\": \"{\\\"ElementTypeToHTMLTemplateList\\\":[]}\","
+                ]
+              },
+              {
+                "header": "@@ -10,6 +10,7 @@",
+                "lines": [
+                  "         \"PR_AddUpgradeFeeAccessoryIP_Element_setUpgradeInput.json\",",
+                  "         \"PR_AddUpgradeFeeAccessoryIP_Element_postCartItems.json\",",
+                  "         \"PR_AddUpgradeFeeAccessoryIP_Element_updateFeeDetails.json\",",
+                  "+        \"PR_AddUpgradeFeeAccessoryIP_Element_OneTimePriceOverride.json\",",
+                  "         \"PR_AddUpgradeFeeAccessoryIP_Element_responseAction.json\"",
+                  "     ],",
+                  "     \"%vlocity_namespace%__IsLwcEnabled__c\": false,"
+                ]
+              },
+              {
+                "header": "",
+                "lines": [
+                  "--- Prod:master:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_DataPack.json",
+                  "+++ UAT:uatsfdc:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_DataPack.json"
+                ]
+              },
+              {
+                "header": "@@ -1,5 +1,5 @@",
+                "lines": [
+                  " {",
+                  "-    \"%vlocity_namespace%__AdditionalInformation__c\": \"This IP is being used to add upgrade fee for accessories in remorse flow.\",",
+                  "+    \"%vlocity_namespace%__AdditionalInformation__c\": \"This IP is being used to add upgrade fee for accessories in remorse flow, Added Price override step & added input in updateFeeDetails step QA-215703\",",
+                  "     \"%vlocity_namespace%__CustomJavaScript__c\": \"PR_AddUpgradeFeeAccessoryIP_SampleInput.json\",",
+                  "     \"%vlocity_namespace%__DisableMetadataCache__c\": false,",
+                  "     \"%vlocity_namespace%__ElementTypeToHTMLTemplateList__c\": \"{\\\"ElementTypeToHTMLTemplateList\\\":[]}\","
+                ]
+              },
+              {
+                "header": "@@ -10,6 +10,7 @@",
+                "lines": [
+                  "         \"PR_AddUpgradeFeeAccessoryIP_Element_setUpgradeInput.json\",",
+                  "         \"PR_AddUpgradeFeeAccessoryIP_Element_postCartItems.json\",",
+                  "         \"PR_AddUpgradeFeeAccessoryIP_Element_updateFeeDetails.json\",",
+                  "+        \"PR_AddUpgradeFeeAccessoryIP_Element_OneTimePriceOverride.json\",",
+                  "         \"PR_AddUpgradeFeeAccessoryIP_Element_responseAction.json\"",
+                  "     ],",
+                  "     \"%vlocity_namespace%__IsLwcEnabled__c\": false,"
+                ]
+              }
+            ]
+          },
+          "path": "vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_DataPack.json",
+          "per_org_meta": [
+            {
+              "branch": "qasales",
+              "exists": true,
+              "line_count": 31,
+              "org": "QAorg",
+              "sha256": "7ca74364bfea6a491b105e36924d88acf3a029a771dcec5520edde1c8a4bcac6"
+            },
+            {
+              "branch": "uatsfdc",
+              "exists": true,
+              "line_count": 31,
+              "org": "UAT",
+              "sha256": "7ca74364bfea6a491b105e36924d88acf3a029a771dcec5520edde1c8a4bcac6"
+            },
+            {
+              "branch": "master",
+              "exists": true,
+              "line_count": 30,
+              "org": "Prod",
+              "sha256": "c7bf51671cd8f56e46fead34ef350a92c869c64db66099632bb2896368ebd4ec"
+            }
+          ],
+          "status": "DIFF"
+        },
+        {
+          "base_org": "Prod",
+          "diff": {
+            "format": "mixed",
+            "items": [
+              {
+                "header": "",
+                "lines": [
+                  "--- Prod:master:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_Element_updateFeeDetails.json",
+                  "+++ QAorg:qasales:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_Element_updateFeeDetails.json"
+                ]
+              },
+              {
+                "header": "@@ -9,6 +9,8 @@",
+                "lines": [
+                  "     \"%vlocity_namespace%__PropertySet__c\": {",
+                  "         \"actionMessage\": \"\",",
+                  "         \"additionalInput\": {",
+                  "+            \"FeeType\": \"%UpgradeFeeType%\",",
+                  "+            \"isOverrideFee\": \"%UpgradeOverrideFee%\"",
+                  "         },",
+                  "         \"additionalOutput\": {",
+                  "         },"
+                ]
+              },
+              {
+                "header": "",
+                "lines": [
+                  "--- Prod:master:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_Element_updateFeeDetails.json",
+                  "+++ UAT:uatsfdc:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_Element_updateFeeDetails.json"
+                ]
+              },
+              {
+                "header": "@@ -9,6 +9,8 @@",
+                "lines": [
+                  "     \"%vlocity_namespace%__PropertySet__c\": {",
+                  "         \"actionMessage\": \"\",",
+                  "         \"additionalInput\": {",
+                  "+            \"FeeType\": \"%UpgradeFeeType%\",",
+                  "+            \"isOverrideFee\": \"%UpgradeOverrideFee%\"",
+                  "         },",
+                  "         \"additionalOutput\": {",
+                  "         },"
+                ]
+              }
+            ]
+          },
+          "path": "vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_Element_updateFeeDetails.json",
+          "per_org_meta": [
+            {
+              "branch": "qasales",
+              "exists": true,
+              "line_count": 43,
+              "org": "QAorg",
+              "sha256": "fc13dbb8cf29865e1d62c05377cd050c6e43a4513ee660bd48113775a7b93693"
+            },
+            {
+              "branch": "uatsfdc",
+              "exists": true,
+              "line_count": 43,
+              "org": "UAT",
+              "sha256": "fc13dbb8cf29865e1d62c05377cd050c6e43a4513ee660bd48113775a7b93693"
+            },
+            {
+              "branch": "master",
+              "exists": true,
+              "line_count": 41,
+              "org": "Prod",
+              "sha256": "c8b3a82541ecd4e30be13b88d85981cd8989354c49db5e3b842ba5875bd0fe99"
+            }
+          ],
+          "status": "DIFF"
+        },
+        {
+          "base_org": "Prod",
+          "diff": {
+            "format": "mixed",
+            "items": [
+              {
+                "header": "",
+                "lines": [
+                  "--- Prod:master:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_ParentKeys.json",
+                  "+++ QAorg:qasales:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_ParentKeys.json"
+                ]
+              },
+              {
+                "header": "@@ -1,3 +1,5 @@",
+                "lines": [
+                  " [",
+                  "-    \"DataRaptor/PR_GetAccessoryOrderItemsDR\"",
+                  "+    \"DataRaptor/PR_GetAccessoryOrderItemsDR\",",
+                  "+    \"DataRaptor/PR_GetPriceBookEntryIdAddOnDR\",",
+                  "+    \"DataRaptor/PR_UpdateFeeTypeDR\"",
+                  " ]"
+                ]
+              },
+              {
+                "header": "",
+                "lines": [
+                  "--- Prod:master:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_ParentKeys.json",
+                  "+++ UAT:uatsfdc:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_ParentKeys.json"
+                ]
+              },
+              {
+                "header": "@@ -1,3 +1,5 @@",
+                "lines": [
+                  " [",
+                  "-    \"DataRaptor/PR_GetAccessoryOrderItemsDR\"",
+                  "+    \"DataRaptor/PR_GetAccessoryOrderItemsDR\",",
+                  "+    \"DataRaptor/PR_GetPriceBookEntryIdAddOnDR\",",
+                  "+    \"DataRaptor/PR_UpdateFeeTypeDR\"",
+                  " ]"
+                ]
+              }
+            ]
+          },
+          "path": "vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_ParentKeys.json",
+          "per_org_meta": [
+            {
+              "branch": "qasales",
+              "exists": true,
+              "line_count": 5,
+              "org": "QAorg",
+              "sha256": "3a1630440764af230c7985289d9c082c151d4fe7c63cf0e5d4d0d8ae5af6b837"
+            },
+            {
+              "branch": "uatsfdc",
+              "exists": true,
+              "line_count": 5,
+              "org": "UAT",
+              "sha256": "3a1630440764af230c7985289d9c082c151d4fe7c63cf0e5d4d0d8ae5af6b837"
+            },
+            {
+              "branch": "master",
+              "exists": true,
+              "line_count": 3,
+              "org": "Prod",
+              "sha256": "0a99f9c2ab88d969c813256b614001bdeee5ddc5482698f1920efc2aff576f23"
+            }
+          ],
+          "status": "DIFF"
+        },
+        {
+          "base_org": "Prod",
+          "diff": {
+            "format": "mixed",
+            "items": [
+              {
+                "header": "",
+                "lines": [
+                  "--- Prod:master:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_PropertySet.json",
+                  "+++ QAorg:qasales:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_PropertySet.json"
+                ]
+              },
+              {
+                "header": "@@ -1,31 +0,0 @@",
+                "lines": [
+                  "-{",
+                  "-    \"additionalChainableResponse\": {",
+                  "-    },",
+                  "-    \"chainableActualTimeLimit\": null,",
+                  "-    \"chainableCpuLimit\": 2000,",
+                  "-    \"chainableDMLRowsLimit\": null,",
+                  "-    \"chainableDMLStatementsLimit\": null,",
+                  "-    \"chainableHeapSizeLimit\": null,",
+                  "-    \"chainableQueriesLimit\": 50,",
+                  "-    \"chainableQueryRowsLimit\": null,",
+                  "-    \"chainableSoslQueriesLimit\": null,",
+                  "-    \"columnsPropertyMap\": [",
+                  "-    ],",
+                  "-    \"description\": \"\",",
+                  "-    \"includeAllActionsInResponse\": false,",
+                  "-    \"labelPlural\": \"\",",
+                  "-    \"labelSingular\": \"\",",
+                  "-    \"linkToExternalObject\": \"\",",
+                  "-    \"mockResponseMap\": {",
+                  "-    },",
+                  "-    \"nameColumn\": \"\",",
+                  "-    \"queueableChainableCpuLimit\": 40000,",
+                  "-    \"queueableChainableHeapSizeLimit\": 6,",
+                  "-    \"queueableChainableQueriesLimit\": 120,",
+                  "-    \"relationshipFieldsMap\": [",
+                  "-    ],",
+                  "-    \"rollbackOnError\": false,",
+                  "-    \"trackingCustomData\": {",
+                  "-    },",
+                  "-    \"ttlMinutes\": 5",
+                  "-}"
+                ]
+              },
+              {
+                "header": "",
+                "lines": [
+                  "--- Prod:master:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_PropertySet.json",
+                  "+++ UAT:uatsfdc:vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_PropertySet.json"
+                ]
+              },
+              {
+                "header": "@@ -1,31 +0,0 @@",
+                "lines": [
+                  "-{",
+                  "-    \"additionalChainableResponse\": {",
+                  "-    },",
+                  "-    \"chainableActualTimeLimit\": null,",
+                  "-    \"chainableCpuLimit\": 2000,",
+                  "-    \"chainableDMLRowsLimit\": null,",
+                  "-    \"chainableDMLStatementsLimit\": null,",
+                  "-    \"chainableHeapSizeLimit\": null,",
+                  "-    \"chainableQueriesLimit\": 50,",
+                  "-    \"chainableQueryRowsLimit\": null,",
+                  "-    \"chainableSoslQueriesLimit\": null,",
+                  "-    \"columnsPropertyMap\": [",
+                  "-    ],",
+                  "-    \"description\": \"\",",
+                  "-    \"includeAllActionsInResponse\": false,",
+                  "-    \"labelPlural\": \"\",",
+                  "-    \"labelSingular\": \"\",",
+                  "-    \"linkToExternalObject\": \"\",",
+                  "-    \"mockResponseMap\": {",
+                  "-    },",
+                  "-    \"nameColumn\": \"\",",
+                  "-    \"queueableChainableCpuLimit\": 40000,",
+                  "-    \"queueableChainableHeapSizeLimit\": 6,",
+                  "-    \"queueableChainableQueriesLimit\": 120,",
+                  "-    \"relationshipFieldsMap\": [",
+                  "-    ],",
+                  "-    \"rollbackOnError\": false,",
+                  "-    \"trackingCustomData\": {",
+                  "-    },",
+                  "-    \"ttlMinutes\": 5",
+                  "-}"
+                ]
+              }
+            ]
+          },
+          "path": "vlocity/IntegrationProcedure/PR_AddUpgradeFeeAccessoryIP/PR_AddUpgradeFeeAccessoryIP_PropertySet.json",
+          "per_org_meta": [
+            {
+              "branch": "qasales",
+              "exists": false,
+              "line_count": null,
+              "org": "QAorg",
+              "sha256": null
+            },
+            {
+              "branch": "uatsfdc",
+              "exists": false,
+              "line_count": null,
+              "org": "UAT",
+              "sha256": null
+            },
+            {
+              "branch": "master",
+              "exists": true,
+              "line_count": 31,
+              "org": "Prod",
+              "sha256": "dd0a9e88be2a76fc359045fba07878738620cfdf1e3e03b9c3bea0d22dd9618e"
+            }
+          ],
+          "status": "NEW"
+        }
+      ],
+      "name": "PR_AddUpgradeFeeAccessoryIP",
+      "summary": {
+        "files_changed": 4,
+        "files_total": 11,
+        "files_unchanged": 7
+      },
+      "type": "IntegrationProcedure"
+    }
+  ],
+  "meta": {
+    "changed_only": true,
+    "diff_base_org": "Prod",
+    "include_diffs": true,
+    "orgs": [
+      {
+        "branch": "qasales",
+        "org": "QAorg"
+      },
+      {
+        "branch": "uatsfdc",
+        "org": "UAT"
+      },
+      {
+        "branch": "master",
+        "org": "Prod"
+      }
+    ],
+    "unified_context": 3,
+    "version": "v2"
+  },
+  "perf": {
+    "components": 2,
+    "total_ms": 27169
+  }
+}

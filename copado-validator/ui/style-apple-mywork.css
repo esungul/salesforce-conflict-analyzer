@@ -1,0 +1,397 @@
+/* Apple-Inspired Styling for My Work Tab */
+
+/* ===== Landing Container ===== */
+.apple-landing-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 60px 20px;
+  background: #ffffff;
+}
+
+/* ===== Header ===== */
+.apple-header {
+  text-align: center;
+  margin-bottom: 60px;
+  padding-bottom: 40px;
+}
+
+.apple-header h1 {
+  font-size: 48px;
+  font-weight: 700;
+  margin: 0 0 16px 0;
+  color: #1d1d1f;
+  letter-spacing: -0.5px;
+}
+
+.apple-header p {
+  font-size: 18px;
+  color: #666666;
+  margin: 0;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+/* ===== Section ===== */
+.apple-section {
+  margin-bottom: 80px;
+}
+
+.apple-section h2 {
+  font-size: 32px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: #1d1d1f;
+  letter-spacing: -0.5px;
+}
+
+.section-description {
+  font-size: 16px;
+  color: #666666;
+  margin: 0 0 32px 0;
+  font-weight: 400;
+}
+
+.apple-section-light {
+  background: #f5f5f7;
+  border-radius: 18px;
+  padding: 60px 40px;
+  margin-left: -20px;
+  margin-right: -20px;
+  padding-left: calc(40px + 20px);
+  padding-right: calc(40px + 20px);
+}
+
+/* ===== Tools Grid ===== */
+.apple-tools-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 24px;
+  margin-top: 32px;
+}
+
+/* ===== Tool Card ===== */
+.apple-tool-card {
+  background: #ffffff;
+  border: 1px solid #e5e5e7;
+  border-radius: 18px;
+  padding: 32px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.apple-tool-card:hover {
+  border-color: #d2d2d7;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.tool-header {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  gap: 16px;
+}
+
+.tool-icon-large {
+  font-size: 40px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.tool-header h3 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+  color: #1d1d1f;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.tool-description {
+  font-size: 15px;
+  color: #666666;
+  margin: 12px 0 16px 0;
+  line-height: 1.5;
+  flex-grow: 1;
+}
+
+.tool-features {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e5e7;
+}
+
+.feature {
+  font-size: 13px;
+  color: #555555;
+  line-height: 1.4;
+}
+
+.tool-footer {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid #e5e5e7;
+}
+
+.learn-more {
+  font-size: 14px;
+  color: #0071e3;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.learn-more:hover {
+  color: #0077ed;
+}
+
+/* ===== CTA Container ===== */
+.apple-cta-container {
+  background: #f5f5f7;
+  border-radius: 18px;
+  padding: 40px;
+  text-align: center;
+  margin-top: 32px;
+}
+
+/* ===== Apple Button ===== */
+.apple-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 32px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.apple-button-primary {
+  background: #0071e3;
+  color: #ffffff;
+}
+
+.apple-button-primary:hover {
+  background: #0077ed;
+}
+
+.apple-button-primary:active {
+  background: #0066cc;
+}
+
+.button-icon {
+  font-size: 12px;
+}
+
+.button-text {
+  font-size: 15px;
+}
+
+.button-description {
+  font-size: 13px;
+  color: #666666;
+  margin-top: 12px;
+  margin-bottom: 0;
+}
+
+/* ===== Info Grid ===== */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 40px;
+  margin-top: 32px;
+}
+
+.info-item {
+  text-align: center;
+}
+
+.info-icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+  display: block;
+}
+
+.info-item h4 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: #1d1d1f;
+}
+
+.info-item p {
+  font-size: 14px;
+  color: #555555;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ===== Responsive Design ===== */
+@media (max-width: 768px) {
+  .apple-landing-container {
+    padding: 40px 16px;
+  }
+
+  .apple-header h1 {
+    font-size: 32px;
+  }
+
+  .apple-header p {
+    font-size: 16px;
+  }
+
+  .apple-section {
+    margin-bottom: 60px;
+  }
+
+  .apple-section h2 {
+    font-size: 24px;
+  }
+
+  .apple-tools-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .apple-tool-card {
+    padding: 24px;
+  }
+
+  .tool-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .apple-cta-container {
+    padding: 24px;
+  }
+
+  .info-grid {
+    gap: 24px;
+  }
+
+  .apple-section-light {
+    margin-left: -16px;
+    margin-right: -16px;
+    padding-left: calc(40px + 16px);
+    padding-right: calc(40px + 16px);
+    padding-top: 40px;
+    padding-bottom: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .apple-landing-container {
+    padding: 32px 12px;
+  }
+
+  .apple-header h1 {
+    font-size: 24px;
+  }
+
+  .apple-header p {
+    font-size: 14px;
+  }
+
+  .apple-tools-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tool-header {
+    gap: 12px;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}
+
+/* ===== Animation ===== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.apple-tool-card {
+  animation: fadeIn 0.5s ease-out;
+}
+
+/* ===== Dark Mode Support ===== */
+@media (prefers-color-scheme: dark) {
+  .apple-landing-container {
+    background: #1d1d1f;
+  }
+
+  .apple-header h1,
+  .apple-section h2,
+  .tool-header h3,
+  .info-item h4 {
+    color: #f5f5f7;
+  }
+
+  .apple-header p,
+  .section-description,
+  .tool-description,
+  .feature,
+  .button-description,
+  .info-item p {
+    color: #a1a1a6;
+  }
+
+  .apple-tool-card {
+    background: #2a2a2c;
+    border-color: #424245;
+  }
+
+  .apple-tool-card:hover {
+    border-color: #555557;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  .apple-section-light {
+    background: #2a2a2c;
+  }
+
+  .tool-features,
+  .tool-footer {
+    border-color: #424245;
+  }
+
+  .apple-cta-container {
+    background: #2a2a2c;
+  }
+
+  .learn-more {
+    color: #0a84ff;
+  }
+
+  .learn-more:hover {
+    color: #0f6ff3;
+  }
+}
+
+.unified-diff .diff-line-number {
+  display: inline-block;
+  width: 30px;
+  text-align: center;
+  margin-right: 8px;
+  font-weight: 600;
+}

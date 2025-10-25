@@ -41,6 +41,8 @@ import re
 import logging
 import os
 
+
+
 def setup_logging():
     """
     Configure consistent logging for all modules.
@@ -67,6 +69,11 @@ setup_logging()
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app)  # Allow frontend to call this API
+
+from multi_compare_adapter import register_compare_v2
+
+if "compare_orgs_v2" not in app.blueprints:
+    register_compare_v2(app)
 
 # Configuration
 UPLOAD_FOLDER = tempfile.gettempdir()
@@ -2692,3 +2699,6 @@ if __name__ == '__main__':
     print("=" * 60)
     
     app.run(debug=True, host='0.0.0.0', port=5000)
+    
+    
+    

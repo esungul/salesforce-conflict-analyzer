@@ -12,6 +12,12 @@ import re
 GUID_RE = re.compile(r"[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
 from component_registry import vlocity_bundle_folder_candidates
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from requests.adapters import HTTPAdapter
+from config import get_config
+from urllib3.util.retry import Retry
+
+
 
 
 
@@ -41,38 +47,50 @@ class BitBucketClient:
     """Client for interacting with BitBucket API v2"""
     
     from component_registry import vlocity_bundle_folder_candidates
-
-    def list_folder(self, branch: str, folder: str, pagelen: int = 100):
-            """
-            List files in a repository folder for a given branch/ref.
-            Returns a list of dicts (commit_file entries) or [] if empty, None on 404.
-            """
-            # Normalize folder to always end with a slash for directory listing
-            folder = folder.strip("/")
-            url = f"{self.base_url}/src/{quote(branch, safe='')}/{quote(folder, safe='/')}/"
-
-            params = {"pagelen": pagelen}
-            items = []
-
-            while True:
-                resp = requests.get(url, headers=self._get_headers(), params=params)
-                if resp.status_code == 404:
-                    return None
-                resp.raise_for_status()
-                data = resp.json()
-
-                values = data.get("values")
-                if isinstance(values, list):
-                    items.extend(values)
-
-                next_url = data.get("next")
-                if not next_url:
-                    break
-                # The 'next' field already includes its own query params
-                url, params = next_url, {}
-
-            return items
     
+    
+    
+    def get_diffstat(self, ref_a: str, ref_b: str, pagelen: int = 200) -> list[dict]:
+        """
+        Fetch Bitbucket diffstat between two refs (branch names or commit SHAs).
+        Returns a flat list of entries with keys: status, old_path, new_path.
+        """
+        if not ref_a or not ref_b:
+            return []
+
+        spec = f"{ref_a}..{ref_b}"
+        url = f"{self.base_url}/diffstat/{spec}"
+        params = {"pagelen": int(pagelen)}
+
+        items: list[dict] = []
+        try:
+            while url:
+                resp = self.session.get(url, headers=self._get_headers(), params=params, timeout=self.timeout)
+                if resp.status_code == 404:
+                    # No diff found (e.g., refs invalid) — return empty
+                    return []
+                resp.raise_for_status()
+                data = resp.json() or {}
+                for v in data.get("values", []) or []:
+                    status = v.get("status")
+                    old_path = (v.get("old") or {}).get("path")
+                    new_path = (v.get("new") or {}).get("path")
+                    items.append({
+                        "status": status,
+                        "old_path": old_path,
+                        "new_path": new_path
+                    })
+                url = data.get("next")
+                params = None  # 'next' already includes query params
+        except Exception as e:
+            self.logger.error("get_diffstat(%s..%s) failed: %s", ref_a, ref_b, e)
+            return []
+
+        return items
+
+    
+    
+
     def verify_commit_in_branch(self, commit_hash: str, branch: str = "master") -> dict:
         """
         Check if a commit exists in a branch
@@ -262,7 +280,128 @@ class BitBucketClient:
                 'error': str(e)
             }
 
+    def list_folder_files(self, folder_path: str, branch: str = "master") -> list:
+        """
+        List all files in a folder (paths only).
+        """
+        if not folder_path:
+            return []
+        cache_key = (branch, folder_path)
+        if cache_key in self._cache_list_folder_files:
+            return self._cache_list_folder_files[cache_key]
 
+        url = f"{self.base_url}/src/{quote(branch, safe='')}/{quote(folder_path, safe='/')}"
+        try:
+            response = self.session.get(url, headers=self._get_headers(), timeout=self.timeout)
+            if response.status_code == 200:
+                data = response.json()
+                files = []
+                for item in data.get('values', []) or []:
+                    if item.get('type') == 'commit_file':
+                        p = item.get('path')
+                        if isinstance(p, str):
+                            files.append(p)
+                self._cache_list_folder_files[cache_key] = files
+                return files
+            elif response.status_code == 404:
+                self._cache_list_folder_files[cache_key] = []
+                return []
+            else:
+                self.logger.warning("list_folder_files %s %s -> %s", branch, folder_path, response.status_code)
+                self._cache_list_folder_files[cache_key] = []
+                return []
+        except Exception as e:
+            self.logger.error("list_folder_files error: %s", e)
+            self._cache_list_folder_files[cache_key] = []
+            return []
+
+    def get_bundle_diff(self, component_name: str, component_type: str,
+                        prod_branch: str = "master", uat_branch: str = "uatsfdc") -> dict:
+        """
+        Get diff for all files in a component bundle (fast, parallel).
+        Falls back to single-file diff for non-bundle types.
+        """
+
+        # Non-bundle? delegate
+        bundle_kinds = {
+            'OmniScript','IntegrationProcedure','DataRaptor','VlocityUILayout','VlocityCard',
+            'CalculationProcedure','CalculationMatrix','Product2','OrchestrationItemDefinition',
+            'OrchestrationDependencyDefinition','CalculationMatrixVersion','Catalog','PriceList','AttributeCategory'
+        }
+        if component_type not in bundle_kinds:
+            return self.get_component_diff(component_name, component_type, prod_branch, uat_branch)
+
+        folder = f"vlocity/{component_type}/{component_name}"
+
+        # list files for both branches in parallel
+        with ThreadPoolExecutor(max_workers=min(self.max_workers, 8)) as exe:
+            f_prod = exe.submit(self.list_folder_files, folder, prod_branch)
+            f_uat  = exe.submit(self.list_folder_files, folder, uat_branch)
+            prod_files = f_prod.result() or []
+            uat_files  = f_uat.result() or []
+
+        all_files = sorted(set(prod_files + uat_files))
+        self.logger.info("bundle %s/%s -> %d files", component_type, component_name, len(all_files))
+
+        if not all_files:
+            return {
+                'component_name': component_name,
+                'component_type': component_type,
+                'is_bundle': True,
+                'bundle_files': [],
+                'has_changes': False,
+                'file_path': folder,
+                'total_files': 0
+            }
+
+        def _diff_one(path: str) -> dict:
+            # fetch both contents (sequential inside task; tasks run in parallel)
+            prod_content = self.get_file_content(path, prod_branch)
+            uat_content  = self.get_file_content(path, uat_branch)
+            exists_prod = prod_content is not None
+            exists_uat  = uat_content is not None
+            has_changes = False
+            if exists_prod and exists_uat:
+                has_changes = (prod_content != uat_content)
+            elif exists_prod != exists_uat:
+                has_changes = True
+
+            return {
+                'file_name': path.split('/')[-1],
+                'file_path': path,
+                'exists_in_prod': exists_prod,
+                'exists_in_uat': exists_uat,
+                'has_changes': has_changes,
+                'production_code': prod_content if exists_prod else None,
+                'uat_code': uat_content if exists_uat else None
+            }
+
+        bundle_files = []
+        has_any_changes = False
+        # Parallelize across files (tune workers)
+        with ThreadPoolExecutor(max_workers=self.max_workers) as exe:
+            futures = {exe.submit(_diff_one, p): p for p in all_files}
+            for fut in as_completed(futures):
+                row = fut.result()
+                bundle_files.append(row)
+                has_any_changes = has_any_changes or row['has_changes']
+
+        # Keep deterministic order by path
+        bundle_files.sort(key=lambda r: r['file_path'])
+
+        return {
+            'component_name': component_name,
+            'component_type': component_type,
+            'is_bundle': True,
+            'bundle_files': bundle_files,
+            'has_changes': has_any_changes,
+            'file_path': folder,
+            'total_files': len(bundle_files)
+        }
+    
+    
+
+    
     def _is_commit_ancestor(self, ancestor_hash: str, descendant_hash: str, max_depth: int = 50) -> bool:
         """
         Check if ancestor_hash is an ancestor of descendant_hash
@@ -302,100 +441,99 @@ class BitBucketClient:
         
         return False    
     
-    def get_bundle_diff(self, component_name: str, component_type: str, 
-                    prod_branch: str = "master", uat_branch: str = "uatsfdc") -> dict:
+   
+    def __init__(
+        self,
+        logger: Optional[logging.Logger] = None,
+        *,
+        workspace: Optional[str] = None,
+        repo: Optional[str] = None,
+        token: Optional[str] = None,
+        base_url: Optional[str] = None,
+        session: Optional[requests.Session] = None,
+        timeout: Optional[float] = None,
+        max_workers: Optional[int] = None,
+    ):
         """
-        Get diff for all files in a component bundle
-        Automatically discovers all files in the bundle
+        Single, unified constructor:
+        - Reads defaults from config.py (which reads your env: API_MAX_WORKERS, BITBUCKET_MAX_WORKERS, BITBUCKET_POOL_MAXSIZE, BITBUCKET_TIMEOUT, etc.)
+        - Allows per-instance overrides via kwargs (backward-compatible).
+        - Sets up a pooled HTTP session with retries and Authorization header.
+        - Initializes per-instance caches (intended: one client per request).
         """
-        # Determine folder path
-        if component_type == 'lwc':
-            folder = f"lwc/{component_name}"
-        elif component_type == 'aura':
-            folder = f"aura/{component_name}"
-        elif component_type in ['DataRaptor', 'IntegrationProcedure', 'OmniScript', 
-                                'VlocityCard', 'CalculationProcedure', 'CalculationMatrix']:
-            folder = f"vlocity/{component_type}/{component_name}"
+        cfg = get_config()
+
+        # ---- logger ----
+        self.logger = logger or logging.getLogger(__name__)
+        if not self.logger.handlers:
+            self.logger.addHandler(logging.NullHandler())
+
+        # ---- core repo coordinates (cfg → env → override already handled by kwargs) ----
+        self.workspace = workspace or cfg.BITBUCKET_WORKSPACE or os.getenv("BITBUCKET_WORKSPACE")
+        self.repo      = repo      or cfg.BITBUCKET_REPO_SLUG  or os.getenv("BITBUCKET_REPO")
+        self.token     = token     or cfg.BITBUCKET_TOKEN      or os.getenv("BITBUCKET_TOKEN")
+
+        if not self.workspace or not self.repo:
+            raise ValueError("Bitbucket workspace/repo not configured. Set BITBUCKET_WORKSPACE and BITBUCKET_REPO (or configure in config.py).")
+
+        # API root (support on-prem override)
+        api_root = (cfg.BITBUCKET_BASE_URL or "").strip().rstrip("/") or "https://api.bitbucket.org/2.0"
+        self.base_url = base_url or f"{api_root}/repositories/{self.workspace}/{self.repo}"
+
+        # performance knobs
+        self.timeout     = float(timeout if timeout is not None else cfg.BITBUCKET_TIMEOUT)
+        self.max_workers = int(max_workers if max_workers is not None else cfg.BITBUCKET_MAX_WORKERS)
+        pool_max         = int(cfg.BITBUCKET_POOL_MAXSIZE)
+
+        # ---- HTTP session (inject or create) ----
+        if session is not None:
+            self.session = session
         else:
-            # Single file component
-            return self.get_component_diff(component_name, component_type, prod_branch, uat_branch)
-        
-        # Get list of files from BOTH branches
-        prod_files = self.list_folder_files(folder, prod_branch)
-        uat_files = self.list_folder_files(folder, uat_branch)
-        
-        # Merge file lists (all unique files from both branches)
-        all_files = list(set(prod_files + uat_files))
-        all_files.sort()  # Sort for consistent display
-        
-        print(f"📦 Found {len(all_files)} files in {folder}")
-        print(f"   Files: {all_files}")
-        
-        if not all_files:
-            return {
-                'component_name': component_name,
-                'component_type': component_type,
-                'is_bundle': True,
-                'bundle_files': [],
-                'has_changes': False,
-                'file_path': folder,
-                'error': 'No files found in bundle'
-            }
-        
-        bundle_files = []
-        has_any_changes = False
-        
-        for file_path in all_files:
-            prod_content = self.get_file_content(file_path, prod_branch)
-            uat_content = self.get_file_content(file_path, uat_branch)
-            
-            if prod_content is not None or uat_content is not None:
-                has_changes = prod_content != uat_content if (prod_content and uat_content) else True
-                if has_changes:
-                    has_any_changes = True
-                
-                bundle_files.append({
-                    'file_path': file_path,
-                    'file_name': file_path.split('/')[-1],
-                    'production_code': prod_content,
-                    'uat_code': uat_content,
-                    'has_changes': has_changes,
-                    'exists_in_prod': prod_content is not None,
-                    'exists_in_uat': uat_content is not None
-                })
-        
-        return {
-            'component_name': component_name,
-            'component_type': component_type,
-            'is_bundle': True,
-            'bundle_files': bundle_files,
-            'has_changes': has_any_changes,
-            'file_path': folder,
-            'total_files': len(bundle_files)
-        }
-        
-    def __init__(self, logger: logging.Logger | None = None):
-        self.token = os.getenv('BITBUCKET_TOKEN')
-        self.workspace = os.getenv('BITBUCKET_WORKSPACE', 'lla-dev')
-        self.repo = os.getenv('BITBUCKET_REPO', 'copado_lla')
-        self.base_url = f"https://api.bitbucket.org/2.0/repositories/{self.workspace}/{self.repo}"
+            self.session = requests.Session()
+            retry = Retry(
+                total=3, connect=3, read=3,
+                backoff_factor=0.3,
+                status_forcelist=(429, 500, 502, 503, 504),
+                allowed_methods=frozenset({"GET", "POST"}),
+                raise_on_status=False,
+            )
+            adapter = HTTPAdapter(pool_connections=pool_max, pool_maxsize=pool_max, max_retries=retry)
+            self.session.mount("http://", adapter)
+            self.session.mount("https://", adapter)
 
-        # ✅ logger fix
-        if logger is None:
-            logger = logging.getLogger("git_client.BitBucketClient")
-            if not logger.handlers:
-                h = logging.StreamHandler()
-                h.setFormatter(logging.Formatter(
-                    "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-                ))
-                logger.addHandler(h)
-            logger.setLevel(os.getenv("LOG_LEVEL", "INFO").upper())
-            logger.propagate = False
-        self.logger = logger
+            # Default headers once, on the session
+            headers = {"Accept": "application/json"}
+            if self.token:
+                headers["Authorization"] = f"Bearer {self.token}"
+            else:
+                self.logger.warning("BITBUCKET_TOKEN not set; private repo calls may fail.")
+            self.session.headers.update(headers)
 
-        if not self.token:
-            raise ValueError("BITBUCKET_TOKEN not set in .env file")
-        
+        # ---- per-instance caches (cleared when client is discarded) ----
+        self._cache_list_folder: Dict[tuple, object] = {}
+        self._cache_list_folder_files: Dict[tuple, List[str]] = {}
+        self._cache_get_file_content: Dict[tuple, Optional[str]] = {}
+        self._cache_get_file_commits: Dict[tuple, List[Dict]] = {}
+
+        self.closed = False
+
+    def _get_headers(self) -> Dict[str, str]:
+        """
+        Kept for backward compatibility if other methods call it.
+        We already set headers on the session; this returns the same values.
+        """
+        base = {"Accept": "application/json"}
+        if self.token:
+            base["Authorization"] = f"Bearer {self.token}"
+        return base
+
+    def close(self):
+        if getattr(self, "session", None) and not getattr(self, "closed", False):
+            try:
+                self.session.close()
+            finally:
+                self.closed = True
+    
     def _get_headers(self) -> Dict[str, str]:
         """Get authentication headers"""
         return {
@@ -405,25 +543,33 @@ class BitBucketClient:
   
     def get_file_content(self, file_path: str, branch: str = "master") -> Optional[str]:
         """
-        Get file content from repository
-        Tries the provided path first
+        Get file content from repository. Returns None on 404.
         """
-        url = f"{self.base_url}/src/{branch}/{file_path}"
-        
+        if not file_path:
+            return None
+
+        cache_key = (branch, file_path)
+        if cache_key in self._cache_get_file_content:
+            return self._cache_get_file_content[cache_key]
+
+        url = f"{self.base_url}/src/{quote(branch, safe='')}/{quote(file_path, safe='/')}"
         try:
-            response = requests.get(url, headers=self._get_headers())
-            
+            response = self.session.get(url, headers=self._get_headers(), timeout=self.timeout)
             if response.status_code == 200:
+                self._cache_get_file_content[cache_key] = response.text
                 return response.text
             elif response.status_code == 404:
+                self._cache_get_file_content[cache_key] = None
                 return None
             else:
-                print(f"Error fetching file: {response.status_code}")
+                self.logger.warning("get_file_content %s %s -> %s", branch, file_path, response.status_code)
+                self._cache_get_file_content[cache_key] = None
                 return None
-                
         except Exception as e:
-            print(f"Exception fetching file: {str(e)}")
+            self.logger.error("get_file_content error: %s", e)
+            self._cache_get_file_content[cache_key] = None
             return None
+
 
     def get_file_content_smart(self, component_name: str, component_type: str, branch: str = "master") -> tuple:
         """
@@ -845,8 +991,47 @@ class BitBucketClient:
 
         return None, None
             
+    def list_folder(self, branch: str, folder: str, pagelen: int = 100):
+        """
+        List files in a repository folder for a given branch/ref.
+        Returns a list of dicts (commit_file entries) or [] if empty, None on 404.
+        """
+        folder = folder.strip("/")
+        url = f"{self.base_url}/src/{quote(branch, safe='')}/{quote(folder, safe='/')}/"
+        params = {"pagelen": pagelen}
+        cache_key = (branch, folder, pagelen)
 
+        if cache_key in self._cache_list_folder:
+            return self._cache_list_folder[cache_key]
 
+        items = []
+        try:
+            while True:
+                resp = self.session.get(url, headers=self._get_headers(), params=params, timeout=self.timeout)
+                if resp.status_code == 404:
+                    self._cache_list_folder[cache_key] = None
+                    return None
+                resp.raise_for_status()
+                data = resp.json()
+
+                values = data.get("values")
+                if isinstance(values, list):
+                    items.extend(values)
+
+                next_url = data.get("next")
+                if not next_url:
+                    break
+                url = next_url
+                params = None  # next already has query
+        except Exception as e:
+            self.logger.error("list_folder failed: %s", e)
+            self._cache_list_folder[cache_key] = None
+            return None
+
+        self._cache_list_folder[cache_key] = items
+        return items
+
+     
     def list_component_types(self, branch: str = "master") -> List[str]:
         """
         List available component types in vlocity folder
@@ -877,52 +1062,82 @@ class BitBucketClient:
             return []
     def get_file_commits(self, file_path: str, branch: str = "master", limit: int = 10) -> List[Dict]:
         """
-        Get commit history for a specific file
-        
-        Args:
-            file_path: Path to file
-            branch: Branch name
-            limit: Number of commits to retrieve
-        
-        Returns:
-            List of commit dictionaries
+        Get commit history for a specific file.
         """
-        url = f"{self.base_url}/commits/{branch}"
-        params = {
-            'path': file_path,
-            'pagelen': limit
-        }
-        
+        if not file_path:
+            return []
+
+        cache_key = (branch, file_path, int(limit))
+        if cache_key in self._cache_get_file_commits:
+            return self._cache_get_file_commits[cache_key]
+
+        url = f"{self.base_url}/commits/{quote(branch, safe='')}"
+        params = {'path': file_path, 'pagelen': int(limit)}
+
         try:
-            response = requests.get(
-                url, 
-                headers=self._get_headers(),
-                params=params
-            )
-            
+            response = self.session.get(url, headers=self._get_headers(), params=params, timeout=self.timeout)
             if response.status_code == 200:
                 data = response.json()
-                commits = data.get('values', [])
-                
-                result = []
-                for commit in commits:
-                    result.append({
-                        'hash': commit['hash'],
-                        'short_hash': commit['hash'][:8],
-                        'message': commit['message'],
-                        'author': commit['author']['raw'],
-                        'date': commit['date']
-                    })
-                
+                commits = data.get('values', []) or []
+                result = [{
+                    'hash': c.get('hash'),
+                    'short_hash': (c.get('hash') or '')[:8],
+                    'message': c.get('message'),
+                    'author': (c.get('author') or {}).get('raw'),
+                    'date': c.get('date')
+                } for c in commits]
+                self._cache_get_file_commits[cache_key] = result
                 return result
             else:
+                self.logger.warning("get_file_commits %s %s -> %s", branch, file_path, response.status_code)
+                self._cache_get_file_commits[cache_key] = []
                 return []
-                
         except Exception as e:
-            print(f"Error getting file commits: {str(e)}")
+            self.logger.error("get_file_commits error: %s", e)
+            self._cache_get_file_commits[cache_key] = []
             return []
+
+   
+        """
+        List files in a repository folder for a given branch/ref.
+        Returns a list of dicts (commit_file entries) or [] if empty, None on 404.
+        """
+        folder = folder.strip("/")
+        url = f"{self.base_url}/src/{quote(branch, safe='')}/{quote(folder, safe='/')}/"
+        params = {"pagelen": pagelen}
+        cache_key = (branch, folder, pagelen)
+
+        if cache_key in self._cache_list_folder:
+            return self._cache_list_folder[cache_key]
+
+        items = []
+        try:
+            while True:
+                resp = self.session.get(url, headers=self._get_headers(), params=params, timeout=self.timeout)
+                if resp.status_code == 404:
+                    self._cache_list_folder[cache_key] = None
+                    return None
+                resp.raise_for_status()
+                data = resp.json()
+
+                values = data.get("values")
+                if isinstance(values, list):
+                    items.extend(values)
+
+                next_url = data.get("next")
+                if not next_url:
+                    break
+                url = next_url
+                params = None  # next already has query
+        except Exception as e:
+            self.logger.error("list_folder failed: %s", e)
+            self._cache_list_folder[cache_key] = None
+            return None
+
+        self._cache_list_folder[cache_key] = items
+        return items
+
     
-    def list_folder_files(self, folder_path: str, branch: str = "master") -> list:
         """
         List all files in a folder using BitBucket API
         
