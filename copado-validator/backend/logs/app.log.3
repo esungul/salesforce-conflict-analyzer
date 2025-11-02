@@ -1,0 +1,95 @@
+2025-11-01 07:40:43,305 INFO [app]: Logging initialized at INFO level, writing to logs/app.log
+2025-11-01 07:40:43,310 WARNING [deployment_prover]: validation_config not available - using default validators
+2025-11-01 07:40:43,897 INFO [deployment_prover]: ✅ DeploymentProver initialized with REAL clients
+2025-11-01 07:40:43,934 INFO [werkzeug]: [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://192.168.50.129:5000
+2025-11-01 07:40:43,934 INFO [werkzeug]: [33mPress CTRL+C to quit[0m
+2025-11-01 07:40:43,935 INFO [werkzeug]:  * Restarting with stat
+2025-11-01 07:40:44,475 INFO [app]: Logging initialized at INFO level, writing to logs/app.log
+2025-11-01 07:40:44,478 WARNING [deployment_prover]: validation_config not available - using default validators
+2025-11-01 07:40:44,986 INFO [deployment_prover]: ✅ DeploymentProver initialized with REAL clients
+2025-11-01 07:40:45,016 WARNING [werkzeug]:  * Debugger is active!
+2025-11-01 07:40:45,030 INFO [werkzeug]:  * Debugger PIN: 751-587-999
+2025-11-01 07:40:51,573 INFO [app]: ================================================================================
+2025-11-01 07:40:51,573 INFO [app]: [ROUTE] POST /api/analyze-stories
+2025-11-01 07:40:51,573 INFO [app]: ================================================================================
+2025-11-01 07:40:51,573 INFO [app]: [ROUTE] Payload received: {'releaseNames': 'SFDC-PEAC-B2C 25.22.1'}
+2025-11-01 07:40:51,976 INFO [app]: [ROUTE] Fetching story metadata for stories=None releases=['SFDC-PEAC-B2C 25.22.1']
+2025-11-01 07:40:51,977 INFO [salesforce_client]: Running SOQL: 
+                SELECT copado__User_Story__r.Name, copado__User_Story__r.copado__User_Story_Title__c, copado__User_Story__r.copado__Release__r.Name, copado__User_Story__r.copado__Project__r.Name, copado__User_Story__r.copado__Developer__r.Name, copado__User_Story__r.copado__Close_Date__c, copado__User_Story__r.copado__Story_Points_SFDC__c, copado__User_Story__r.copado__Environment__r.Name, copado__User_Story__r.copadoccmint__JIRA_key__c, copado__Metadata_API_Name__c, copado__Type__c, copado__Category__c, copado__Action__c, copado__Status__c, copado__ModuleDirectory__c, copado__Last_Commit_Date__c, copado__JsonInformation__c, copado__Unique_ID__c, CreatedDate, CreatedBy.Name, LastModifiedDate, LastModifiedBy.Name
+                FROM copado__User_Story_Metadata__c
+                WHERE copado__User_Story__r.copado__Release__r.Name IN ('SFDC-PEAC-B2C 25.22.1')
+                ORDER BY copado__Last_Commit_Date__c
+            
+2025-11-01 07:40:52,702 INFO [salesforce_client]: SOQL returned 108 record(s).
+2025-11-01 07:40:52,703 INFO [app]: [ROUTE] Got 108 metadata records from Copado__User_Story_Metadata__c
+2025-11-01 07:40:53,058 INFO [salesforce_client]: fetch_deployment_tasks_by_release -> total 18 rows
+2025-11-01 07:40:53,059 INFO [app]: [ROUTE] Got 18 deployment-task rows
+2025-11-01 07:40:53,059 INFO [app]: [ROUTE] Merge result: metadata=108, deployment=18, skipped=11, total=115
+2025-11-01 07:40:53,061 INFO [app]: [ROUTE] Normalized to 115 rows
+2025-11-01 07:40:53,062 INFO [app]: [ROUTE] Found 89 unique components to check in production
+2025-11-01 07:40:53,062 INFO [app]: [ROUTE] Fetching production state for 89 components (batched)
+2025-11-01 07:40:53,062 INFO [salesforce_client]: [SF] Running production state query with 89 components
+2025-11-01 07:40:53,062 INFO [salesforce_client]: [SF] Processing 2 batches
+2025-11-01 07:40:53,063 INFO [salesforce_client]: [SF] Batch 1/2: 50 components
+2025-11-01 07:40:53,688 INFO [salesforce_client]: [SF] Batch 1 got 280 production records
+2025-11-01 07:40:53,688 INFO [salesforce_client]: [SF] Batch 2/2: 39 components
+2025-11-01 07:40:54,498 INFO [salesforce_client]: [SF] Batch 2 got 477 production records
+2025-11-01 07:40:54,498 INFO [salesforce_client]: [SF] Total production records fetched: 757
+2025-11-01 07:40:54,498 INFO [salesforce_client]: [SF] Starting normalization of 757 records
+2025-11-01 07:40:54,502 INFO [salesforce_client]: [SF] Completed normalization: 757 records
+2025-11-01 07:40:54,502 INFO [app]: [ROUTE] Got 757 production records
+2025-11-01 07:40:54,503 INFO [salesforce_client]: [SF] fetch_story_commits SOQL: SELECT copado__User_Story__r.Name, copado__User_Story__c, copado__User_Story__r.copado__Environment__r.Name, copado__Snapshot_Commit__c, copado__View_in_Git__c, copado__External_Id__c
+            FROM copado__User_Story_Commit__c
+            WHERE copado__User_Story__r.Name IN ('US-0033975','US-0033736','US-0034075','US-0034032','US-0033754','US-0034040','US-0033831','US-0034077','US-0033885','US-0033840','US-0033848','US-0034011','US-0033578','US-0033731','US-0033709','US-0033749','US-0034036','US-0033916','US-0033973','US-0033905','US-0034082','US-0033622','US-0033733','US-0034007','US-0033802','US-0033852','US-0033806','US-0033880','US-0034039','US-0033732','US-0033760','US-0033833','US-0034076')
+2025-11-01 07:40:54,937 INFO [salesforce_client]: [SF] fetch_story_commits rows=32
+2025-11-01 07:40:54,938 INFO [app]: [ROUTE] Enriched commits for 26 stories
+2025-11-01 07:40:54,939 INFO [app]: [INIT] StoryAnalyzerTransformer initialized
+2025-11-01 07:40:54,939 INFO [app]: [TRANSFORM] Starting with 115 SF records
+2025-11-01 07:40:54,939 INFO [app]: [STEP1] Grouping records by story...
+2025-11-01 07:40:54,940 WARNING [app]: [STEP1] Record 108 has no story ID, skipping
+2025-11-01 07:40:54,940 WARNING [app]: [STEP1] Record 109 has no story ID, skipping
+2025-11-01 07:40:54,940 WARNING [app]: [STEP1] Record 110 has no story ID, skipping
+2025-11-01 07:40:54,940 WARNING [app]: [STEP1] Record 111 has no story ID, skipping
+2025-11-01 07:40:54,940 WARNING [app]: [STEP1] Record 112 has no story ID, skipping
+2025-11-01 07:40:54,940 WARNING [app]: [STEP1] Record 113 has no story ID, skipping
+2025-11-01 07:40:54,940 WARNING [app]: [STEP1] Record 114 has no story ID, skipping
+2025-11-01 07:40:54,940 INFO [app]: [STEP1] Complete: 26 unique stories found
+2025-11-01 07:40:54,941 INFO [app]: [TRANSFORM] Step 1 complete: 26 unique stories
+2025-11-01 07:40:54,941 INFO [app]: [STEP2] Extracting components...
+2025-11-01 07:40:54,942 INFO [app]: [STEP2] Complete: 108 components extracted
+2025-11-01 07:40:54,942 INFO [app]: [STEP2] Unique api_names: 89
+2025-11-01 07:40:54,942 INFO [app]: [TRANSFORM] Step 2 complete: 108 unique components extracted
+2025-11-01 07:40:54,943 INFO [app]: [STEP3] Detecting conflicts...
+2025-11-01 07:40:54,943 INFO [app]: [STEP3] CONFLICT: LightningComponentBundle.pR_MyCart found in stories: ['US-0033709', 'US-0033749']
+2025-11-01 07:40:54,943 INFO [app]: [STEP3] CONFLICT: IntegrationProcedure.PR_GetDeviceLinesWithNoFullyFinanced found in stories: ['US-0033709', 'US-0033749']
+2025-11-01 07:40:54,943 INFO [app]: [STEP3] CONFLICT: OmniScript.PR_TermsAndConditionRefactorPostpaid_English found in stories: ['US-0033806', 'US-0034036']
+2025-11-01 07:40:54,943 INFO [app]: [STEP3] CONFLICT: CustomMetadata.PR_Generic.PR_Enable_New_Sales_Features_For_All found in stories: ['US-0033806', 'US-0033831']
+2025-11-01 07:40:54,943 INFO [app]: [STEP3] CONFLICT: CustomField.PartyConsent.PR_Consent_Type__c found in stories: ['US-0033806', 'US-0033831', 'US-0033840']
+2025-11-01 07:40:54,944 INFO [app]: [STEP3] CONFLICT: LightningComponentBundle.prInstallmentWithTermsAndConditions found in stories: ['US-0033806', 'US-0034036']
+2025-11-01 07:40:54,944 INFO [app]: [STEP3] CONFLICT: LightningComponentBundle.prTermsAndConditionsFromCollapsePrepaid found in stories: ['US-0033806', 'US-0034077']
+2025-11-01 07:40:54,944 INFO [app]: [STEP3] CONFLICT: Group.PR_Enable_New_Sales_Features found in stories: ['US-0033806', 'US-0033831']
+2025-11-01 07:40:54,944 INFO [app]: [STEP3] CONFLICT: OmniScript.PR_NoAssetsAddlineRefactor_English found in stories: ['US-0033806', 'US-0033880']
+2025-11-01 07:40:54,944 INFO [app]: [STEP3] CONFLICT: OmniScript.PR_CreditCheckMobileRefactored_English found in stories: ['US-0033806', 'US-0033831', 'US-0034011']
+2025-11-01 07:40:54,944 INFO [app]: [STEP3] CONFLICT: OmniScript.PR_TermsAndConditionPrepaidRefactor_English found in stories: ['US-0033831', 'US-0034036', 'US-0034077']
+2025-11-01 07:40:54,945 INFO [app]: [STEP3] CONFLICT: OmniScript.PR_CreatePrepaidAccountRefactor_English found in stories: ['US-0033831', 'US-0034011']
+2025-11-01 07:40:54,945 INFO [app]: [STEP3] CONFLICT: RecordType.PartyConsent.LCPR_Consent_Library_RecordType found in stories: ['US-0033840', 'US-0034007']
+2025-11-01 07:40:54,945 INFO [app]: [STEP3] CONFLICT: ApexClass.PR_NokiaConnectSystemInterface_cls found in stories: ['US-0033833', 'US-0034040']
+2025-11-01 07:40:54,945 INFO [app]: [STEP3] CONFLICT: ApexClass.PR_NokiaConnectSystemInterface_tst found in stories: ['US-0033833', 'US-0034040']
+2025-11-01 07:40:54,946 INFO [app]: [STEP3] CONFLICT: OmniScript.PR_MobilePrepaidTopUpScreen_English found in stories: ['US-0034076', 'US-0034082']
+2025-11-01 07:40:54,946 INFO [app]: [STEP3] Complete: 16 components have conflicts
+2025-11-01 07:40:54,946 INFO [app]: [TRANSFORM] Step 3 complete: 16 components with conflicts
+2025-11-01 07:40:54,947 INFO [app]: [STEP4] Classifying stories...
+2025-11-01 07:40:54,947 INFO [app]: [STEP4] Complete: blocked=0, conflicts=0, safe=0
+2025-11-01 07:40:54,947 INFO [app]: [TRANSFORM] Step 4 complete: blocked=0, conflicts=0, safe=0
+2025-11-01 07:40:54,947 INFO [app]: [STEP5] Enriching 0 stories with conflict details...
+2025-11-01 07:40:54,947 INFO [app]: [STEP5] Complete: 0 stories enriched
+2025-11-01 07:40:54,947 INFO [app]: [STEP5] Enriching 0 stories with conflict details...
+2025-11-01 07:40:54,948 INFO [app]: [STEP5] Complete: 0 stories enriched
+2025-11-01 07:40:54,948 INFO [app]: [STEP5] Enriching 0 stories with conflict details...
+2025-11-01 07:40:54,948 INFO [app]: [STEP5] Complete: 0 stories enriched
+2025-11-01 07:40:54,948 INFO [app]: [TRANSFORM] Step 5 complete: enriched all story groups
+2025-11-01 07:40:54,948 INFO [app]: [STEP6] Building summary...
+2025-11-01 07:42:37,404 INFO [werkzeug]:  * Restarting with stat

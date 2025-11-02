@@ -90,7 +90,7 @@ export function renderEnforcementTab(analysis = {}) {
   const header = createElement('div', { className: 'section-header' }, [
     createElement('h2', {}, 'Enforcement / Blocked'),
     createElement('p', { className: 'muted' }, 
-      `${filtered.length} story(ies) blocked by production dependencies`)
+      `${filtered.length} Storys Blocked by Production Dependencies`)
   ]);
   panel.append(header);
 
@@ -298,6 +298,8 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+// Update the injectCss function in enforcement-enhanced.js with these styles:
+
 const injectCss = (() => {
   let done = false;
   return () => {
@@ -305,20 +307,83 @@ const injectCss = (() => {
     done = true;
 
     const css = `
-      .enforcement-list { display: flex; flex-direction: column; gap: 16px; }
+      /* Updated section header to match overview.js */
+      .section-header h2 {
+        font-size: 24px;
+        font-weight: 600;
+        margin: 0 0 8px 0;
+        color: #1d1d1f;
+      }
+
+      .section-header .muted {
+        font-size: 24px;
+        color: white ;
+        margin: 0;
+      }
+
+      /* Updated filter bar to match overview.js style */
+      .filter-bar {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 24px;
+        padding: 16px;
+        background: white;
+        border: 1px solid #e5e5e7;
+        border-radius: 8px;
+        align-items: center;
+      }
+
+      .search-input {
+        flex: 1;
+        padding: 10px 12px;
+        border: 1px solid #e5e5e7;
+        border-radius: 8px;
+        font-size: 13px;
+        transition: all 0.2s ease;
+      }
+
+      .search-input:focus {
+        outline: none;
+        border-color: #0071e3;
+        box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.1);
+      }
+
+      .sort-select {
+        padding: 10px 12px;
+        border: 1px solid #e5e5e7;
+        border-radius: 8px;
+        font-size: 13px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .sort-select:focus {
+        outline: none;
+        border-color: #0071e3;
+      }
+
+      /* Updated enforcement list and cards */
+      .enforcement-list {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
 
       .enforcement-card {
         background: white;
         border: 1px solid #e5e5e7;
-        border-radius: 8px;
-        padding: 16px;
-        transition: all 0.3s ease;
+        border-radius: 12px;
+        padding: 20px;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
         border-left: 4px solid #FF3B30;
       }
 
-      .enforcement-card:hover { 
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); 
-        border-color: #d2d2d7; 
+      .enforcement-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border-color: #d2d2d7;
       }
 
       .enforcement-header {
@@ -326,12 +391,14 @@ const injectCss = (() => {
         justify-content: space-between;
         align-items: flex-start;
         gap: 12px;
-        margin-bottom: 12px;
-        padding-bottom: 12px;
+        margin-bottom: 16px;
+        padding-bottom: 16px;
         border-bottom: 1px solid #f5f5f7;
       }
 
-      .enforcement-title-section { flex: 1; }
+      .enforcement-title-section {
+        flex: 1;
+      }
 
       .enforcement-title {
         margin: 0 0 8px;
@@ -353,16 +420,30 @@ const injectCss = (() => {
         color: #86868b;
         background: #f5f5f7;
         padding: 4px 8px;
-        border-radius: 4px;
+        border-radius: 6px;
+        font-weight: 500;
       }
 
+      /* Status badges matching overview.js style */
+      .status-badge {
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        background: #FF3B30;
+        color: white;
+      }
+
+      /* Blocking summary */
       .blocking-summary {
         display: flex;
         gap: 24px;
-        margin-bottom: 12px;
-        padding: 12px;
+        margin-bottom: 16px;
+        padding: 16px;
         background: #fff3f3;
-        border-radius: 6px;
+        border-radius: 8px;
         border: 1px solid #ffd1d1;
       }
 
@@ -388,30 +469,32 @@ const injectCss = (() => {
         color: #FF3B30;
       }
 
+      /* Components section */
       .components-section {
-        margin-top: 12px;
+        margin-top: 16px;
       }
 
       .comp-toggle {
-        background: #f5f5f7;
+        background: #f8f9fa;
         border: 1px solid #e5e5e7;
-        padding: 8px 12px;
-        border-radius: 6px;
+        padding: 12px 16px;
+        border-radius: 8px;
         cursor: pointer;
         font-size: 13px;
         font-weight: 600;
         color: #1d1d1f;
         width: 100%;
         text-align: left;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
       }
 
-      .comp-toggle:hover { 
-        background: #e8e8ed; 
+      .comp-toggle:hover {
+        background: #e8e8ed;
+        border-color: #d2d2d7;
       }
 
       .components-list {
-        margin-top: 8px;
+        margin-top: 12px;
         display: flex;
         flex-direction: column;
         gap: 8px;
@@ -419,16 +502,21 @@ const injectCss = (() => {
         overflow-y: auto;
       }
 
-      .components-list.hidden { 
-        display: none; 
+      .components-list.hidden {
+        display: none;
       }
 
       .component-item {
         background: #fafafa;
         border: 1px solid #e5e5e7;
-        padding: 12px;
-        border-radius: 6px;
-        font-size: 12px;
+        padding: 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        transition: all 0.2s ease;
+      }
+
+      .component-item:hover {
+        border-color: #d2d2d7;
       }
 
       .component-item.has-old-commit {
@@ -441,7 +529,7 @@ const injectCss = (() => {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        margin-bottom: 8px;
+        margin-bottom: 12px;
         gap: 8px;
       }
 
@@ -454,16 +542,19 @@ const injectCss = (() => {
         font-weight: 600;
         color: #86868b;
         background: #f5f5f7;
-        padding: 2px 6px;
-        border-radius: 4px;
-        margin-right: 6px;
+        padding: 4px 8px;
+        border-radius: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
       }
 
       .comp-name {
-        font-size: 13px;
+        font-size: 14px;
         color: #1d1d1f;
-        font-family: monospace;
+        font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
+        font-weight: 600;
         word-break: break-all;
+        margin-top: 4px;
       }
 
       .old-commit-badge {
@@ -471,22 +562,23 @@ const injectCss = (() => {
         font-weight: 700;
         color: #FF3B30;
         background: #ffebea;
-        padding: 4px 6px;
-        border-radius: 4px;
+        padding: 6px 8px;
+        border-radius: 6px;
         white-space: nowrap;
       }
 
       .comp-commit {
-        margin-bottom: 8px;
+        margin-bottom: 12px;
       }
 
       .commit-link {
-        font-size: 11px;
+        font-size: 12px;
         color: #0071e3;
         text-decoration: none;
         background: #e8f0ff;
-        padding: 2px 6px;
-        border-radius: 4px;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-weight: 500;
       }
 
       .commit-link:hover {
@@ -495,10 +587,11 @@ const injectCss = (() => {
       }
 
       .comp-reason {
-        font-size: 12px;
+        font-size: 13px;
         color: #1d1d1f;
-        margin-bottom: 8px;
+        margin-bottom: 12px;
         padding: 4px 0;
+        font-weight: 500;
       }
 
       .comp-reason strong {
@@ -506,20 +599,21 @@ const injectCss = (() => {
       }
 
       .comp-dates {
-        font-size: 11px;
+        font-size: 12px;
       }
 
       .date-comparison {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 12px;
-        margin-bottom: 8px;
+        margin-bottom: 12px;
       }
 
       .date-item {
-        padding: 6px 8px;
-        border-radius: 4px;
+        padding: 8px;
+        border-radius: 6px;
         border: 1px solid #e5e5e7;
+        background: white;
       }
 
       .date-item.outdated {
@@ -536,49 +630,58 @@ const injectCss = (() => {
         display: block;
         font-weight: 600;
         color: #86868b;
-        font-size: 10px;
-        margin-bottom: 2px;
+        font-size: 11px;
+        margin-bottom: 4px;
       }
 
       .date-value {
         display: block;
         color: #1d1d1f;
         font-weight: 600;
+        font-size: 12px;
       }
 
       .production-info {
-        padding: 6px 0;
+        padding: 8px 0;
         border-top: 1px solid #f5f5f7;
-        margin-top: 6px;
+        margin-top: 8px;
       }
 
       .prod-label {
         font-weight: 600;
         color: #86868b;
-        margin-right: 4px;
+        margin-right: 6px;
+        font-size: 12px;
       }
 
       .prod-value {
         color: #1d1d1f;
-        font-family: monospace;
+        font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Source Code Pro', monospace;
+        font-size: 12px;
       }
 
       .prod-title {
-        font-size: 11px;
+        font-size: 12px;
         color: #86868b;
-        margin-top: 2px;
+        margin-top: 4px;
         font-style: italic;
       }
 
+      /* Empty state matching overview.js */
       .empty-card {
         text-align: center;
-        padding: 40px 20px;
+        padding: 60px 20px;
         color: #86868b;
+        background: white;
+        border: 1px solid #e5e5e7;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
       }
 
-      .empty-icon { 
-        font-size: 48px; 
-        margin-bottom: 12px; 
+      .empty-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+        opacity: 0.5;
       }
 
       .empty-card h3 {
@@ -588,25 +691,56 @@ const injectCss = (() => {
         color: #1d1d1f;
       }
 
-      .empty-card p { 
-        margin: 0; 
-        font-size: 13px; 
+      .empty-card p {
+        margin: 0;
+        font-size: 13px;
       }
 
+      /* Responsive design */
       @media (max-width: 768px) {
+        .filter-bar {
+          flex-direction: column;
+          align-items: stretch;
+        }
+
+        .search-input, .sort-select {
+          width: 100%;
+        }
+
         .blocking-summary {
           flex-direction: column;
           gap: 12px;
         }
-        
+
         .date-comparison {
           grid-template-columns: 1fr;
         }
-        
+
         .comp-header {
           flex-direction: column;
           align-items: flex-start;
-          gap: 6px;
+          gap: 8px;
+        }
+
+        .enforcement-header {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 8px;
+        }
+
+        .enforcement-story-info {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .enforcement-card {
+          padding: 16px;
+        }
+
+        .component-item {
+          padding: 12px;
         }
       }
     `;

@@ -16,6 +16,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from requests.adapters import HTTPAdapter
 from config import get_config
 from urllib3.util.retry import Retry
+log = logging.getLogger(__name__)
 
 
 
@@ -47,7 +48,8 @@ class BitBucketClient:
     """Client for interacting with BitBucket API v2"""
     
     from component_registry import vlocity_bundle_folder_candidates
-    
+     
+      
     
     
     def get_diffstat(self, ref_a: str, ref_b: str, pagelen: int = 200) -> list[dict]:
@@ -399,7 +401,7 @@ class BitBucketClient:
             'total_files': len(bundle_files)
         }
     
-    
+     
 
     
     def _is_commit_ancestor(self, ancestor_hash: str, descendant_hash: str, max_depth: int = 50) -> bool:
@@ -570,7 +572,17 @@ class BitBucketClient:
             self._cache_get_file_content[cache_key] = None
             return None
 
-
+    def get_diffstat(self, commit_sha: str) -> dict:
+        """Get diffstat for a commit - returns file changes with paths"""
+        url = f"{self.base_url}/repositories/{self.workspace}/{self.repo}/diffstat/{commit_sha}"
+        
+        try:
+            response = self.session.get(url)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            self.logger.error(f"Failed to get diffstat for commit {commit_sha}: {e}")
+            return {}
     def get_file_content_smart(self, component_name: str, component_type: str, branch: str = "master") -> tuple:
         """
         Smart file retrieval - tries multiple possible paths
@@ -1031,7 +1043,43 @@ class BitBucketClient:
         self._cache_list_folder[cache_key] = items
         return items
 
-     
+    def get_pull_request_commits(self, pr_id: int | str, pagelen: int = 50) -> list[dict]:
+        """
+        Bitbucket Cloud:
+        GET https://api.bitbucket.org/2.0/repositories/{workspace}/{repo}/pullrequests/{id}/commits
+        Returns a list of commit objects (at least 'hash' per item).
+        """
+        wid = getattr(self, "workspace", None)
+        rid = getattr(self, "repo", None)
+        base = getattr(self, "base_url", "https://api.bitbucket.org/2.0/repositories").rstrip("/")
+        sess = getattr(self, "session", None)
+        token = getattr(self, "token", None)
+
+        if not (wid and rid and sess):
+            raise RuntimeError("BitBucketClient missing workspace/repo/session")
+
+        url = f"{base}/{wid}/{rid}/pullrequests/{pr_id}/commits"
+        params = {"pagelen": pagelen}
+        headers = {}
+        # If your client already sets auth on the session, this header isn't needed.
+        if token and "Authorization" not in getattr(sess, "headers", {}):
+            headers["Authorization"] = f"Bearer {token}"
+
+        commits: list[dict] = []
+        while True:
+            resp = sess.get(url, params=params, headers=headers, timeout=getattr(self, "timeout", 30))
+            resp.raise_for_status()
+            data = resp.json() or {}
+            values = data.get("values", [])
+            commits.extend(values)
+            next_url = data.get("next")
+            if not next_url:
+                break
+            # Bitbucket 'next' is a full URL; switch to it and clear params:
+            url, params = next_url, {}
+        log.info(f"[git_client] PR {pr_id} commits fetched: {len(commits)}")
+        return commits
+        
     def list_component_types(self, branch: str = "master") -> List[str]:
         """
         List available component types in vlocity folder
@@ -1096,84 +1144,73 @@ class BitBucketClient:
             self.logger.error("get_file_commits error: %s", e)
             self._cache_get_file_commits[cache_key] = []
             return []
+        
+    def get_pull_request_diffstat(self, pr_id: int | str, pagelen: int = 50) -> list[dict]:
+        """
+        Bitbucket Cloud:
+        GET .../pullrequests/{id}/diffstat
+        Returns a list of file change entries. Normalized later by our adapter.
+        """
+        wid = getattr(self, "workspace", None)
+        rid = getattr(self, "repo", None)
+        base = getattr(self, "base_url", "https://api.bitbucket.org/2.0/repositories").rstrip("/")
+        sess = getattr(self, "session", None)
+        token = getattr(self, "token", None)
 
-   
-        """
-        List files in a repository folder for a given branch/ref.
-        Returns a list of dicts (commit_file entries) or [] if empty, None on 404.
-        """
-        folder = folder.strip("/")
-        url = f"{self.base_url}/src/{quote(branch, safe='')}/{quote(folder, safe='/')}/"
+        if not (wid and rid and sess):
+            raise RuntimeError("BitBucketClient missing workspace/repo/session")
+
+        url = f"{base}/{wid}/{rid}/pullrequests/{pr_id}/diffstat"
         params = {"pagelen": pagelen}
-        cache_key = (branch, folder, pagelen)
+        headers = {}
+        if token and "Authorization" not in getattr(sess, "headers", {}):
+            headers["Authorization"] = f"Bearer {token}"
 
-        if cache_key in self._cache_list_folder:
-            return self._cache_list_folder[cache_key]
+        out: list[dict] = []
+        while True:
+            resp = sess.get(url, params=params, headers=headers, timeout=getattr(self, "timeout", 30))
+            resp.raise_for_status()
+            data = resp.json() or {}
+            values = data.get("values", [])
+            out.extend(values)
+            next_url = data.get("next")
+            if not next_url:
+                break
+            url, params = next_url, {}
 
-        items = []
-        try:
-            while True:
-                resp = self.session.get(url, headers=self._get_headers(), params=params, timeout=self.timeout)
-                if resp.status_code == 404:
-                    self._cache_list_folder[cache_key] = None
-                    return None
-                resp.raise_for_status()
-                data = resp.json()
-
-                values = data.get("values")
-                if isinstance(values, list):
-                    items.extend(values)
-
-                next_url = data.get("next")
-                if not next_url:
-                    break
-                url = next_url
-                params = None  # next already has query
-        except Exception as e:
-            self.logger.error("list_folder failed: %s", e)
-            self._cache_list_folder[cache_key] = None
-            return None
-
-        self._cache_list_folder[cache_key] = items
-        return items
-
+        return out
     
-        """
-        List all files in a folder using BitBucket API
-        
-        Args:
-            folder_path: Path to folder (e.g., "vlocity/OmniScript/ComponentName")
-            branch: Branch name
-        
-        Returns:
-            List of file paths
-        """
-        url = f"{self.base_url}/src/{branch}/{folder_path}"
-        
+    # Add to git_client.py
+
+    def get_commit_details(self, commit_sha: str) -> Dict:
+        """Get comprehensive commit information including timestamp"""
         try:
-            response = requests.get(url, headers=self._get_headers())
+            url = f"https://api.bitbucket.org/2.0/repositories/{self.workspace}/{self.repo}/commit/{commit_sha}"
+            response = self.session.get(url)
             
             if response.status_code == 200:
                 data = response.json()
-                files = []
-                
-                # BitBucket API returns directory listing
-                if 'values' in data:
-                    for item in data['values']:
-                        if item.get('type') == 'commit_file':
-                            files.append(item.get('path'))
-                
-                return files
-            elif response.status_code == 404:
-                print(f"Folder not found: {folder_path} in {branch}")
-                return []
+                return {
+                    'success': True,
+                    'commit_hash': commit_sha,
+                    'author': data.get('author', {}).get('raw', 'Unknown'),
+                    'date': data.get('date', ''),
+                    'message': data.get('message', ''),
+                    'parents': [p.get('hash') for p in data.get('parents', [])]
+                }
             else:
-                print(f"Error listing folder {folder_path}: {response.status_code}")
-                return []
+                return {'success': False, 'error': f"API Error: {response.status_code}"}
                 
         except Exception as e:
-            print(f"Exception listing folder: {str(e)}")
-            return []
+            return {'success': False, 'error': str(e)}
+
+    def get_commit_timestamp(self, commit_sha: str) -> Optional[str]:
+        """Get just the commit timestamp for verification"""
+        details = self.get_commit_details(commit_sha)
+        return details.get('date') if details.get('success') else None
+
+
+
 # Test function
 if __name__ == "__main__":
     print("=" * 70)

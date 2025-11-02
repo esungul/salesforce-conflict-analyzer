@@ -1,0 +1,114 @@
+# Vlocity/OmniStudio Configuration
+# Updated with actual Salesforce queries from your org
+
+# Namespace prefix
+namespace: "vlocity_cmt"
+
+# Component configurations
+components:
+  OmniScript:
+    # Query from OmniScript object
+    object: "vlocity_cmt__OmniScript__c"
+    
+    # Fields to retrieve
+    fields:
+      - "Name"
+      - "CreatedDate"
+      - "CreatedById"
+      - "LastModifiedDate"
+      - "LastModifiedById"
+      - "LastActivityDate"
+      - "vlocity_cmt__Language__c"
+      - "vlocity_cmt__Type__c"
+      - "vlocity_cmt__SubType__c"
+      - "vlocity_cmt__Version__c"
+      - "vlocity_cmt__IsTest__c"
+      - "vlocity_cmt__OmniProcessType__c"
+      - "vlocity_cmt__ProcedureKey__c"
+    
+    # Filter conditions
+    filter_field: "vlocity_cmt__OmniProcessType__c"
+    filter_value: "OmniScript"
+    
+    # Search field (use Name, but strip language suffix)
+    search_field: "Name"
+    
+    # Language suffix patterns to remove (e.g., _English, _Spanish)
+    strip_suffixes:
+      - "_English"
+      - "_Spanish"
+      - "_French"
+      - "_German"
+      - "_Italian"
+      - "_Portuguese"
+    
+    # Query settings
+    order_by: "CreatedDate DESC"
+    limit: 100
+  
+  IntegrationProcedure:
+    # IntegrationProcedures are stored in OmniScript object!
+    object: "vlocity_cmt__OmniScript__c"
+    
+    # Fields to retrieve
+    fields:
+      - "Name"
+      - "CreatedDate"
+      - "CreatedById"
+      - "LastModifiedDate"
+      - "LastModifiedById"
+      - "LastActivityDate"
+      - "vlocity_cmt__Language__c"
+      - "vlocity_cmt__Type__c"
+      - "vlocity_cmt__SubType__c"
+      - "vlocity_cmt__Version__c"
+      - "vlocity_cmt__IsTest__c"
+      - "vlocity_cmt__OmniProcessType__c"
+      - "vlocity_cmt__ProcedureKey__c"
+      - "vlocity_cmt__IsProcedure__c"
+    
+    # Filter conditions
+    filter_field: "vlocity_cmt__IsProcedure__c"
+    filter_value: "true"
+    
+    # Search field (use ProcedureKey__c, not Name!)
+    search_field: "vlocity_cmt__ProcedureKey__c"
+    
+    # Query settings
+    order_by: "CreatedDate DESC"
+    limit: 100
+  
+  DataRaptor:
+    # Query from DRBundle object
+    object: "vlocity_cmt__DRBundle__c"
+    
+    # Fields to retrieve
+    fields:
+      - "Id"
+      - "Name"
+      - "OwnerId"
+      - "IsDeleted"
+      - "CurrencyIsoCode"
+      - "vlocity_cmt__DRMapName__c"
+      - "CreatedDate"
+      - "CreatedById"
+      - "LastModifiedDate"
+      - "LastModifiedById"
+      - "vlocity_cmt__Description__c"
+    
+    # Search field (use DRMapName__c, not Name!)
+    search_field: "vlocity_cmt__DRMapName__c"
+    
+    # Query settings
+    order_by: "CreatedDate DESC"
+    limit: 100
+
+# Global settings
+settings:
+  # Remove type prefix from component names
+  # E.g., "IntegrationProcedure.PR_Name" -> "PR_Name"
+  strip_type_prefix: true
+  
+  # Handle doubled prefixes
+  # E.g., "OmniScript.OmniScript.PR_Name" -> "PR_Name"
+  fix_doubled_prefix: true

@@ -1,16 +1,23 @@
 # salesforce_client.py
 from __future__ import annotations
 import json, os
-from typing import Iterable, List,Dict
+from typing import Iterable, List,Dict,Optional
 # Note: We import simple_salesforce inside the function to avoid import errors at build time.
 # Install with: pip install simple-salesforce
 import re
 import logging
 logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
+from vlocity_query_builder import VlocityQueryBuilder
+
+
+
 
 
 _ANCHOR_RE = re.compile(r'href=["\']([^"\']+)["\']', re.I)
 _SHA_RE = re.compile(r'([a-f0-9]{7,40})', re.I)
+_SHA40_RE = re.compile(r'\b([a-f0-9]{40})\b', re.I)
+
 
 _REQUIRED_FIELDS = [
     "copado__User_Story__r.copadoccmint__JIRA_key__c",
@@ -84,17 +91,6 @@ def fetch_user_story_metadata_by_release(sf, release_names: list[str]) -> list[d
         
     return records
 
-def fetch_user_story_metadata_by_story_namesbackup(sf, story_names: list[str]) -> list[dict]:
-    records: list[dict] = []
-    for batch in chunked(story_names, 100):
-        soql = f"""
-            SELECT {", ".join(_FIELDS)}
-            FROM copado__User_Story_Metadata__c
-            WHERE copado__User_Story__r.Name IN {soql_in(batch)}
-            ORDER BY copado__Last_Commit_Date__c
-        """
-        records.extend(_query_all(sf, soql))
-    return records
 
 def fetch_user_story_metadata_by_story_names(sf, story_names: list[str] = None, release_names: list[str] = None) -> list[dict]:
     """
@@ -275,6 +271,172 @@ def ensure_required_fields(field_list):
 
 
 
+def _sha_from_external_id(ext_id: Optional[str]) -> Optional[str]:
+    if not ext_id: return None
+    if "_" in ext_id:
+        tail = ext_id.rsplit("_", 1)[-1]
+        if _SHA40_RE.fullmatch(tail): return tail.lower()
+    m = _SHA40_RE.search(ext_id)
+    if m: return m.group(1).lower()
+    return None
+
+# --- replace your fetch_story_commits with this (shape preserved; extra fields added) ---
+def fetch_story_commits(sf, user_story_names: List[str]) -> List[Dict]:
+    if not user_story_names: return []
+    fields = [
+        "copado__User_Story__r.Name",
+        "copado__User_Story__c",
+        "copado__User_Story__r.copado__Environment__r.Name",
+        "copado__Snapshot_Commit__c",
+        "copado__View_in_Git__c",
+        "copado__External_Id__c",  # NEW
+    ]
+    out: List[Dict] = []
+    for batch in chunked(user_story_names, 100):
+        soql = f"""
+            SELECT {", ".join(fields)}
+            FROM copado__User_Story_Commit__c
+            WHERE copado__User_Story__r.Name IN {soql_in(batch)}
+        """
+        logger.info(f"[SF] fetch_story_commits SOQL: {soql.strip()}")
+        recs = sf.query_all(soql).get("records", [])
+        logger.info(f"[SF] fetch_story_commits rows={len(recs)}")
+        for r in recs:
+            long_sha = _sha_from_external_id(r.get("copado__External_Id__c"))
+            html = r.get("copado__View_in_Git__c") or ""
+            short = None; url = None
+            # very small extractor for <a href=...>hash</a>
+            m = re.search(r'href="([^"]+)"[^>]*>([0-9a-fA-F]+)</a>', html)
+            if m:
+                url = m.group(1); short = m.group(2).lower()
+            commit_sha = long_sha or short
+            out.append({
+                "user_story_name": (r.get("copado__User_Story__r") or {}).get("Name"),
+                "user_story_id": r.get("copado__User_Story__c"),
+                "environment": (r.get("copado__User_Story__r") or {}).get("copado__Environment__r", {}).get("Name"),
+                "snapshot_commit": r.get("copado__Snapshot_Commit__c"),
+                "commit_url": url,
+                "commit_sha": commit_sha,
+                "commit_sha_short": (short or (long_sha[:7] if long_sha else None)),
+            })
+    return out
+
+def fetch_vlocity_component_state(sf, components: List[Dict]) -> List[Dict]:
+    """
+    Fetch Vlocity component state from production using configurable queries
+    
+    Args:
+        sf: Salesforce connection
+        components: List of components to check
+    
+    Returns:
+        List of Salesforce records for Vlocity components
+    """
+    if not components:
+        logger.info("[VLOCITY] No components to fetch")
+        return []
+    
+    try:
+        # Load query builder with config
+        builder = VlocityQueryBuilder()
+        
+        # Build queries for all components
+        queries = builder.build_bulk_query(components)
+        
+        logger.info(f"[VLOCITY] Built {len(queries)} queries for component types")
+        
+        # Execute queries
+        all_records = []
+        for comp_type, query in queries.items():
+            logger.info(f"[VLOCITY] Querying {comp_type}...")
+            logger.info(f"[VLOCITY] Query: {query}")
+            
+            try:
+                result = sf.query_all(query)
+                records = result.get('records', [])
+                
+                logger.info(f"[VLOCITY] Found {len(records)} {comp_type} records")
+                
+                # Normalize records to match standard format
+                normalized = []
+                for rec in records:
+                    # Keep ALL fields from the record
+                    normalized_rec = dict(rec)  # Copy all fields
+                    normalized_rec['_component_type'] = comp_type  # Add our tag
+                    normalized.append(normalized_rec)
+                all_records.extend(normalized)
+                
+            except Exception as e:
+                logger.error(f"[VLOCITY] Error querying {comp_type}: {e}")
+                import traceback
+                logger.error(traceback.format_exc())
+                continue
+        
+        logger.info(f"[VLOCITY] Total records fetched: {len(all_records)}")
+        return all_records
+        
+    except Exception as e:
+        logger.error(f"[VLOCITY] Error fetching component state: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return []
+
+
+def _query_tooling(self, query: str) -> Optional[List[Dict]]:
+    """
+    Execute Tooling API query
+    
+    Args:
+        query: SOQL query string
+        
+    Returns:
+        List of records or None if failed
+    """
+    try:
+        # Option 1: If using simple_salesforce directly
+        if hasattr(self.sf, 'toolingexecute'):
+            result = self.sf.toolingexecute(f"query/?q={query}")
+            return result.get('records', []) if result else []
+        
+        # Option 2: If you added query_tooling to salesforce_client
+        from salesforce_client import query_tooling
+        return query_tooling(self.sf, query)
+        
+    except Exception as e:
+        logger.error(f"      Tooling API query failed: {e}")
+        return None
+
+def get_user_stories_from_release(sf, release_name: str) -> List[str]:
+    """Get all user story names from a release"""
+    try:
+        log.info(f"🔍 Getting user stories from release: {release_name}")
+        
+        safe_release_name = release_name.replace("'", "\\'")
+        
+        query = f"""
+            SELECT copado__User_Story__r.Name
+            FROM copado__User_Story_Commit__c
+            WHERE copado__User_Story__r.copado__Release__r.Name = '{safe_release_name}'
+        """
+        
+        log.info(f"   Query: {query}")
+        result = sf.query(query)  # ← Changed from self.sf to sf
+        
+        story_names = set()
+        for record in result.get('records', []):
+            if record.get('copado__User_Story__r'):
+                story_names.add(record['copado__User_Story__r']['Name'])
+        
+        user_stories = sorted(list(story_names))
+        log.info(f"   ✅ Found {len(user_stories)} stories")
+        return user_stories
+        
+    except Exception as e:
+        log.error(f"   ✗ Error: {e}")
+        import traceback
+        log.error(traceback.format_exc())
+        return []
+
 def fetch_production_component_state(sf, components: List[Dict]) -> List[Dict]:
     if not components:
         logger.info("[SF] No components provided for production state lookup")
@@ -356,135 +518,59 @@ def fetch_production_component_state(sf, components: List[Dict]) -> List[Dict]:
     return all_records
 
 
-    if not components:
+
+def fetch_deployment_tasks(sf, release_names: list[str] = None, story_names: list[str] = None) -> list[dict]:
+    """
+    Fetch deployment tasks for stories that might not have commit records
+    """
+    if not release_names and not story_names:
+        logger.info("[SF] No release_names or story_names provided for deployment tasks")
         return []
     
-    api_names = [comp.get("api_name") for comp in components if comp.get("api_name")]
-    logger.info(f"[SF] Running query with {len(api_names)} components")
+    # ✅ ENHANCED FIELD SELECTION - include both nested and flat versions
+    fields = [
+        "copado__User_Story__r.Name",
+        "copado__User_Story__r.copado__User_Story_Title__c",
+        "copado__User_Story__r.copado__Release__r.Name", 
+        "copado__User_Story__r.copado__Environment__r.Name",
+        "copado__User_Story__r.copado__Last_Validation_Deployment_Status__c",
+        "copado__Perform_Manual_Task__c",
+        "copado__Status__c",
+        "CreatedDate",
+        "CreatedBy.Name",  # ✅ Also get flat field
+        "LastModifiedDate", 
+        "LastModifiedBy.Name"  # ✅ Also get flat field
+    ]
     
-    if not api_names:
-        return []
+    conditions = []
+    if release_names:
+        conditions.append(f"copado__User_Story__r.copado__Release__r.Name IN {soql_in(release_names)}")
+    if story_names:
+        conditions.append(f"copado__User_Story__r.Name IN {soql_in(story_names)}")
+    
+    # ✅ FIX: Change AND to OR
+    where_clause = " OR ".join(conditions) if conditions else ""
     
     soql = f"""
-        SELECT 
-            copado__Metadata_API_Name__c,
-            copado__Type__c,
-            copado__Last_Commit_Date__c,
-            copado__User_Story__r.Name,
-            copado__User_Story__r.copado__User_Story_Title__c,
-            LastModifiedDate,
-            LastModifiedBy.Name
-        FROM copado__User_Story_Metadata__c
-        WHERE copado__Metadata_API_Name__c IN {soql_in(api_names)}
-        AND copado__User_Story__r.copado__Environment__r.Name = 'production'
-        ORDER BY copado__Last_Commit_Date__c DESC
+        SELECT {", ".join(fields)}
+        FROM copado__Deployment_Task__c
+        {f"WHERE {where_clause}" if where_clause else ""}
+        ORDER BY copado__User_Story__r.Name, CreatedDate
     """
     
-    logger.debug(f"[SF] SOQL: {soql}")
-    result = sf.query_all(soql)
-    records = result.get("records", [])
+    logger.info(f"[SF] Fetching deployment tasks: {len(release_names or [])} releases, {len(story_names or [])} stories")
+    logger.debug(f"[SF] Deployment task SOQL: {soql}")
     
-    logger.info(f"[SF] Got {len(records)} records")
+    records = _query_all(sf, soql)
+    logger.info(f"[SF] Found {len(records)} deployment task records")
+    
+    # ✅ LOG FIELD AVAILABILITY IN RESPONSE
     if records:
-        logger.info(f"[SF] Sample record keys: {list(records[0].keys())}")
-        logger.debug(f"[SF] Sample record #1: {json.dumps(records[0], indent=2, default=str)}")
-        
-        # NORMALIZE: Convert SF format to consistent flat structure
-        normalized = []
-        for rec in records:
-            # Handle nested User Story relationship
-            user_story = rec.get("copado__User_Story__r") or {}
-            
-            normalized_rec = {
-                "copado__Metadata_API_Name__c": rec.get("copado__Metadata_API_Name__c"),
-                "copado__Type__c": rec.get("copado__Type__c"),
-                "copado__Last_Commit_Date__c": rec.get("copado__Last_Commit_Date__c"),
-                "copado__User_Story__r.Name": user_story.get("Name"),
-                "copado__User_Story__r.copado__User_Story_Title__c": user_story.get("copado__User_Story_Title__c"),
-                "LastModifiedDate": rec.get("LastModifiedDate"),
-                "LastModifiedBy.Name": rec.get("LastModifiedBy.Name") or (rec.get("LastModifiedBy") or {}).get("Name")
-            }
-            normalized.append(normalized_rec)
-            logger.debug(f"[SF] Normalized: {normalized_rec['copado__Metadata_API_Name__c']} → story={normalized_rec['copado__User_Story__r.Name']}")
-        
-        return normalized
+        first_record = records[0]
+        logger.info(f"[SF] First deployment task record keys: {list(first_record.keys())}")
+        if 'CreatedBy' in first_record:
+            logger.debug(f"[SF] CreatedBy structure: {type(first_record['CreatedBy'])} -> {first_record['CreatedBy']}")
+        if 'LastModifiedBy' in first_record:
+            logger.info(f"[SF] LastModifiedBy structure: {type(first_record['LastModifiedBy'])} -> {first_record['LastModifiedBy']}")
     
     return records
-
-
-
-    if not components:
-        return []
-    
-    api_names = [comp.get("api_name") for comp in components if comp.get("api_name")]
-    logger.info(f"[SF] Running production state query with {len(api_names)} components")
-    logger.info(f"[SF] Running production state query with {len(api_names)} components")
-    logger.info(f"[SF] First 5 components: {api_names[:5]}")
-    
-    if not api_names:
-        return []
-    
-    # CHUNK the API names to avoid SOQL limits - THE ONLY FIX NEEDED
-    all_records = []
-    batches = list(chunked(api_names, 50))
-    logger.info(f"[SF] Processing {len(batches)} batches")
-    for i, batch in enumerate(batches):
-        soql = f"""
-            SELECT 
-                copado__Metadata_API_Name__c,
-                copado__Type__c,
-                copado__Last_Commit_Date__c,
-                copado__User_Story__r.Name,
-                copado__User_Story__r.copado__User_Story_Title__c,
-                LastModifiedDate,
-                LastModifiedBy.Name
-            FROM copado__User_Story_Metadata__c
-            WHERE copado__Metadata_API_Name__c IN {soql_in(batch)}
-            AND copado__User_Story__r.copado__Environment__r.Name = 'production'
-            ORDER BY copado__Last_Commit_Date__c DESC
-        """
-        
-        logger.debug(f"[SF] Production state batch: {len(batch)} components")
-        logger.info(f"[SF] Batch {i+1}/{len(batches)}: {len(batch)} components")
-        
-        logger.debug(f"[SF] SOQL for batch {i+1}: {soql}")
-        
-        try:
-            result = sf.query_all(soql)
-            records = result.get("records", [])
-            all_records.extend(records)
-            logger.info(f"[SF] Batch got {len(records)} production records")
-        except Exception as e:
-            logger.error(f"[SF] Error in production state batch query: {str(e)}")
-            logger.error(f"[SF] Error in production state batch {i+1}: {str(e)}")
-            logger.error(f"[SF] Failed SOQL: {soql}")
-            continue
-    
-    logger.info(f"[SF] Total production records fetched: {len(all_records)}")
-    
-    # ... rest of the function remains exactly the same ...
-    if records:
-        logger.info(f"[SF] Sample record keys: {list(records[0].keys())}")
-        logger.debug(f"[SF] Sample record #1: {json.dumps(records[0], indent=2, default=str)}")
-        
-        # NORMALIZE: Convert SF format to consistent flat structure
-        normalized = []
-        for rec in records:
-            # Handle nested User Story relationship
-            user_story = rec.get("copado__User_Story__r") or {}
-            
-            normalized_rec = {
-                "copado__Metadata_API_Name__c": rec.get("copado__Metadata_API_Name__c"),
-                "copado__Type__c": rec.get("copado__Type__c"),
-                "copado__Last_Commit_Date__c": rec.get("copado__Last_Commit_Date__c"),
-                "copado__User_Story__r.Name": user_story.get("Name"),
-                "copado__User_Story__r.copado__User_Story_Title__c": user_story.get("copado__User_Story_Title__c"),
-                "LastModifiedDate": rec.get("LastModifiedDate"),
-                "LastModifiedBy.Name": rec.get("LastModifiedBy.Name") or (rec.get("LastModifiedBy") or {}).get("Name")
-            }
-            normalized.append(normalized_rec)
-            logger.debug(f"[SF] Normalized: {normalized_rec['copado__Metadata_API_Name__c']} → story={normalized_rec['copado__User_Story__r.Name']}")
-        
-        return normalized
-    
-    return all_records

@@ -1,106 +1,199 @@
-// ui/src/ui/tabs/overview.js
 const $ = (s, r=document) => r.querySelector(s);
 
 export function renderOverviewTab(analysis = {}) {
   const panel = $('#tab-overview');
   if (!panel) return;
   
+  // ==================== DEBUG LOGS ====================
+  console.log('🔍 ===== ANALYSIS DATA STRUCTURE =====');
+  console.log('Full analysis object:', analysis);
+  console.log('Analysis keys:', Object.keys(analysis));
+  
   const summary = analysis?.summary || {};
+  const enhancedSummary = analysis?.summary_enhanced || {};
+  const deploymentTaskStories = analysis.deployment_task_stories || [];
+  
+  console.log('📊 summary:', summary);
+  console.log('🚀 summary_enhanced:', enhancedSummary);
+  console.log('🛠️ deployment_task_stories count:', deploymentTaskStories.length);
+  console.log('🛠️ deployment_task_stories:', deploymentTaskStories);
+  
+  // Check if we have the new structure
+  const hasEnhancedStructure = enhancedSummary && enhancedSummary.total_stories_in_scope;
+  console.log('✅ Has enhanced structure:', hasEnhancedStructure);
+  console.log('========================================');
+  // ==================== END DEBUG LOGS ====================
 
-  // Extract summary data - USE ACTUAL COUNTS FROM SUMMARY
-  const totalStories = summary.total_stories || (summary.stories_safe || 0) + (summary.stories_blocked || 0) + (summary.stories_with_conflicts || 0);
+  // Extract summary data - USE ENHANCED COUNTS WHEN AVAILABLE
+  const totalStories = enhancedSummary.total_stories_in_scope || summary.total_stories || (summary.stories_safe || 0) + (summary.stories_blocked || 0) + (summary.stories_with_conflicts || 0);
   const safeStories = summary.stories_safe || 0;
   const blockedStories = summary.stories_blocked || 0;
-  const conflictStories = summary.stories_with_conflicts || 0; // This should be 9 from console log
-  const componentConflicts = summary.components_with_conflicts || 0; // This is 21 from console log
+  const conflictStories = summary.stories_with_conflicts || 0;
+  const componentConflicts = summary.components_with_conflicts || 0;
 
-  // Calculate derived values - USE ACTUAL STORY COUNTS, not component counts
+  // Calculate deployment task counts
+  const deploymentTaskCount = deploymentTaskStories.length;
+  const codeChangeStories = totalStories - deploymentTaskCount;
+
+  // Log the calculated values
+  console.log('📈 CALCULATED VALUES:');
+  console.log('Total Stories:', totalStories);
+  console.log('Code Change Stories:', codeChangeStories);
+  console.log('Deployment Task Stories:', deploymentTaskCount);
+  console.log('Safe Stories:', safeStories);
+  console.log('Blocked Stories:', blockedStories);
+  console.log('Conflict Stories:', conflictStories);
+
+  // Calculate derived values
   const deployablePercent = totalStories > 0 ? Math.round((safeStories / totalStories) * 100) : 0;
   const conflictPercent = totalStories > 0 ? Math.round((conflictStories / totalStories) * 100) : 0;
   const blockedPercent = totalStories > 0 ? Math.round((blockedStories / totalStories) * 100) : 0;
 
   panel.innerHTML = '';
 
-  // Section header
+  // Clean, minimal section header
   panel.append(
     createElement('div', { className: 'section-header' }, [
-      createElement('h2', {}, 'Analysis Summary'),
-      createElement('p', { className: 'muted' }, 'Overview of your deployment analysis')
+      createElement('h2', { style: 'font-size: 24px; font-weight: 600; margin: 0 0 8px 0; color: white;' }, 'Deployment Overview'),
+      createElement('p', { className: 'muted', style: 'font-size: 24px; color: white; margin: 0;' }, 
+        enhancedSummary.total_stories_in_scope 
+          ? `${totalStories} stories in scope`
+          : 'Summary of deployment analysis'
+      )
     ])
   );
 
-  // Status indicators grid
+  // Clean stats grid with white text
   const statsGrid = createElement('div', { className: 'stats-grid' });
   
   statsGrid.append(
-    createStatCard('Total Stories', totalStories, '#1d1d1f'),
-    createStatCard('Safe to Deploy', safeStories, '#34C759', { subtext: `${deployablePercent}% ready` }),
-    createStatCard('Conflicts', conflictStories, '#FF9500', { subtext: `${conflictPercent}% stories` }),
-    createStatCard('Blocked', blockedStories, '#FF3B30', { subtext: `${blockedPercent}% blocked` })
+    createStatCard('Total Stories', totalStories, 'linear-gradient(135deg, #667eea, #764ba2)', {
+      subtext: enhancedSummary.total_stories_in_scope 
+        ? `${codeChangeStories} code + ${deploymentTaskCount} tasks`
+        : 'In deployment scope'
+    }),
+    createStatCard('Ready', safeStories, 'linear-gradient(135deg, #4CAF50, #2E7D32)', { 
+      subtext: `${deployablePercent}% ready`,
+      percentage: deployablePercent
+    }),
+    createStatCard('Conflicts', conflictStories, 'linear-gradient(135deg, #FF9800, #EF6C00)', { 
+      subtext: `${conflictPercent}% need review`,
+      percentage: conflictPercent
+    }),
+    createStatCard('Blocked', blockedStories, 'linear-gradient(135deg, #F44336, #C62828)', { 
+      subtext: `${blockedPercent}% blocked`,
+      percentage: blockedPercent
+    })
   );
 
   panel.append(statsGrid);
 
-  // Detail cards section
+  // Clean breakdown section
   const detailsSection = createElement('div', { className: 'details-section' });
   
-  detailsSection.append(
-    createElement('h3', { className: 'section-title' }, 'Deployment Readiness')
-  );
-
-  // Readiness breakdown - USE ACTUAL STORY COUNTS
+  // Simple breakdown cards
   const breakdownCards = createElement('div', { className: 'breakdown-grid' });
   
   breakdownCards.append(
-    createBreakdownCard('Ready', safeStories, '#34C759', 'ready'),
-    createBreakdownCard('Conflicts', conflictStories, '#FF9500', 'conflict'),
-    createBreakdownCard('Blocked', blockedStories, '#FF3B30', 'blocked')
+    createBreakdownCard('Ready Stories', safeStories, '#4CAF50', 'Stories ready for deployment'),
+    createBreakdownCard('Conflict Stories', conflictStories, '#FF9800', 'Stories with conflicts'),
+    createBreakdownCard('Blocked Stories', blockedStories, '#F44336', 'Stories blocked by dependencies')
   );
+
+  // Add deployment tasks if available
+  if (deploymentTaskCount > 0) {
+    breakdownCards.append(
+      createBreakdownCard('Deployment Tasks', deploymentTaskCount, '#388E3C', 'Configuration tasks')
+    );
+  }
 
   detailsSection.append(breakdownCards);
 
-  // Summary insights - SHOW BOTH STORY AND COMPONENT COUNTS
+  // Clean insights card with larger fonts
   const insightsCard = createElement('div', { className: 'insights-card' });
   
   const insights = [];
   
   if (safeStories === totalStories) {
-    insights.push('✓ All stories are ready for deployment');
+    insights.push({text: 'All stories are ready for deployment', type: 'success'});
   } else {
     if (conflictStories > 0) {
-      insights.push(`⚠ ${conflictStories} stories with conflicts affecting ${componentConflicts} components`);
+      insights.push({text: `${conflictStories} stories with conflicts affecting ${componentConflicts} components`, type: 'warning'});
     }
     if (blockedStories > 0) {
-      insights.push(`⚠ ${blockedStories} stories blocked by production dependencies`);
+      insights.push({text: `${blockedStories} stories blocked by production dependencies`, type: 'warning'});
     }
   }
   
   if (componentConflicts > 0) {
-    insights.push(`🔧 ${componentConflicts} total component conflicts detected`);
+    insights.push({text: `${componentConflicts} total component conflicts detected`, type: 'info'});
+  }
+  
+  // Add deployment task insights
+  if (deploymentTaskCount > 0) {
+    insights.push({text: `${deploymentTaskCount} deployment tasks in release scope`, type: 'info'});
+    
+    const validatedTasks = deploymentTaskStories.filter(story => 
+      story.deployment_details?.validation === 'Validated'
+    ).length;
+    const nonValidatedTasks = deploymentTaskCount - validatedTasks;
+    
+    if (validatedTasks > 0) {
+      insights.push({text: `${validatedTasks} deployment tasks validated`, type: 'success'});
+    }
+    if (nonValidatedTasks > 0) {
+      insights.push({text: `${nonValidatedTasks} deployment tasks pending validation`, type: 'warning'});
+    }
   }
   
   if (insights.length === 0) {
-    insights.push('Review conflicts and blocking issues in their respective tabs');
+    insights.push({text: 'Review conflicts and blocking issues in their respective tabs', type: 'info'});
   }
 
   insightsCard.innerHTML = `
-    <h4>Key Insights</h4>
+    <div class="insights-header">
+      <h4>Summary</h4>
+    </div>
     <ul class="insights-list">
-      ${insights.map(i => `<li>${i}</li>`).join('')}
+      ${insights.map(insight => `
+        <li class="insight-item insight-${insight.type}">
+          <span class="insight-text">${insight.text}</span>
+        </li>
+      `).join('')}
     </ul>
   `;
 
   detailsSection.append(insightsCard);
   panel.append(detailsSection);
 
+  // Clean action buttons
+  const actionsSection = createElement('div', { className: 'actions-section' });
+  actionsSection.innerHTML = `
+    <div class="actions-grid">
+      <button class="action-btn primary" onclick="showConflictsTab()">
+        <span class="action-text">Review Conflicts</span>
+        <span class="action-badge">${conflictStories}</span>
+      </button>
+      <button class="action-btn secondary" onclick="showStoriesTab()">
+        <span class="action-text">View Stories</span>
+        <span class="action-badge">${totalStories}</span>
+      </button>
+      <button class="action-btn secondary" onclick="showReportsTab()">
+        <span class="action-text">Reports</span>
+      </button>
+    </div>
+  `;
+
+  panel.append(actionsSection);
+
   injectCss();
 }
 
-function createStatCard(label, value, color, options = {}) {
+function createStatCard(label, value, gradient, options = {}) {
   const card = createElement('div', { className: 'stat-card' });
   
   const header = createElement('div', { className: 'stat-label' }, label);
-  const val = createElement('div', { className: 'stat-value', style: `color: ${color}` }, String(value));
+  const val = createElement('div', { className: 'stat-value' }, String(value));
   
   card.append(header, val);
   
@@ -108,20 +201,40 @@ function createStatCard(label, value, color, options = {}) {
     const sub = createElement('div', { className: 'stat-subtext' }, options.subtext);
     card.append(sub);
   }
+
+  if (options.percentage !== undefined) {
+    const progressBar = createElement('div', { className: 'stat-progress' });
+    const progressFill = createElement('div', { 
+      className: 'stat-progress-fill',
+      style: `width: ${options.percentage}%`
+    });
+    progressBar.appendChild(progressFill);
+    card.append(progressBar);
+  }
+  
+  // Apply gradient background with white text
+  card.style.background = gradient;
   
   return card;
 }
 
-function createBreakdownCard(label, count, color, type) {
+function createBreakdownCard(label, count, color, description) {
   const card = createElement('div', { className: 'breakdown-card' });
   
-  const icon = createElement('div', { className: `breakdown-icon breakdown-${type}` });
+  const colorDot = createElement('div', { 
+    className: 'breakdown-dot',
+    style: `background-color: ${color}` 
+  });
+  
   const info = createElement('div', { className: 'breakdown-info' }, [
-    createElement('h4', {}, label),
-    createElement('p', {}, `${count} ${count === 1 ? 'story' : 'stories'}`)
+    createElement('div', { className: 'breakdown-header' }, [
+      createElement('h4', {}, label),
+      createElement('span', { className: 'breakdown-count' }, count)
+    ]),
+    createElement('p', { className: 'breakdown-description' }, description)
   ]);
   
-  card.append(icon, info);
+  card.append(colorDot, info);
   return card;
 }
 
@@ -139,6 +252,22 @@ function createElement(tag, props = {}, children = []) {
   return node;
 }
 
+// Global functions for navigation
+window.showConflictsTab = function() {
+  const conflictTab = document.querySelector('[data-tab="conflicts"]');
+  if (conflictTab) conflictTab.click();
+};
+
+window.showStoriesTab = function() {
+  const storiesTab = document.querySelector('[data-tab="stories"]');
+  if (storiesTab) storiesTab.click();
+};
+
+window.showReportsTab = function() {
+  const reportsTab = document.querySelector('[data-tab="reports"]');
+  if (reportsTab) reportsTab.click();
+};
+
 const injectCss = (() => {
   let done = false;
   return () => {
@@ -148,111 +277,146 @@ const injectCss = (() => {
     const css = `
       .stats-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
         margin-bottom: 32px;
       }
       
       .stat-card {
-        background: #f5f5f7;
-        padding: 16px;
-        border-radius: 8px;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        padding: 20px;
+        border-radius: 12px;
         text-align: center;
+        color: white;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transition: all 0.2s ease;
+      }
+      
+      .stat-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       }
       
       .stat-label {
-        font-size: 13px;
-        color: #86868b;
+        font-size: 14px;
         margin-bottom: 8px;
         font-weight: 500;
+        color: white;
+        opacity: 0.95;
       }
       
       .stat-value {
-        font-size: 28px;
-        font-weight: 600;
-        margin-bottom: 4px;
+        font-size: 32px;
+        font-weight: 700;
+        margin-bottom: 6px;
+        color: white;
       }
       
       .stat-subtext {
-        font-size: 12px;
-        color: #86868b;
+        font-size: 13px;
+        color: white;
+        opacity: 0.9;
+      }
+      
+      .stat-progress {
+        width: 100%;
+        height: 3px;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 2px;
+        overflow: hidden;
+        margin-top: 8px;
+      }
+      
+      .stat-progress-fill {
+        height: 100%;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 2px;
+        transition: width 0.5s ease;
       }
       
       .details-section {
         margin-top: 24px;
       }
       
-      .section-title {
-        font-size: 16px;
-        font-weight: 600;
-        margin-bottom: 16px;
-        color: #1d1d1f;
-      }
-      
       .breakdown-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 12px;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
         margin-bottom: 24px;
       }
       
       .breakdown-card {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 12px;
-        padding: 12px;
+        padding: 16px;
         background: white;
         border-radius: 8px;
         border: 1px solid #e5e5e7;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
       }
       
       .breakdown-card:hover {
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         border-color: #d2d2d7;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
       }
       
-      .breakdown-icon {
-        width: 32px;
-        height: 32px;
-        border-radius: 6px;
+      .breakdown-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-top: 8px;
         flex-shrink: 0;
       }
       
-      .breakdown-icon.breakdown-ready {
-        background: #d1f4e0;
+      .breakdown-info {
+        flex: 1;
       }
       
-      .breakdown-icon.breakdown-conflict {
-        background: #ffd4a3;
+      .breakdown-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 4px;
       }
       
-      .breakdown-icon.breakdown-blocked {
-        background: #ffcccb;
-      }
-      
-      .breakdown-info h4 {
+      .breakdown-header h4 {
         margin: 0;
         font-size: 14px;
         font-weight: 600;
         color: #1d1d1f;
       }
       
-      .breakdown-info p {
-        margin: 2px 0 0;
+      .breakdown-count {
+        font-size: 16px;
+        font-weight: 700;
+        color: #1d1d1f;
+      }
+      
+      .breakdown-description {
+        margin: 0;
         font-size: 12px;
-        color: #86868b;
+        color: #666666;
+        line-height: 1.4;
       }
       
       .insights-card {
-        background: #f5f5f7;
-        padding: 16px;
+        background: white;
+        border: 1px solid #e5e5e7;
         border-radius: 8px;
+        padding: 0;
+        overflow: hidden;
       }
       
-      .insights-card h4 {
-        margin: 0 0 12px;
-        font-size: 14px;
+      .insights-header {
+        padding: 16px 20px;
+        background: #f8f9fa;
+        border-bottom: 1px solid #e5e5e7;
+      }
+      
+      .insights-header h4 {
+        margin: 0;
+        font-size: 16px;
         font-weight: 600;
         color: #1d1d1f;
       }
@@ -263,11 +427,158 @@ const injectCss = (() => {
         margin: 0;
       }
       
-      .insights-list li {
-        padding: 6px 0;
-        font-size: 13px;
-        color: #1d1d1f;
+      .insight-item {
+        padding: 14px 20px;
+        border-bottom: 1px solid #f5f5f7;
+        font-size: 14px;
         line-height: 1.5;
+      }
+      
+      .insight-item:last-child {
+        border-bottom: none;
+      }
+      
+      .insight-text {
+        color: #1d1d1f;
+        font-weight: 500;
+      }
+      
+      .insight-success .insight-text {
+        color: #2e7d32;
+      }
+      
+      .insight-warning .insight-text {
+        color: #ef6c00;
+      }
+      
+      .insight-info .insight-text {
+        color: #1976d2;
+      }
+      
+      .actions-section {
+        margin-top: 24px;
+      }
+      
+      .actions-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+      }
+      
+      .action-btn {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        border: 1px solid #e5e5e7;
+        border-radius: 8px;
+        background: white;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 13px;
+      }
+      
+      .action-btn:hover {
+        border-color: #d2d2d7;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      }
+      
+      .action-btn.primary {
+        background: #0071e3;
+        color: white;
+        border-color: #0071e3;
+      }
+      
+      .action-btn.secondary {
+        background: white;
+        color: #1d1d1f;
+      }
+      
+      .action-text {
+        font-weight: 600;
+      }
+      
+      .action-badge {
+        background: rgba(0, 0, 0, 0.1);
+        padding: 2px 6px;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+      
+      .action-btn.primary .action-badge {
+        background: rgba(255, 255, 255, 0.2);
+      }
+      
+      .muted {
+        color: white;
+        font-size: 24px;
+        font-weight: bold;
+        font-family: 'Open Sans', 'Segoe UI', Tahoma, sans-serif;
+      }
+      
+
+      /* Updated header styling */
+      #app-header {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        border-bottom: 1px solid #e5e5e7;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      }
+
+      #app-header .brand {
+        color: #0071e3;
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+      }
+
+      #app-header .brand::before {
+        content: "🚀 ";
+      }
+      
+      /* Responsive design */
+      @media (max-width: 768px) {
+        .stats-grid {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 12px;
+        }
+        
+        .stat-card {
+          padding: 16px;
+        }
+        
+        .stat-value {
+          font-size: 24px;
+        }
+        
+        .breakdown-grid {
+          grid-template-columns: 1fr;
+        }
+        
+        .actions-grid {
+          grid-template-columns: 1fr;
+        }
+        
+        .insight-item {
+          font-size: 13px;
+          padding: 12px 16px;
+        }
+        
+        .insights-header h4 {
+          font-size: 15px;
+        }
+      }
+      
+      @media (max-width: 480px) {
+        .stats-grid {
+          grid-template-columns: 1fr;
+        }
+        
+        .insight-item {
+          font-size: 13px;
+          padding: 10px 14px;
+        }
       }
     `;
     

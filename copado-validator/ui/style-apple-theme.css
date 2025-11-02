@@ -454,3 +454,203 @@ body {
   background: #d4e4ff;
   text-decoration: underline;
 }
+
+.impact-badge {
+  font-size: 11px;
+  color: #ff3b30;
+  background: #fff3f3;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 600;
+  margin-left: 8px;
+}
+
+.timeline-group {
+  margin-bottom: 8px;
+}
+
+.timeline-group-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #86868b;
+  margin-bottom: 8px;
+  padding-left: 32px;
+}
+
+.current-marker {
+  background: #0071e3 !important;
+  border: 2px solid #0071e3 !important;
+}
+
+.production-marker {
+  background: #34c759 !important;
+  border: 2px solid #34c759 !important;
+}
+
+.current-title {
+  color: #0071e3 !important;
+  font-weight: 700 !important;
+}
+/* Export Cards Section */
+.export-cards-section {
+  margin-bottom: 24px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #e9ecef;
+}
+
+.export-cards-title {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1d1d1f;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.export-cards-title::before {
+  content: '📊';
+  font-size: 20px;
+}
+
+.export-cards-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.export-card {
+  background: white;
+  border: 1px solid #e5e5e7;
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.export-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border-color: #d2d2d7;
+}
+
+.export-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-left: 12px;
+}
+
+.export-card-icon {
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f7;
+  border-radius: 8px;
+}
+
+.export-card-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1d1d1f;
+  flex: 1;
+}
+
+.export-card-description {
+  margin: 0 0 20px 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #86868b;
+  flex: 1;
+}
+
+.export-card-button {
+  background: #0071e3;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  text-align: center;
+  margin-top: auto;
+}
+
+.export-card-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .export-cards-section {
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  
+  .export-cards-container {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .export-card {
+    padding: 16px;
+  }
+  
+  .export-card-header {
+    padding-left: 8px;
+  }
+  
+  .export-card-icon {
+    font-size: 20px;
+    width: 36px;
+    height: 36px;
+  }
+  
+  .export-card-title {
+    font-size: 15px;
+  }
+  
+  .export-card-description {
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+  
+  .export-card-button {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+}
+
+/* Ensure existing conflict cards still look good */
+.conflicts-list {
+  margin-top: 20px;
+}
+
+.section-header {
+  margin-bottom: 24px;
+}
+
+.section-header h2 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #1d1d1f;
+}
+
+.section-header .muted {
+  margin: 0;
+  font-size: 14px;
+  color: #86868b;
+}

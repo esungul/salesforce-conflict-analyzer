@@ -13,6 +13,8 @@ import { renderEnforcementTab } from './ui/tabs/enforcement-enhanced.js';
 import { createAnalyzeModal } from './ui/components/analyzeModal.js';
 import { renderDeploymentPlanTab } from './ui/tabs/deployment-plan.js';
 import { renderReportsTab } from './ui/tabs/reports-enhanced.js';
+import { renderProductionValidatorTab } from './ui/tabs/production-validator.js'; // ADD THIS LINE
+
 
 import * as precheckModule from './ui/tabs/development-tools/precheck/precheck.js';
 //import * as comparisonModule from './ui/tabs/development-tools/comparison/comparison.js';
@@ -59,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
+
 function renderTabContent(tabId, container) {
   // IMPORTANT: My Work, Conflict Radar, Production Guard are INDEPENDENT
   // They don't need analysis data - they work standalone!
@@ -73,6 +76,11 @@ function renderTabContent(tabId, container) {
     case 'conflict-radar':
       container.innerHTML = renderConflictRadarTab(ANALYSIS);
       break;
+
+    case 'production-validator':
+      renderProductionValidatorTab();  // ADD THIS CASE
+      break;
+      
     default:
       // Other tabs (Overview, Stories, etc.) might need analysis
       if (!ANALYSIS) {
@@ -1190,7 +1198,7 @@ function wireAnalyzeMenuEnhanced() {
 
 // In main.js - ensure this function is clean
 
-/* ---------- Update the analysis completion flow ---------- */
+
 function openAnalyzeModal() {
   console.log('Opening analyze modal...');
   
@@ -1220,10 +1228,16 @@ function openAnalyzeModal() {
         showLoadingSpinner(true, 'Analysis complete! Generating report...');
         await new Promise(resolve => setTimeout(resolve, 800));
         
-        // Process the results
+        // DEBUG: Check what we're receiving
+        console.log('🔍 FULL RESULT.ANALYSIS:', result.ANALYSIS);
+        console.log('🔍 RESULT.ANALYSIS KEYS:', Object.keys(result.ANALYSIS));
+        
+        // Process the results - PRESERVE ENHANCED FIELDS
         ANALYSIS = {
           summary: result.ANALYSIS.summary,
-          all_stories: result.ANALYSIS.safe || [],
+          summary_enhanced: result.ANALYSIS.summary_enhanced,
+          deployment_task_stories: result.ANALYSIS.deployment_task_stories,
+          all_stories: result.ANALYSIS.all_stories || result.ANALYSIS.safe || [],
           component_conflicts: result.ANALYSIS.conflicts || [],
           blocked_stories: result.ANALYSIS.blocked || []
         };
@@ -1233,7 +1247,7 @@ function openAnalyzeModal() {
         STATE.source = 'Online';
         updateSourceBadge();
         
-        console.log('Analysis complete:', ANALYSIS);
+        console.log('🔍 FINAL ANALYSIS OBJECT:', ANALYSIS);
         
         // Show success state briefly then auto-close
         showLoadingSpinner(true, 'Analysis Complete!');
@@ -2961,43 +2975,6 @@ window.searchStories = function() {
   }
 };
 
-/**
- * STORY & COMPONENT ACTIONS
- */
-window.viewStoryDetails = function(storyId) {
-  console.log('📋 Viewing Story Details:', storyId);
-  alert('📋 Story Details\n\nStory ID: ' + storyId + '\n\nLoading details...');
-};
-
-window.runSafetyCheck = function(storyId) {
-  console.log('🛡️ Running Safety Check for Story:', storyId);
-  alert('🛡️ Checking story: ' + storyId);
-};
-
-window.viewStoryConflicts = function(storyId) {
-  console.log('⚠️ Viewing Conflicts for Story:', storyId);
-  alert('⚠️ Conflicts for story: ' + storyId);
-};
-
-window.viewComponentDetails = function(component) {
-  console.log('👁️ Viewing Component Details:', component);
-  alert('👁️ Component: ' + component + '\n\nLoading component details...');
-};
-
-window.unwatchComponent = function(component) {
-  console.log('👁️ Unwatching Component:', component);
-  alert('✅ Removed ' + component + ' from watchlist');
-};
-
-window.viewComponentHistory = function(component) {
-  console.log('📜 Viewing Component History:', component);
-  alert('📜 History for: ' + component);
-};
-
-window.compareWithProduction = function(component) {
-  console.log('⇄ Comparing with Production:', component);
-  alert('⇄ Comparing ' + component + ' with Production environment');
-};
 
 /**
  * TOOL FUNCTIONS - REAL IMPLEMENTATIONS

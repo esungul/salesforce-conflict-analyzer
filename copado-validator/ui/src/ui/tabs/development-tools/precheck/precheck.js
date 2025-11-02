@@ -5,6 +5,7 @@
 import { checkProductionState } from '../../../../api/endpoints.js';
 import COMPONENT_CONFIG from '../../../../config/component-config.js';
 
+
 /**
  * Make parallel API calls for multiple branches
  */
@@ -14,6 +15,7 @@ async function checkProductionStateMultiBranchWithProgress(
   onProgress = null
 ) {
   console.log('📡 Making PARALLEL API calls for', branches.length, 'branches...');
+  console.log('📦 Components being checked:', components);
 
   let completed = 0;
 
@@ -28,6 +30,14 @@ async function checkProductionStateMultiBranchWithProgress(
     return checkProductionState(payload)
       .then(response => {
         completed++;
+
+        // Log the full response for debugging
+        console.log(`✅ ${branch} API Response:`, {
+          branch: branch,
+          totalComponents: response.components?.length,
+          meta: response.meta,
+          sampleComponent: response.components?.[0] // Log first component to see structure
+        });
 
         if (onProgress) {
           onProgress({
@@ -47,6 +57,8 @@ async function checkProductionStateMultiBranchWithProgress(
       })
       .catch(error => {
         completed++;
+
+        console.error(`❌ ${branch} API Error:`, error);
 
         if (onProgress) {
           onProgress({
@@ -71,7 +83,7 @@ async function checkProductionStateMultiBranchWithProgress(
   console.log('⏳ Waiting for all parallel API calls to complete...');
   const results = await Promise.all(promises);
 
-  console.log('✅ All parallel API calls completed');
+  console.log('✅ All parallel API calls completed - Full results:', results);
 
   return {
     results: results.reduce((acc, r) => {
@@ -577,39 +589,74 @@ async function promptForMultiEnvOptions() {
 }
 
 /**
- * Map multi-org API response to UI format
+ * Map multi-org API response to UI format - PRESERVE ALL DATA
  */
 function mapMultiOrgResponseToUIFormat(apiResponse) {
+  console.log('🗺️ Mapping API response to UI format - Raw API response:', apiResponse);
+
   const mappedResults = {};
 
   for (const [branch, branchData] of Object.entries(apiResponse.results || {})) {
+    console.log(`📋 Processing branch ${branch}:`, {
+      totalComponents: branchData.components?.length,
+      meta: branchData.meta,
+      sampleData: branchData.components?.[0]
+    });
+
     mappedResults[branch] = {
-      components: (branchData.components || []).map(comp => ({
-        component_name: comp.name,
-        component_type: comp.type,
-        exists_in_prod: comp.exists === true,
-        file_path: comp.file_path || null,
-        file_size: comp.file_size || 0,
-        last_author: comp.author || null,
-        last_commit_date: comp.commit_date || null,
-        last_commit_hash: comp.commit_sha || null,
-        last_commit_message: comp.commit_message || null,
-        branch: branch
-      })),
+      components: (branchData.components || []).map(comp => {
+        // Preserve ALL fields from the API response
+        const mappedComp = {
+          // Core identification
+          component_name: comp.name || comp.component_name,
+          component_type: comp.type || comp.component_type,
+          exists_in_prod: comp.exists === true || comp.exists_in_prod === true,
+          
+          // File information
+          file_path: comp.file_path || null,
+          file_size: comp.file_size || 0,
+          
+          // Commit information
+          last_author: comp.author || comp.last_author || null,
+          last_commit_date: comp.commit_date || comp.last_commit_date || null,
+          last_commit_hash: comp.commit_sha || comp.last_commit_hash || null,
+          last_commit_message: comp.commit_message || comp.last_commit_message || null,
+          
+          // Branch context
+          branch: branch,
+          
+          // Preserve any additional fields that might come from API
+          ...comp
+        };
+
+        console.log(`📄 Mapped component ${mappedComp.component_name}:`, {
+          exists: mappedComp.exists_in_prod,
+          author: mappedComp.last_author,
+          commit_hash: mappedComp.last_commit_hash,
+          commit_message: mappedComp.last_commit_message?.substring(0, 50) + '...',
+          file_path: mappedComp.file_path
+        });
+
+        return mappedComp;
+      }),
       meta: {
         total: branchData.meta?.total || 0,
         existing: branchData.meta?.existing || 0,
-        missing: branchData.meta?.missing || 0
+        missing: branchData.meta?.missing || 0,
+        // Preserve any additional meta fields
+        ...branchData.meta
       }
     };
   }
 
-  return {
+  const result = {
     results: mappedResults,
     branches: Object.keys(mappedResults)
   };
-}
 
+  console.log('✅ Final mapped result:', result);
+  return result;
+}
 /**
  * Apply filters to multi-org results
  */
@@ -1093,15 +1140,24 @@ function createTableComparisonModal(mappedResult, componentsWithTypes, options) 
   return modal;
 }
 
+
+
 /**
- * Generate comparison table HTML
+ * Generate comparison table HTML with enhanced details
  */
 function generateComparisonTable(componentsArray, results, branches, modalId) {
-  // Get environment config
-  const environments = branches.map(b => ({
-    branch: b,
-    env: COMPONENT_CONFIG.getEnvironment(b)
-  }));
+  // Get environment config and sort in standard order: QA -> UAT -> Preprod -> Prod
+  const environmentOrder = ['qa', 'uat', 'preprod', 'prod'];
+  const environments = branches
+    .map(b => ({
+      branch: b,
+      env: COMPONENT_CONFIG.getEnvironment(b)
+    }))
+    .sort((a, b) => {
+      const aIndex = environmentOrder.indexOf(a.env.id);
+      const bIndex = environmentOrder.indexOf(b.env.id);
+      return aIndex - bIndex;
+    });
 
   // Generate header
   let headerHTML = `
@@ -1110,54 +1166,20 @@ function generateComparisonTable(componentsArray, results, branches, modalId) {
         <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
           <th style="padding: 16px; text-align: left; font-weight: 600;">Component</th>
           <th style="padding: 16px; text-align: center; font-weight: 600;">Type</th>
-          <th style="padding: 16px; text-align: center; font-weight: 600;">Author</th>
   `;
 
+  // Add environment headers
   for (const { branch, env } of environments) {
     headerHTML += `
-      <th colspan="3" style="
+      <th style="
         padding: 16px;
         text-align: center;
         font-weight: 600;
         border-right: 1px solid rgba(255,255,255,0.2);
       ">
-        ${env.icon} ${env.label}
+        <div style="font-size: 14px; margin-bottom: 4px;">${env.icon} ${env.label}</div>
         <div style="font-size: 11px; opacity: 0.9;">${env.shortLabel}</div>
       </th>
-    `;
-  }
-
-  headerHTML += `
-        </tr>
-        <tr style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-          <th style="padding: 8px 16px;"></th>
-          <th style="padding: 8px 16px;"></th>
-          <th style="padding: 8px 16px;"></th>
-  `;
-
-  for (const { branch, env } of environments) {
-    headerHTML += `
-      <th style="
-        padding: 8px 12px;
-        text-align: center;
-        font-weight: 600;
-        font-size: 12px;
-        border-right: 1px solid rgba(255,255,255,0.2);
-      ">Status</th>
-      <th style="
-        padding: 8px 12px;
-        text-align: center;
-        font-weight: 600;
-        font-size: 12px;
-        border-right: 1px solid rgba(255,255,255,0.2);
-      ">Date</th>
-      <th style="
-        padding: 8px 12px;
-        text-align: center;
-        font-weight: 600;
-        font-size: 12px;
-        border-right: 1px solid rgba(255,255,255,0.2);
-      ">Commit</th>
     `;
   }
 
@@ -1167,18 +1189,12 @@ function generateComparisonTable(componentsArray, results, branches, modalId) {
       <tbody>
   `;
 
-  // Generate rows
+  // Generate rows - one row per component
   let bodyHTML = '';
 
   for (const component of componentsArray) {
-    // Determine component status across all environments
-    const existsCount = Object.values(component.environments).filter(c => c.exists_in_prod).length;
-    const statusClass = existsCount === branches.length ? 'complete' : existsCount > 0 ? 'partial' : 'missing-all';
-
     bodyHTML += `
-      <tr data-component="${component.name}" class="component-row ${statusClass}" style="
-        cursor: pointer;
-      ">
+      <tr data-component="${component.name}" class="component-row" style="cursor: pointer;">
         <td style="padding: 16px; font-weight: 600; color: #1d1d1f;">
           <div style="display: flex; align-items: center; gap: 8px;">
             <span>▼</span>
@@ -1188,12 +1204,9 @@ function generateComparisonTable(componentsArray, results, branches, modalId) {
         <td style="padding: 16px; text-align: center;">
           <span class="component-type">${component.type}</span>
         </td>
-        <td style="padding: 16px; text-align: center; font-size: 12px; color: #666666;">
-          ${component.author ? component.author.split('<')[0].trim() : '-'}
-        </td>
     `;
 
-    // Add cells for each environment
+    // Add status cells for each environment
     for (const { branch, env } of environments) {
       const comp = component.environments[branch];
       
@@ -1201,50 +1214,37 @@ function generateComparisonTable(componentsArray, results, branches, modalId) {
         const dateObj = new Date(comp.last_commit_date);
         const dateStr = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
         const timeStr = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-        const commitShort = (comp.last_commit_hash || '').substring(0, 8);
+        const authorName = comp.last_author ? comp.last_author.split('<')[0].trim() : '-';
+        const commitShort = comp.last_commit_hash ? comp.last_commit_hash.substring(0, 8) : '-';
 
         bodyHTML += `
-          <td class="status-cell status-exists" style="border-right: 1px solid #e5e5e7;">
-            ✓ EXISTS
-          </td>
-          <td style="
-            padding: 12px 8px;
-            text-align: center;
-            font-size: 12px;
-            color: #666666;
-            border-right: 1px solid #e5e5e7;
-          ">
-            <div>${dateStr}</div>
-            <div style="font-size: 11px; color: #999999;">${timeStr}</div>
-          </td>
           <td style="
             padding: 12px 8px;
             text-align: center;
             border-right: 1px solid #e5e5e7;
+            background: #e8f5e9;
           ">
-            <code class="commit-hash">${commitShort}</code>
+            <div style="font-weight: 600; color: #1b5e20; margin-bottom: 4px;">✓ EXISTS</div>
+            <div style="font-size: 11px; color: #2e7d32;">
+              <div>${dateStr} ${timeStr}</div>
+              <div style="margin-top: 2px;"><strong>${authorName}</strong></div>
+              <div style="margin-top: 2px; font-family: monospace; background: rgba(0,0,0,0.1); padding: 2px 4px; border-radius: 3px;">
+                ${commitShort}
+              </div>
+            </div>
           </td>
         `;
       } else {
         bodyHTML += `
-          <td class="status-cell status-missing" style="border-right: 1px solid #e5e5e7;">
+          <td style="
+            padding: 12px 8px;
+            text-align: center;
+            border-right: 1px solid #e5e5e7;
+            background: #ffebee;
+            color: #b71c1c;
+            font-weight: 600;
+          ">
             ✗ MISSING
-          </td>
-          <td style="
-            padding: 12px 8px;
-            text-align: center;
-            color: #999999;
-            border-right: 1px solid #e5e5e7;
-          ">
-            -
-          </td>
-          <td style="
-            padding: 12px 8px;
-            text-align: center;
-            color: #999999;
-            border-right: 1px solid #e5e5e7;
-          ">
-            -
           </td>
         `;
       }
@@ -1254,15 +1254,15 @@ function generateComparisonTable(componentsArray, results, branches, modalId) {
       </tr>
       <!-- Details Row -->
       <tr class="details-row" style="background: #f9f9f9; display: none;">
-        <td colspan="999" style="padding: 24px;">
+        <td colspan="${2 + environments.length}" style="padding: 24px;">
           <div style="
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 16px;
           ">
     `;
 
-    // Add details for each environment
+    // Add detailed information for each environment
     for (const { branch, env } of environments) {
       const comp = component.environments[branch];
       const status = comp && comp.exists_in_prod;
@@ -1275,12 +1275,16 @@ function generateComparisonTable(componentsArray, results, branches, modalId) {
           background: white;
         ">
           <div style="
-            font-size: 13px;
-            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
             margin-bottom: 12px;
+            font-size: 14px;
+            font-weight: 600;
             color: #1d1d1f;
           ">
-            ${env.icon} ${env.label}
+            <span>${env.icon}</span>
+            <span>${env.label}</span>
           </div>
           
           <div style="
@@ -1293,7 +1297,7 @@ function generateComparisonTable(componentsArray, results, branches, modalId) {
             margin-bottom: 12px;
             text-align: center;
           ">
-            ${status ? '✓ EXISTS' : '✗ MISSING'}
+            ${status ? '✓ EXISTS IN ENVIRONMENT' : '✗ NOT FOUND IN ENVIRONMENT'}
           </div>
       `;
 
@@ -1304,30 +1308,50 @@ function generateComparisonTable(componentsArray, results, branches, modalId) {
           month: 'short',
           day: 'numeric',
           hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit'
+          minute: '2-digit'
         });
 
+        const authorName = comp.last_author ? comp.last_author.split('<')[0].trim() : '-';
+
         bodyHTML += `
-          <div style="font-size: 12px; margin-bottom: 8px; color: #666666;">
-            <strong>Date:</strong> ${fullDate}
+          <div style="font-size: 12px; margin-bottom: 6px; color: #666666;">
+            <strong>Last Modified:</strong> ${fullDate}
           </div>
-          <div style="font-size: 12px; margin-bottom: 8px; color: #666666;">
-            <strong>Commit:</strong> <code style="background: #f5f5f7; padding: 2px 6px; border-radius: 3px; font-family: monospace;">${comp.last_commit_hash}</code>
+          <div style="font-size: 12px; margin-bottom: 6px; color: #666666;">
+            <strong>Author:</strong> ${authorName}
           </div>
-          <div style="font-size: 12px; margin-bottom: 8px; color: #666666;">
-            <strong>Author:</strong> ${comp.last_author}
+          <div style="font-size: 12px; margin-bottom: 6px; color: #666666;">
+            <strong>Commit Hash:</strong> 
+            <code style="background: #f5f5f7; padding: 2px 6px; border-radius: 3px; font-family: monospace; display: block; margin-top: 2px; word-break: break-all;">
+              ${comp.last_commit_hash}
+            </code>
           </div>
+          ${comp.file_path ? `
+            <div style="font-size: 12px; margin-bottom: 6px; color: #666666;">
+              <strong>File Path:</strong> 
+              <code style="background: #f5f5f7; padding: 2px 6px; border-radius: 3px; font-family: monospace; display: block; margin-top: 2px;">
+                ${comp.file_path}
+              </code>
+            </div>
+          ` : ''}
+          ${comp.file_size ? `
+            <div style="font-size: 12px; margin-bottom: 6px; color: #666666;">
+              <strong>File Size:</strong> ${comp.file_size} bytes
+            </div>
+          ` : ''}
           ${comp.last_commit_message ? `
-            <div style="font-size: 12px; color: #666666;">
-              <strong>Message:</strong> <em>${comp.last_commit_message.substring(0, 50)}...</em>
+            <div style="font-size: 12px; color: #666666; margin-top: 8px; padding-top: 8px; border-top: 1px solid #e5e5e7;">
+              <strong>Commit Message:</strong> 
+              <div style="font-style: italic; margin-top: 4px; background: #f8f9fa; padding: 8px; border-radius: 4px; font-size: 11px;">
+                ${comp.last_commit_message}
+              </div>
             </div>
           ` : ''}
         `;
       } else {
         bodyHTML += `
-          <div style="font-size: 12px; color: #999999; text-align: center; padding: 8px;">
-            No data available
+          <div style="font-size: 12px; color: #999999; text-align: center; padding: 16px;">
+            Component not found in this environment
           </div>
         `;
       }

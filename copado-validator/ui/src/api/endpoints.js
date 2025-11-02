@@ -97,6 +97,7 @@ export async function checkProductionState({ components, branch = 'master' }) {
   };
 }
 
+
 // Unified Analyze Stories API
 export async function analyzeStories({ userStoryNames, releaseNames, configJsonPath } = {}) {
   const payload = {};
@@ -131,12 +132,30 @@ export async function analyzeStories({ userStoryNames, releaseNames, configJsonP
   const story_conflicts     = Array.isArray(body?.story_conflicts) ? body.story_conflicts : [];
   const summary             = body?.summary || {};
 
-  return { summary, component_conflicts, story_conflicts, raw: body };
+  // ENHANCED: Preserve the new fields for deployment tasks
+  const summary_enhanced = body?.summary_enhanced || {};
+  const deployment_task_stories = body?.deployment_task_stories || [];
+  const all_stories = body?.all_stories || [];
+  const blocked_stories = body?.blocked_stories || [];
+  const safe_stories = body?.safe || [];
+
+  return { 
+    summary, 
+    component_conflicts, 
+    story_conflicts, 
+    // ENHANCED: Include the new fields
+    summary_enhanced,
+    deployment_task_stories,
+    all_stories,
+    blocked_stories,
+    safe_stories,
+    raw: body 
+  };
 }
 
 
 // In api/endpoints.js - ADD THIS
-export async function getMultiOrgComponentHistory({ 
+export async function getMultiOrgComponentHistorybackup({ 
   orgA, orgB, branchA, branchB, components, limit = 5 
 }) {
   const payload = { orgA, orgB, branchA, branchB, components, limit };
@@ -146,10 +165,10 @@ export async function getMultiOrgComponentHistory({
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
-
   if (!res.ok) throw new Error(`API Error: ${res.status}`);
   
   const body = await res.json();
+  console.log('🔍 Raw API Response Body:', body);
   
   // Transform response format
   const results = {};
@@ -169,6 +188,52 @@ export async function getMultiOrgComponentHistory({
   };
 }
 
+// In getMultiOrgComponentHistory function, add debugging:
+export async function getMultiOrgComponentHistory({ 
+  orgA, orgB, branchA, branchB, components, limit = 5 
+}) {
+  const payload = { orgA, orgB, branchA, branchB, components, limit };
+  
+  console.log('🔍 API Request Payload:', payload);
+  
+  const res = await fetch(`${API_URL}/api/component-history`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  if (!res.ok) throw new Error(`API Error: ${res.status}`);
+  
+  const body = await res.json();
+  
+  console.log('🔍 Raw API Response Body:', body);
+  
+  // Transform response format - THIS MIGHT BE THE ISSUE
+  const results = {};
+  body.history?.forEach(comp => {
+    const key = `${comp.component_type}/${comp.component_name}`;
+    results[key] = {
+      orgA: comp.orgA?.commits || [],
+      orgB: comp.orgB?.commits || []
+    };
+    
+    console.log(`🔍 API Transform - ${key}:`, {
+      orgA_commits: comp.orgA?.commits?.length || 0,
+      orgB_commits: comp.orgB?.commits?.length || 0
+    });
+  });
+
+  const transformedResult = {
+    orgA: body.orgA || { name: orgA, branch: branchA },
+    orgB: body.orgB || { name: orgB, branch: branchB },
+    results: results,
+    meta: { totalComponents: components.length, limit, success: body.success }
+  };
+  
+  console.log('🔍 Final Transformed Result:', transformedResult);
+  
+  return transformedResult;
+}
 
 // Add these new functions to your existing endpoints.js
 

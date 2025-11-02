@@ -1,0 +1,8 @@
+2025-11-01 07:46:22,104 INFO [salesforce_client]: [SF] fetch_story_commits SOQL: SELECT copado__User_Story__r.Name, copado__User_Story__c, copado__User_Story__r.copado__Environment__r.Name, copado__Snapshot_Commit__c, copado__View_in_Git__c, copado__External_Id__c
+            FROM copado__User_Story_Commit__c
+            WHERE copado__User_Story__r.Name IN ('US-0034011','US-0033885','US-0033802','US-0033880','US-0033760','US-0033806','US-0033975','US-0034039','US-0033852','US-0034075','US-0034082','US-0033973','US-0034077','US-0034076','US-0033848','US-0033749','US-0033833','US-0034036','US-0033916','US-0033905','US-0033736','US-0033831','US-0034040','US-0033709','US-0034007','US-0033840')
+2025-11-01 07:46:22,601 INFO [salesforce_client]: [SF] fetch_story_commits rows=32
+2025-11-01 07:46:22,603 INFO [app]: Enriched commits for 26 stories (additive)
+2025-11-01 07:46:22,604 INFO [app]: Built additive all_stories=26 component_index=89
+2025-11-01 07:46:22,610 INFO [werkzeug]: 127.0.0.1 - - [01/Nov/2025 07:46:22] "POST /api/analyze-stories HTTP/1.1" 200 -
+2025-11-01 07:48:31,211 INFO [werkzeug]:  * Detected change in '/Users/esungul/Documents/Projects/salesforce-conflict-analyzer/copado-validator/backend/app.py', reloading

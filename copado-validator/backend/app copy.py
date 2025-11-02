@@ -29,17 +29,32 @@ from salesforce_client import (
     sf_login_from_config,
     fetch_user_story_metadata_by_release,
     fetch_user_story_metadata_by_story_names,
-    fetch_story_commits
+    fetch_story_commits,fetch_deployment_tasks
 )
 
 
 import logging
+import requests
 logging.basicConfig(level=logging.DEBUG)  # put once (e.g., in app.py main)
 logger = logging.getLogger(__name__)
 import json
 import re
 import logging
 import os
+from io import BytesIO, StringIO
+import pandas as pd
+from flask import send_file, Response
+
+###########
+from config import get_config
+
+# Get basic config
+cfg = get_config()
+print(f"API Workers: {cfg.API_MAX_WORKERS}")
+print(f"Validation Enabled: {cfg.VALIDATION_ENABLED}")
+
+
+
 
 def setup_logging():
     """
@@ -68,6 +83,15 @@ setup_logging()
 app = Flask(__name__)
 CORS(app)  # Allow frontend to call this API
 
+
+# ADD THIS INITIALIZATION CODE:
+
+
+from multi_compare_adapter import register_compare_v2
+
+if "compare_orgs_v2" not in app.blueprints:
+    register_compare_v2(app)
+
 # Configuration
 UPLOAD_FOLDER = tempfile.gettempdir()
 ALLOWED_EXTENSIONS = {'csv'}
@@ -88,65 +112,9 @@ from flask import send_file
 
 ############# Testing 
 
-# Add to app.py - NEW TRANSFORMER for story analysis
-
-import logging
-from datetime import datetime
-from typing import Dict, List, Tuple, Optional
-import copy
-import json
-import re
 
 logger = logging.getLogger(__name__)
 
-
-# Add to app.py - NEW TRANSFORMER for story analysis
-
-import logging
-from datetime import datetime
-from typing import Dict, List, Tuple, Optional
-import copy
-import json
-import re
-
-logger = logging.getLogger(__name__)
-
-# Add to app.py - NEW TRANSFORMER for story analysis
-
-import logging
-from datetime import datetime
-from typing import Dict, List, Tuple, Optional
-import copy
-import json
-import re
-
-logger = logging.getLogger(__name__)
-
-
-# Add to app.py - NEW TRANSFORMER for story analysis
-
-import logging
-from datetime import datetime
-from typing import Dict, List, Tuple, Optional
-import copy
-import json
-import re
-
-logger = logging.getLogger(__name__)
-
-
-
-
-# Add to app.py - NEW TRANSFORMER for story analysis
-
-import logging
-from datetime import datetime
-from typing import Dict, List, Tuple, Optional
-import copy
-import json
-import re
-
-logger = logging.getLogger(__name__)
 
 class StoryAnalyzerTransformer:
     """
@@ -589,28 +557,189 @@ class StoryAnalyzerTransformer:
             return None
 
 
-# ============================================================
-# NEW ROUTE: Use the transformer
-# ============================================================
+
+
+
 
 
 
 @app.route('/api/analyze-stories', methods=['POST'])
 def analyze_stories():
     """
-    Transform SF records into blocked/conflicts/safe stories
+    Transform SF records into blocked/conflicts/safe stories with deployment task support
     
     Input:
     {
       "userStoryNames": "US-001,US-002" OR ["US-001", "US-002"],
       "releaseNames": "Q1-2025" OR ["Q1-2025"]
     }
+    
+    Enhanced Output:
+    - All existing fields unchanged (backward compatible)
+    - New fields: summary_enhanced, deployment_task_stories, all_stories
     """
     
     logger.info("=" * 80)
-    logger.info("[ROUTE] POST /api/analyze-stories")
+    logger.info("[ROUTE] POST /api/analyze-stories (Enhanced)")
     logger.info("=" * 80)
+
+    def build_deployment_story_object(task_record: dict) -> dict:
+        """Build enhanced deployment story object with OrderedDict support"""
+        user_story = task_record.get("copado__User_Story__r") or {}
+        title = user_story.get("copado__User_Story_Title__c", "")
+        
+        # Enhanced data extraction with OrderedDict support
+        assignee = get_assignee(task_record)
+        jira_key = extract_jira_key(title)
+        validation_status = get_validation_status(user_story)
+        
+        # ✅ FIX: Extract names from OrderedDict for audit trail
+        created_by = task_record.get("CreatedBy", {})
+        last_modified_by = task_record.get("LastModifiedBy", {})
+        
+        created_by_name = created_by.get("Name") if hasattr(created_by, 'get') else "Unassigned"
+        last_modified_by_name = last_modified_by.get("Name") if hasattr(last_modified_by, 'get') else "Unassigned"
+        
+        return {
+            # Core story fields
+            "story_id": user_story.get("Name"),
+            "title": title,
+            "jira_key": jira_key,
+            "release": user_story.get("copado__Release__r", {}).get("Name"),
+            "environment": user_story.get("copado__Environment__r", {}).get("Name"),
+            "developer": assignee,
+            "component_count": 0,
+            "components": [],
+            
+            # Existing fields
+            "has_commits": False,
+            "classification": "safe", 
+            "data_sources": ["deployment_tasks"],
+            
+            # New enhanced fields
+            "story_type": "deployment_task",
+            "deployment_details": {
+                "task_type": "manual",
+                "timing": task_record.get("copado__Perform_Manual_Task__c"),
+                "current_status": task_record.get("copado__Status__c"),
+                "validation": validation_status,
+                "audit_trail": {
+                    "created": {
+                        "by": created_by_name,  # ✅ Now properly extracted
+                        "date": task_record.get("CreatedDate")
+                    },
+                    "last_updated": {
+                        "by": last_modified_by_name,  # ✅ Now properly extracted
+                        "date": task_record.get("LastModifiedDate")
+                    }
+                }
+            }
+        }
     
+    def get_assignee(task_record: dict) -> str:
+        """Get the most relevant assignee/developer - FIXED for OrderedDict"""
+        
+        # ✅ FIX: Handle OrderedDict properly
+        created_by = task_record.get("CreatedBy")
+        last_modified_by = task_record.get("LastModifiedBy")
+        
+        # Extract names from OrderedDict objects
+        created_by_name = None
+        last_modified_by_name = None
+        
+        if created_by and hasattr(created_by, 'get'):
+            created_by_name = created_by.get("Name")
+        
+        if last_modified_by and hasattr(last_modified_by, 'get'):
+            last_modified_by_name = last_modified_by.get("Name")
+        
+        # Also check for flat fields (though they don't exist in this response)
+        created_by_flat = task_record.get("CreatedBy.Name")
+        last_modified_by_flat = task_record.get("LastModifiedBy.Name")
+        
+        # Log the extraction for debugging
+        logger.debug(f"[ASSIGNEE] CreatedBy: {created_by} -> {created_by_name}")
+        logger.debug(f"[ASSIGNEE] LastModifiedBy: {last_modified_by} -> {last_modified_by_name}")
+        
+        # Try all possible sources
+        assignee = (
+            created_by_name or
+            last_modified_by_name or
+            created_by_flat or
+            last_modified_by_flat or
+            "Unassigned"
+        )
+        
+        logger.info(f"[ASSIGNEE] Final assignment for story: {assignee}")
+        return assignee
+    def extract_jira_key(title: str) -> str:
+        """Extract Jira key from story title"""
+        if not title:
+            return "N/A"
+        import re
+        match = re.search(r'([A-Z]+-\d+)', title)
+        return match.group(1) if match else "N/A"  # ✅ Better than null
+
+    def get_validation_status(user_story: dict) -> str:
+        """Convert validation status to cleaner format"""
+        status = user_story.get("copado__Last_Validation_Deployment_Status__c", "")
+        if not status:
+            return "Not Started"
+        elif "Validated" in status:
+            return "Validated"
+        elif "Completed" in status:
+            return "Completed"
+        elif "In Progress" in status or "Pending" in status:
+            return "In Progress"
+        else:
+            return status  # Keep original if we don't recognize pattern
+    def merge_story_sources(commit_stories: list, deployment_stories: list) -> tuple:
+        """
+        Merge stories from commits and deployment tasks, identifying overlaps
+        """
+        commit_story_ids = {story["story_id"] for story in commit_stories if story.get("story_id")}
+        deployment_story_ids = {story["story_id"] for story in deployment_stories if story.get("story_id")}
+        
+        # Calculate breakdown
+        commits_only = commit_story_ids - deployment_story_ids
+        deployment_only = deployment_story_ids - commit_story_ids
+        both_sources = commit_story_ids & deployment_story_ids
+        
+        # ✅ CORRECT: Total is union of both sets
+        total_stories_in_scope = len(commits_only) + len(deployment_only) + len(both_sources)
+        
+        breakdown = {
+            "commits_only": len(commits_only),
+            "deployment_tasks_only": len(deployment_only),
+            "both_sources": len(both_sources)
+        }
+        
+        # Build combined stories list
+        all_stories = []
+        
+        # Add commit-based stories (UNCHANGED - preserve existing structure)
+        for story in commit_stories:
+            story_copy = story.copy()
+            if story_copy["story_id"] in both_sources:
+                story_copy["data_sources"] = ["commits", "deployment_tasks"]
+                story_copy["has_deployment_task"] = True
+                # ✅ Add minimal deployment info to commit stories without breaking structure
+                story_copy["deployment_task_available"] = True
+            else:
+                story_copy["data_sources"] = ["commits"]
+                story_copy["has_deployment_task"] = False
+            all_stories.append(story_copy)
+        
+        # Add deployment-only stories (WITH ENHANCED STRUCTURE)
+        deployment_only_stories = []
+        for story in deployment_stories:
+            if story["story_id"] in deployment_only:
+                # ✅ Story already has enhanced structure from build_deployment_story_object
+                all_stories.append(story)
+                deployment_only_stories.append(story)
+        
+        return all_stories, breakdown, deployment_only_stories, total_stories_in_scope
+
     try:
         payload = request.get_json(force=True, silent=True) or {}
         logger.info(f"[ROUTE] Payload received: {payload}")
@@ -636,7 +765,8 @@ def analyze_stories():
                 sf_login_from_config,
                 fetch_user_story_metadata_by_story_names,
                 fetch_story_commits,
-                fetch_production_component_state
+                fetch_production_component_state,
+                fetch_deployment_tasks  # NEW: Import deployment tasks function
             )
             from sf_adapter import sf_records_to_rows
             
@@ -881,9 +1011,80 @@ def analyze_stories():
         transformer.stories = stories_info
         logger.info(f"[ROUTE] Pre-populated {len(transformer.stories)} story info objects")
         
+        # === EXISTING TRANSFORMER LOGIC (UNCHANGED) ===
         result = transformer.transform(sf_records)
         
-        logger.info("[ROUTE] Transformation complete, returning response")
+        # Log original classification for verification
+        logger.info(f"[ROUTE] Original classification - blocked: {len(result.get('blocked', []))}, conflicts: {len(result.get('conflicts', []))}, safe: {len(result.get('safe', []))}")
+        
+        # === NEW: ADD DEPLOYMENT TASK SUPPORT (NON-BREAKING) ===
+        try:
+            logger.info("[ROUTE] Fetching deployment tasks...")
+            raw_deployment_tasks = fetch_deployment_tasks(
+                sf, 
+                release_names=release_names,
+                story_names=story_names
+            )
+            logger.info(f"[ROUTE] Found {len(raw_deployment_tasks)} deployment task records")
+            
+            # Build deployment story objects
+            deployment_stories = []
+            seen_deployment_stories = set()
+            
+            for task in raw_deployment_tasks:
+                story_id = (task.get("copado__User_Story__r") or {}).get("Name")
+                if story_id and story_id not in seen_deployment_stories:
+                    deployment_story = build_deployment_story_object(task)
+                    deployment_stories.append(deployment_story)
+                    seen_deployment_stories.add(story_id)
+                    logger.debug(f"[ROUTE] Added deployment story: {story_id}")
+            
+            logger.info(f"[ROUTE] Built {len(deployment_stories)} unique deployment stories")
+            
+            # ✅ FIX: Create NEW lists without modifying originals
+            existing_stories = []
+            existing_stories.extend(result.get("blocked", []))  # Creates new list
+            existing_stories.extend(result.get("conflicts", []))
+            existing_stories.extend(result.get("safe", []))
+            
+            # Merge data sources
+            all_stories, data_breakdown, deployment_only_stories, total_in_scope = merge_story_sources(
+                existing_stories, 
+                deployment_stories
+            )
+            
+            # Add enhanced fields to result (NON-BREAKING)
+            result["summary_enhanced"] = {
+                "total_stories_in_scope": total_in_scope,
+                "data_source_breakdown": data_breakdown
+            }
+            
+            result["deployment_task_stories"] = deployment_only_stories
+            result["all_stories"] = all_stories
+            
+            # Verify original arrays are preserved
+            logger.info(f"[ROUTE] After enhancement - blocked: {len(result.get('blocked', []))}, conflicts: {len(result.get('conflicts', []))}, safe: {len(result.get('safe', []))}")
+            logger.info(f"[ROUTE] Enhanced summary: {result['summary_enhanced']}")
+            
+        except Exception as e:
+            logger.warning(f"[ROUTE] Could not fetch deployment tasks: {str(e)}")
+            # Non-critical - continue with existing result
+            result["deployment_task_stories"] = []
+            # ✅ FIX: Create new list without modifying originals
+            result["all_stories"] = []
+            result["all_stories"].extend(result.get("blocked", []))
+            result["all_stories"].extend(result.get("conflicts", []))
+            result["all_stories"].extend(result.get("safe", []))
+            result["summary_enhanced"] = {
+                "total_stories_in_scope": len(result["all_stories"]),
+                "data_source_breakdown": {
+                    "commits_only": len(result["all_stories"]),
+                    "deployment_tasks_only": 0,
+                    "both_sources": 0
+                }
+            }
+        
+        logger.info("[ROUTE] Transformation complete, returning enhanced response")
         logger.info("=" * 80)
         
         return jsonify(result), 200
@@ -894,10 +1095,6 @@ def analyze_stories():
             "success": False,
             "error": str(e)
         }), 500
-
-
-
-
 
 
 
@@ -933,8 +1130,6 @@ from datetime import datetime, date
 
 
 # ---------------- Helpers ----------------
-
-##########
 
 
 
@@ -1444,7 +1639,673 @@ def enrich_conflicts_with_story_details(conflicts, stories, *args, **kwargs):
     return enriched
 
 
-# ===== /api/compare-commits (fast, diffstat-based component change summary) =====
+################################# Testing
+
+# Add these imports to your existing app.py
+from deployment_prover import DeploymentProver
+from salesforce_client import sf_login_from_config
+from git_client import BitBucketClient
+import logging
+
+# Configure logging for DeploymentProver
+deployment_log = logging.getLogger('deployment_prover')
+
+# Initialize the prover (add this after your existing app initialization)
+def initialize_deployment_prover():
+    """Initialize DeploymentProver with real clients"""
+    try:
+        # Try to use real clients
+        sf_client = sf_login_from_config()
+        git_client = BitBucketClient()
+        prover = DeploymentProver(
+            sf_client=sf_client,
+            git_client=git_client, 
+            mock_mode=False
+        )
+        deployment_log.info("✅ DeploymentProver initialized with REAL clients")
+        return prover
+    except Exception as e:
+        # Fall back to mock mode
+        deployment_log.warning(f"⚠️  Using MOCK mode: {e}")
+        return DeploymentProver(mock_mode=True)
+
+# Initialize the prover
+prover = initialize_deployment_prover()
+
+# Add these routes to your existing app.py
+
+@app.route('/api/deployment/prove/story', methods=['POST'])
+def prove_story_deployment():
+    try:
+        data = request.get_json()
+        
+        # Extract parameters (only 1 new line)
+        story_name = data['story_name']
+        target_env = data['target_env']
+        target_branch = data.get('target_branch', 'develop')
+        validate_story_env = data.get('validate_story_env', True)
+        story_metadata = data.get('story_metadata', {})  # ← NEW LINE
+        
+        # Call prover (only 1 new parameter)
+        result = prover.prove_story_deployment(
+            story_name=story_name,
+            target_env=target_env,
+            target_branch=target_branch,
+            validate_story_env=validate_story_env,
+            story_metadata=story_metadata  # ← NEW PARAMETER
+        )
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+
+# =============================================================================
+# OPTION 2: Per-Story Parameters (Different Settings Per Story)
+# =============================================================================
+
+@app.route('/api/deployment/prove/bulk/advanced', methods=['POST'])
+def prove_deployment_bulk_advanced():
+    """
+    Advanced bulk proof with per-story parameters
+    
+    Request Body:
+    {
+        "stories": [
+            {
+                "story_name": "US-001",
+                "target_env": "production",
+                "validation_level": "high",     // Per-story validation level
+                "story_metadata": {
+                    "skip_validators": ["copado_deployment_record"]
+                }
+            },
+            {
+                "story_name": "US-002",
+                "target_env": "qa",
+                "validation_level": "standard",
+                "story_metadata": {
+                    "custom_field": "value"
+                }
+            }
+        ],
+        "defaults": {                           // Defaults for all stories
+            "target_branch": "master",
+            "validation_level": "standard",
+            "validate_story_env": true
+        },
+        "format": "ui"
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        stories = data.get('stories', [])
+        defaults = data.get('defaults', {})
+        response_format = data.get('format', 'ui')
+        
+        if not stories:
+            return jsonify({'error': 'No stories provided'}), 400
+        
+        logger.info(f"🚀 Advanced bulk proof for {len(stories)} stories")
+        
+        start_time = datetime.now()
+        results = []
+        
+        for story_config in stories:
+            story_name = story_config.get('story_name')
+            
+            # Merge with defaults
+            target_env = story_config.get('target_env', defaults.get('target_env', 'production'))
+            target_branch = story_config.get('target_branch', defaults.get('target_branch', 'master'))
+            validation_level = story_config.get('validation_level', defaults.get('validation_level', 'standard'))
+            validate_story_env = story_config.get('validate_story_env', defaults.get('validate_story_env', True))
+            
+            try:
+                result = prover.prove_deployment(
+                    story_names=[story_name],
+                    target_env=target_env,
+                    target_branch=target_branch,
+                    validate_story_env=validate_story_env,
+                    validation_level=validation_level
+                )
+                
+                # Add the custom metadata to the result
+                result['custom_metadata'] = story_config.get('story_metadata', {})
+                results.append(result)
+                
+            except Exception as e:
+                logger.error(f"Error processing {story_name}: {e}")
+                results.append({
+                    'stories': {'requested': [story_name], 'valid': [], 'invalid': [story_name]},
+                    'error': str(e)
+                })
+        
+        # Format response
+        if response_format == 'ui':
+            response = prover.format_bulk_response(results, start_time)
+        else:
+            response = {
+                'total_stories': len(stories),
+                'processing_time': str(datetime.now() - start_time),
+                'results': results
+            }
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        logger.error(f"Advanced bulk proof error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# =============================================================================
+# OPTION 3: Flexible Parameter Passing (Most Versatile)
+# =============================================================================
+
+@app.route('/api/deployment/prove/bulk/flexible', methods=['POST'])
+def prove_deployment_bulk_flexible():
+    """
+    Most flexible bulk proof - supports multiple parameter styles
+    
+    Style 1 - Simple (all same settings):
+    {
+        "story_names": ["US-001", "US-002"],
+        "target_env": "production",
+        "validation_level": "standard"
+    }
+    
+    Style 2 - With story_metadata:
+    {
+        "story_names": ["US-001", "US-002"],
+        "target_env": "production",
+        "story_metadata": {
+            "validation_level": "high",
+            "skip_validators": ["copado_deployment_record"]
+        }
+    }
+    
+    Style 3 - Per-story configuration:
+    {
+        "stories": [
+            {
+                "story_name": "US-001",
+                "validation_level": "high"
+            },
+            {
+                "story_name": "US-002",
+                "validation_level": "standard"
+            }
+        ]
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        # Detect which style is being used
+        if 'stories' in data:
+            # Style 3 - Per-story config
+            return prove_deployment_bulk_advanced()
+        else:
+            # Style 1 or 2 - Simple or with story_metadata
+            return prove_deployment_bulk()
+        
+    except Exception as e:
+        logger.error(f"Flexible bulk proof error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# =============================================================================
+# USAGE EXAMPLES
+# =============================================================================
+
+"""
+EXAMPLE 1: Simple - All stories same settings
+==============================================
+
+curl -X POST http://localhost:5000/api/deployment/prove/bulk \
+  -H "Content-Type: application/json" \
+  -d '{
+    "story_names": ["US-0033638", "US-0033639", "US-0033640"],
+    "target_env": "production",
+    "target_branch": "master",
+    "validation_level": "standard",
+    "format": "ui"
+  }'
+
+
+EXAMPLE 2: With story_metadata (Global)
+========================================
+
+curl -X POST http://localhost:5000/api/deployment/prove/bulk \
+  -H "Content-Type: application/json" \
+  -d '{
+    "story_names": ["US-0033638", "US-0033639"],
+    "target_env": "production",
+    "target_branch": "master",
+    "story_metadata": {
+      "validation_level": "high",
+      "skip_validators": ["copado_deployment_record"],
+      "custom_field": "my_value"
+    },
+    "validate_story_env": true,
+    "format": "ui"
+  }'
+
+
+EXAMPLE 3: Per-Story Configuration
+===================================
+
+curl -X POST http://localhost:5000/api/deployment/prove/bulk/advanced \
+  -H "Content-Type: application/json" \
+  -d '{
+    "stories": [
+      {
+        "story_name": "US-0033638",
+        "target_env": "production",
+        "validation_level": "high",
+        "story_metadata": {
+          "skip_validators": ["copado_deployment_record"]
+        }
+      },
+      {
+        "story_name": "US-0033639",
+        "target_env": "qa",
+        "validation_level": "standard",
+        "story_metadata": {
+          "custom_field": "different_value"
+        }
+      }
+    ],
+    "defaults": {
+      "target_branch": "master",
+      "validation_level": "standard"
+    },
+    "format": "ui"
+  }'
+
+
+EXAMPLE 4: Mixed Validation Levels
+===================================
+
+curl -X POST http://localhost:5000/api/deployment/prove/bulk/advanced \
+  -H "Content-Type: application/json" \
+  -d '{
+    "stories": [
+      {
+        "story_name": "US-CRITICAL-001",
+        "validation_level": "maximum"
+      },
+      {
+        "story_name": "US-NORMAL-002",
+        "validation_level": "standard"
+      },
+      {
+        "story_name": "US-QUICK-003",
+        "validation_level": "basic"
+      }
+    ],
+    "defaults": {
+      "target_env": "production",
+      "target_branch": "master"
+    },
+    "format": "ui"
+  }'
+
+
+EXAMPLE 5: With Options
+========================
+
+curl -X POST http://localhost:5000/api/deployment/prove/bulk \
+  -H "Content-Type: application/json" \
+  -d '{
+    "story_names": ["US-001", "US-002", "US-003"],
+    "target_env": "production",
+    "validation_level": "standard",
+    "options": {
+      "parallel": true,
+      "max_workers": 10,
+      "continue_on_error": true,
+      "timeout_per_story": 30
+    },
+    "format": "ui"
+  }'
+"""
+
+
+# =============================================================================
+# PARAMETER PRIORITY ORDER
+# =============================================================================
+
+"""
+When same parameter appears in multiple places, priority is:
+
+1. Per-story config (highest priority)
+2. story_metadata
+3. Top-level parameter
+4. defaults object
+5. Code default (lowest priority)
+
+Example:
+{
+  "validation_level": "standard",              // Priority 3
+  "story_metadata": {
+    "validation_level": "high"                 // Priority 2 - WINS!
+  },
+  "stories": [
+    {
+      "story_name": "US-001",
+      "validation_level": "maximum"            // Priority 1 - WINS for this story!
+    },
+    {
+      "story_name": "US-002"                   // Uses priority 2 (high)
+    }
+  ]
+}
+
+Result:
+- US-001 uses "maximum"
+- US-002 uses "high"
+"""
+
+
+# =============================================================================
+# COMMON USE CASES
+# =============================================================================
+
+# USE CASE 1: All stories same validation level
+{
+  "story_names": ["US-001", "US-002"],
+  "target_env": "production",
+  "validation_level": "standard"              # All stories use "standard"
+}
+
+# USE CASE 2: All stories same, but via story_metadata
+{
+  "story_names": ["US-001", "US-002"],
+  "target_env": "production",
+  "story_metadata": {
+    "validation_level": "high"                # All stories use "high"
+  }
+}
+
+# USE CASE 3: Different validation levels per story
+{
+  "stories": [
+    {"story_name": "US-001", "validation_level": "maximum"},  # Critical
+    {"story_name": "US-002", "validation_level": "standard"}, # Normal
+    {"story_name": "US-003", "validation_level": "basic"}     # Quick check
+  ]
+}
+
+# USE CASE 4: Most same, one different
+{
+  "stories": [
+    {"story_name": "US-001", "validation_level": "maximum"},  # Special
+    {"story_name": "US-002"},                                 # Uses default
+    {"story_name": "US-003"}                                  # Uses default
+  ],
+  "defaults": {
+    "validation_level": "standard"            # Default for US-002 and US-003
+  }
+}
+
+# USE CASE 5: Different environments
+{
+  "stories": [
+    {"story_name": "US-001", "target_env": "production"},
+    {"story_name": "US-002", "target_env": "qa"},
+    {"story_name": "US-003", "target_env": "dev"}
+  ]
+}
+
+
+
+
+# =============================================================================
+# PAGINATION SUPPORT (Optional)
+# =============================================================================
+
+@app.route('/api/deployment/prove/bulk', methods=['GET'])
+def prove_deployment_bulk_paginated():
+    """
+    Paginated bulk proof results
+    
+    Query params:
+    - page: Page number (default 1)
+    - page_size: Items per page (default 50)
+    - status: Filter by status (proven|unproven|partial)
+    - author: Filter by author
+    - date_from: Filter by date (ISO format)
+    - date_to: Filter by date (ISO format)
+    """
+    # Implementation would retrieve from database/cache
+    # This is a placeholder showing the structure
+    pass
+
+
+# =============================================================================
+# STORY DETAILS ENDPOINT (For drill-down)
+# =============================================================================
+
+@app.route('/api/deployment/prove/story/<story_id>/details', methods=['GET'])
+def get_story_details(story_id):
+    """
+    Get detailed information for a single story
+    
+    Returns:
+    - Full validation results
+    - Complete notes
+    - All component details
+    - Full diff content
+    """
+    try:
+        # Run full validation
+        result = prover.prove_deployment(
+            story_names=[story_id],
+            target_env=request.args.get('env', 'production'),
+            target_branch=request.args.get('branch', 'master'),
+            validation_level=request.args.get('validation_level', 'high')
+        )
+        
+        return jsonify(result)
+        
+    except Exception as e:
+        logger.error(f"Error getting details for {story_id}: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# =============================================================================
+# EXPORT ENDPOINT (For downloading results)
+# =============================================================================
+
+@app.route('/api/deployment/prove/bulk', methods=['POST'])
+def prove_deployment_bulk():
+    try:
+        data = request.get_json()
+        
+        story_names = data.get('story_names', [])
+        release_name = data.get('release_name')
+        
+        # ========== FIX: Properly merge release and story names ==========
+        if release_name:
+            logger.info(f"🔍 Getting stories from release: {release_name}")
+            
+            release_stories = prover.get_stories_from_release(release_name)
+            logger.info(f"   ✅ Got {len(release_stories)} stories from release")
+            
+            if not release_stories:
+                return jsonify({
+                    'error': f'No user stories found in release: {release_name}'
+                }), 404
+            
+            # Merge and deduplicate
+            all_stories = list(set(story_names + release_stories))
+            logger.info(f"   📋 Total unique stories: {len(all_stories)}")
+        else:
+            all_stories = story_names
+        # =================================================================
+        
+        # Check we have stories
+        if not all_stories:
+            return jsonify({
+                'error': 'No story names or release name provided'
+            }), 400
+        
+        # Get other parameters
+        target_env = data.get('target_env', 'production')
+        target_branch = data.get('target_branch', 'master')
+        story_metadata = data.get('story_metadata', {})
+        validation_level = story_metadata.get('validation_level') or \
+                          data.get('validation_level', 'standard')
+        validate_story_env = data.get('validate_story_env', True)
+        response_format = data.get('format', 'ui')
+        
+        logger.info(f"🚀 Bulk proof request for {len(all_stories)} stories")
+        
+        start_time = datetime.now()
+        
+        # Process ALL stories (not just story_names!)
+        results = []
+        for i, story_name in enumerate(all_stories, 1):
+            try:
+                logger.info(f"   [{i}/{len(all_stories)}] Processing {story_name}...")
+                
+                result = prover.prove_deployment(
+                    story_names=[story_name],
+                    target_env=target_env,
+                    target_branch=target_branch,
+                    validate_story_env=validate_story_env,
+                    validation_level=validation_level
+                )
+                results.append(result)
+                
+            except Exception as e:
+                logger.error(f"   Error processing {story_name}: {e}")
+                results.append({
+                    'stories': {'requested': [story_name], 'valid': [], 'invalid': [story_name]},
+                    'overall_proof': {'verdict': 'UNPROVEN', 'confidence': 'very low', 'score': 0.0},
+                    'summary': {'total_components': 0, 'proven_components': 0},
+                    'error': str(e)
+                })
+        
+        # Format response
+        if response_format == 'ui':
+            response = prover.format_bulk_response(results, start_time)
+            
+            # Add release info
+            if release_name:
+                response['release'] = {
+                    'name': release_name,
+                    'story_count': len(all_stories),
+                    'stories': sorted(all_stories)
+                }
+        else:
+            response = {
+                'total_stories': len(all_stories),
+                'processing_time': str(datetime.now() - start_time),
+                'results': results
+            }
+        
+        return jsonify(response)
+        
+    except Exception as e:
+        logger.error(f"❌ ERROR: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
+
+def get_skipped_validators(validation_level, validation_config):
+    """Get list of validators that were skipped for this level"""
+    all_validators = validation_config.get_all_validators()
+    level_validators = validation_config.get_validators_for_level(validation_level)
+    
+    skipped = []
+    for validator in all_validators:
+        if validator not in level_validators:
+            skipped.append(validator)
+    
+    return skipped
+
+
+# Add to app.py - Configuration management endpoints
+
+@app.route('/api/deployment/config/components', methods=['GET'])
+def get_component_config():
+    """Get all supported component configurations"""
+    try:
+        from component_mapper import ComponentMapper
+        from component_config import COMPONENT_CONFIG
+        
+        return jsonify({
+            'supported_components': ComponentMapper.get_supported_component_types(),
+            'configurations': COMPONENT_CONFIG,
+            'total_components': len(COMPONENT_CONFIG)
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/deployment/config/components/<comp_type>', methods=['GET'])
+def get_component_config_detail(comp_type: str):
+    """Get configuration for a specific component type"""
+    try:
+        from component_mapper import ComponentMapper
+        
+        config = ComponentMapper.get_component_config(comp_type)
+        if config:
+            return jsonify(config)
+        else:
+            return jsonify({'error': f'Component type {comp_type} not found'}), 404
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/deployment/config/test-mapping', methods=['POST'])
+def test_component_mapping():
+    """Test file path to component mapping"""
+    try:
+        data = request.get_json()
+        file_paths = data.get('file_paths', [])
+        
+        from component_mapper import ComponentMapper
+        
+        results = []
+        for file_path in file_paths:
+            component = ComponentMapper.file_to_component(file_path)
+            results.append({
+                'file_path': file_path,
+                'component': component,
+                'mapped': component is not None
+            })
+        
+        return jsonify({
+            'results': results,
+            'summary': {
+                'total_files': len(file_paths),
+                'mapped_files': sum(1 for r in results if r['mapped']),
+                'mapping_rate': f"{(sum(1 for r in results if r['mapped']) / len(file_paths)) * 100:.1f}%"
+            }
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+##############
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # =============== /api/compare-commits (fast, diffstat-based, timeout-safe) ===============
@@ -2690,8 +3551,4 @@ if __name__ == '__main__':
     print()
     print("Press Ctrl+C to stop")
     print("=" * 60)
-    
     app.run(debug=True, host='0.0.0.0', port=5000)
-    
-    
-    

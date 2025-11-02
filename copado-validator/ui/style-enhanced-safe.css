@@ -178,3 +178,102 @@
 [data-theme="midnight"] .menu button:hover {
   background: #424245;
 }
+
+.export-section {
+  margin-bottom: 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.export-button-container {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.export-btn {
+  background: white;
+  color: #1d1d1f;
+  border: 2px solid #e5e5e7;
+  padding: 12px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  position: relative;
+}
+
+.export-btn:hover {
+  background: #0071e3;
+  color: white;
+  border-color: #0071e3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
+}
+
+.export-btn.primary {
+  border-color: #0071e3;
+  background: #0071e3;
+  color: white;
+}
+
+.export-btn.primary:hover {
+  background: #0056b3;
+  border-color: #0056b3;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.4);
+}
+
+.export-description {
+  font-size: 12px;
+  color: #86868b;
+  line-height: 1.4;
+  padding: 0 4px;
+}
+
+/* Tooltip style enhancement */
+.export-btn::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1d1d1f;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: normal;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 1000;
+}
+
+.export-btn:hover::after {
+  opacity: 1;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .export-section {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .export-btn {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+}
