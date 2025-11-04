@@ -66,21 +66,20 @@ export function renderStoriesTab(analysis = {}) {
     return bDate - aDate;
   });
 
-  panel.innerHTML = '';
+ 
+
+panel.innerHTML = '';
+
+const header = createElement('div', { className: 'section-header' }, [
+  createElement('h2', { style: 'font-size: 24px; font-weight: 600; margin: 0 0 8px 0; color: white;' }, 'Safe Stories'),
+  createElement('p', { className: 'muted', style: 'font-size: 24px; color: white; margin: 0;' }, 
+    `${filtered.length} ${filtered.length === 1 ? 'story' : 'stories'} Ready to Deploy`
+  )
+]);
+panel.append(header);
+
+
   
-  // FIXED HEADER: Using the same design pattern as precheck.js
-  const header = createElement('div', { className: 'section-header' });
-  header.innerHTML = `
-    <div style="text-align: center; margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid #e5e5e7;">
-      <h2 style="font-size: 28px; font-weight: 700; margin: 0 0 8px 0; color: white;">
-        Safe Stories
-      </h2>
-      <p style="font-family: 'Segoe UI', Arial, sans-serif; font-size: 1.5em; font-weight: 600; color: white; margin: 12px 0 0 0; line-height: 1.3;">
-        ${filtered.length} ${filtered.length === 1 ? 'story' : 'stories'} ready to deploy
-      </p>
-    </div>
-  `;
-  panel.append(header);
 
   const SEARCH_DELAY = 800;
   let searchTimeout;

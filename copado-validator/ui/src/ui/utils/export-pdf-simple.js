@@ -1,596 +1,558 @@
-// ui/src/ui/utils/export-pdf-simple.js
+// export-pdf-simple.js
+// Drop-in, self-contained PDF exporter that mirrors the Preview layout.
+// Public API: exportToPDF(reportData, analysis = {}, reportType = 'technical')
 
-export function exportToPDF(reportData, analysis, reportType = 'technical') {
+/* ------------------------------ Utilities ------------------------------ */
+
+function escapeHtml(s) {
+  if (s === null || s === undefined) return '';
+  return String(s).replace(/&/g, '&amp;')
+                  .replace(/</g, '&lt;')
+                  .replace(/>/g, '&gt;');
+}
+
+function emptySummary() {
+  return {
+    totalStories: 0,
+    blockedStories: 0,
+    conflictStories: 0,
+    safeStories: 0,
+    safeWithCommitStories: 0,
+    componentsWithConflicts: 0,
+    componentConflicts: 0
+  };
+}
+
+// Aligns older/newer shapes: technicalSummary -> summary and ensures arrays exist
+function normalizeReportForExport(reportData) {
+  if (!reportData || typeof reportData !== 'object') {
+    return {
+      title: 'Deployment Report',
+      summary: emptySummary(),
+      blockedStories: [],
+      conflictStories: [],
+      safeStories: [],
+      safeWithCommitStories: [],
+      componentConflicts: []
+    };
+  }
+  if (reportData.summary && typeof reportData.summary === 'object') {
+    return {
+      ...reportData,
+      blockedStories: reportData.blockedStories || [],
+      conflictStories: reportData.conflictStories || [],
+      safeStories: reportData.safeStories || [],
+      safeWithCommitStories: reportData.safeWithCommitStories || [],
+      componentConflicts: reportData.componentConflicts || []
+    };
+  }
+
+  const ts = reportData.technicalSummary || {};
+  const n = (arr) => Array.isArray(arr) ? arr.length : 0;
+  const summary = {
+    totalStories: Number.isFinite(ts.totalStories)
+      ? ts.totalStories
+      : n(reportData.blockedStories) + n(reportData.conflictStories) + n(reportData.safeStories) + n(reportData.safeWithCommitStories),
+    blockedStories: Number.isFinite(ts.blockedStories) ? ts.blockedStories : n(reportData.blockedStories),
+    conflictStories: Number.isFinite(ts.conflictStories) ? ts.conflictStories : n(reportData.conflictStories),
+    safeStories: Number.isFinite(ts.safeStories) ? ts.safeStories : n(reportData.safeStories),
+    safeWithCommitStories: Number.isFinite(ts.safeWithCommitStories) ? ts.safeWithCommitStories : n(reportData.safeWithCommitStories),
+    componentsWithConflicts: Number.isFinite(ts.conflictedComponents)
+      ? ts.conflictedComponents
+      : n(reportData.componentConflicts),
+    componentConflicts: Number.isFinite(ts.componentConflicts)
+      ? ts.componentConflicts
+      : n(reportData.componentConflicts),
+  };
+
+  return {
+    ...reportData,
+    summary,
+    blockedStories: reportData.blockedStories || [],
+    conflictStories: reportData.conflictStories || [],
+    safeStories: reportData.safeStories || [],
+    safeWithCommitStories: reportData.safeWithCommitStories || [],
+    componentConflicts: reportData.componentConflicts || []
+  };
+}
+
+function getAnalysisTime(analysis) {
+  const raw = analysis?.summary?.analyzed_at || analysis?.analysis_time || analysis?.generated_at || analysis?.timestamp || null;
   try {
-    // Create a simple HTML-based PDF export
-    const printWindow = window.open('', '_blank');
-    const timestamp = new Date().toISOString().split('T')[0];
-    
-    let content = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>${reportData.title || 'Deployment Report'}</title>
-        <style>
-          body { 
-            font-family: 'Segoe UI', Arial, sans-serif; 
-            margin: 0; 
-            padding: 30px; 
-            color: #333; 
-            background: #fff;
-            line-height: 1.4;
-          }
-          .header { 
-            text-align: center; 
-            border-bottom: 3px solid #2a5da6; 
-            padding-bottom: 25px; 
-            margin-bottom: 30px; 
-          }
-          .header h1 { 
-            color: #2a5da6; 
-            margin: 0 0 10px; 
-            font-size: 32px;
-            font-weight: 700;
-          }
-          .meta { 
-            display: flex; 
-            justify-content: center; 
-            gap: 30px; 
-            margin-top: 15px; 
-            font-size: 14px; 
-            color: #666; 
-            flex-wrap: wrap;
-          }
-          .section { 
-            margin-bottom: 35px; 
-            page-break-inside: avoid;
-          }
-          .section h2 { 
-            color: #2a5da6; 
-            border-bottom: 2px solid #e5e7eb; 
-            padding-bottom: 8px; 
-            margin-bottom: 20px;
-            font-size: 20px;
-            font-weight: 600;
-          }
-          .stats-grid { 
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 15px; 
-            margin: 25px 0; 
-          }
-          .stat-card { 
-            border: 2px solid #e5e7eb; 
-            padding: 25px 15px; 
-            text-align: center; 
-            border-radius: 12px; 
-            background: #f8fafc;
-            min-height: 90px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-          }
-          .stat-value { 
-            font-size: 28px; 
-            font-weight: 800; 
-            margin: 8px 0; 
-            line-height: 1;
-          }
-          .stat-label { 
-            font-size: 14px; 
-            color: #666; 
-            font-weight: 500;
-          }
-          .total-stat { 
-            background: linear-gradient(135deg, #2a5da6 0%, #1e3a8a 100%); 
-            color: white; 
-            border: none;
-          }
-          .total-stat .stat-value, 
-          .total-stat .stat-label { 
-            color: white; 
-          }
-          .blocked-stat { 
-            border-left: 4px solid #dc3545; 
-            background: #fef2f2;
-          }
-          .blocked-stat .stat-value { color: #dc3545; }
-          .conflict-stat { 
-            border-left: 4px solid #fd7e14; 
-            background: #fff7ed;
-          }
-          .conflict-stat .stat-value { color: #fd7e14; }
-          .safe-stat { 
-            border-left: 4px solid #198754; 
-            background: #f0f9ff;
-          }
-          .safe-stat .stat-value { color: #198754; }
-          .safe-commit-stat { 
-            border-left: 4px solid #0d6efd; 
-            background: #eff6ff;
-          }
-          .safe-commit-stat .stat-value { color: #0d6efd; }
-          .table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            margin: 20px 0; 
-            font-size: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-          }
-          .table th { 
-            background-color: #f8fafc; 
-            border: 1px solid #e5e7eb; 
-            padding: 12px 10px; 
-            text-align: left; 
-            font-weight: 600;
-            font-size: 12px;
-          }
-          .table td { 
-            border: 1px solid #e5e7eb; 
-            padding: 10px; 
-            vertical-align: top;
-            font-size: 11px;
-          }
-          .table tr:nth-child(even) { 
-            background-color: #f9f9f9; 
-          }
-          .table tr:hover { 
-            background-color: #f0f7ff; 
-          }
-          .no-data { 
-            text-align: center; 
-            color: #666; 
-            font-style: italic; 
-            padding: 40px; 
-            background: #f8f9fa;
-            border-radius: 8px;
-          }
-          .component-cell {
-            background: #f8f9fa;
-            padding: 4px 6px;
-            border-radius: 4px;
-            border: 1px solid #e9ecef;
-            font-size: 10px;
-            line-height: 1.3;
-          }
-          .reason-cell {
-            background: #fff3cd;
-            padding: 4px 6px;
-            border-radius: 4px;
-            border: 1px solid #ffeaa7;
-            font-size: 10px;
-            color: #856404;
-            line-height: 1.3;
-          }
-          .status-cell {
-            background: #e7f3ff;
-            padding: 4px 6px;
-            border-radius: 4px;
-            font-size: 10px;
-            text-align: center;
-          }
-          .center-cell {
-            text-align: center;
-            font-weight: 600;
-          }
-          .deployment-task-yes {
-            color: #198754;
-            font-weight: 600;
-            text-align: center;
-          }
-          .deployment-task-no {
-            color: #dc3545;
-            font-weight: 600;
-            text-align: center;
-          }
-          @media print {
-            body { margin: 0; padding: 15px; }
-            .no-print { display: none; }
-            .section { page-break-inside: avoid; }
-            .stats-grid { grid-template-columns: repeat(5, 1fr); }
-            .table { font-size: 10px; }
-            .table th, .table td { padding: 8px 6px; }
-          }
-          @media (max-width: 1000px) {
-            .stats-grid { grid-template-columns: repeat(3, 1fr); }
-            .total-stat { grid-column: span 3; }
-          }
-          @media (max-width: 600px) {
-            .stats-grid { grid-template-columns: repeat(2, 1fr); }
-            .total-stat { grid-column: span 2; }
-            .meta { flex-direction: column; gap: 5px; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h1>${reportData.title || 'Deployment Report'}</h1>
-          <div class="meta">
-            <span>Generated: ${reportData.generatedAt || new Date().toLocaleString()}</span>
-            <span>Type: Technical Analysis</span>
-            <span>Analysis Time: ${analysis.summary?.analyzed_at || 'N/A'}</span>
-          </div>
-        </div>
-    `;
-
-    if (reportType === 'technical') {
-      content += generateTechnicalPDFContent(reportData, analysis);
-    } else {
-      content += generateDeveloperPDFContent(reportData, analysis);
-    }
-
-    content += `
-        <div class="no-print" style="margin-top: 40px; text-align: center; padding: 20px; background: #f8f9fa; border-radius: 8px;">
-          <button onclick="window.print()" style="padding: 12px 24px; background: #2a5da6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600;">
-            Print as PDF
-          </button>
-          <p style="margin-top: 12px; color: #666; font-size: 13px;">
-            Use your browser's print dialog and select "Save as PDF" to export this report.
-          </p>
-        </div>
-      </body>
-      </html>
-    `;
-
-    printWindow.document.write(content);
-    printWindow.document.close();
-    
-    // Auto-print after a short delay
-    setTimeout(() => {
-      printWindow.print();
-    }, 500);
-
-  } catch (error) {
-    console.error('PDF export error:', error);
-    throw new Error(`Failed to generate PDF: ${error.message}`);
+    const d = raw ? new Date(raw) : new Date();
+    return isNaN(d) ? new Date().toISOString() : d.toISOString();
+  } catch {
+    return new Date().toISOString();
   }
 }
 
-function generateTechnicalPDFContent(reportData, analysis) {
-  const blockedStories = Array.isArray(reportData.blockedStories) ? reportData.blockedStories : [];
-  const conflictStories = Array.isArray(reportData.conflictStories) ? reportData.conflictStories : [];
-  const safeStories = Array.isArray(reportData.safeStories) ? reportData.safeStories : [];
-  const safeWithCommitStories = Array.isArray(reportData.safeWithCommitStories) ? reportData.safeWithCommitStories : [];
+/**
+ * Synthesize story-centric conflict list from componentConflicts when
+ * reportData.conflictStories is missing or empty.
+ */
+function synthesizeConflictStoriesFromComponents(reportData) {
+  const rows = Array.isArray(reportData.componentConflicts) ? reportData.componentConflicts : [];
+  if (!rows.length) return [];
 
-  const totalStories = blockedStories.length + conflictStories.length + 
-                      safeStories.length + safeWithCommitStories.length;
+  const byStory = new Map();
+  const storyIdRe = /US-\d{6,}/g;
 
-  let content = `
-      <div class="section">
-        <h2>Technical Analysis - All Story Types</h2>
-        <div class="stats-grid">
-          <div class="stat-card total-stat">
-            <div class="stat-value">${totalStories}</div>
-            <div class="stat-label">Total Stories</div>
-          </div>
-          <div class="stat-card blocked-stat">
-            <div class="stat-value">${blockedStories.length}</div>
-            <div class="stat-label">Blocked Stories</div>
-          </div>
-          <div class="stat-card conflict-stat">
-            <div class="stat-value">${conflictStories.length}</div>
-            <div class="stat-label">Conflict Stories</div>
-          </div>
-          <div class="stat-card safe-stat">
-            <div class="stat-value">${safeStories.length}</div>
-            <div class="stat-label">Safe Stories</div>
-          </div>
-          <div class="stat-card safe-commit-stat">
-            <div class="stat-value">${safeWithCommitStories.length}</div>
-            <div class="stat-label">Safe with Commit</div>
-          </div>
-        </div>
-      </div>
-  `;
+  for (const comp of rows) {
+    const compName = comp?.componentName || 'Unknown';
+    const involved = String(comp?.involvedStories || '');
+    const ids = involved.match(storyIdRe) || [];
+    const latestId = (String(comp?.latestStory || '').match(storyIdRe) || [null])[0];
 
-  // Blocked Stories Table with Deployment Task Column
-  if (blockedStories.length > 0) {
-    content += `
-      <div class="section">
-        <h2>Blocked Stories Report (${blockedStories.length})</h2>
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Story ID</th>
-              <th>Developer</th>
-              <th>Blocking Components</th>
-              <th>Blocking Reason</th>
-              <th>Production User Story</th>
-              <th>Deployment Task</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${blockedStories.map(story => `
-              <tr>
-                <td><strong>${escapeHtml(story.story_id || 'N/A')}</strong></td>
-                <td>${escapeHtml(story.developer || 'Unknown')}</td>
-                <td class="component-cell">${escapeHtml(Array.isArray(story.blocking_components) ? 
-                  (story.blocking_components.length > 5 ? 
-                    story.blocking_components.slice(0, 5).join(', ') + '...' : 
-                    story.blocking_components.join(', ')) 
-                  : 'No components')}</td>
-                <td class="reason-cell">${escapeHtml(Array.isArray(story.blocking_reasons) && story.blocking_reasons.length > 0 ? 
-                  (story.blocking_reasons[0].length > 100 ? 
-                    story.blocking_reasons[0].substring(0, 100) + '...' : 
-                    story.blocking_reasons[0]) 
-                  : 'No reason specified')}</td>
-                <td>${escapeHtml(Array.isArray(story.production_blockers) && story.production_blockers.length > 0 ? 
-                  story.production_blockers[0].production_story_id : 'None')}</td>
-                <td class="${story.has_deployment_task ? 'deployment-task-yes' : 'deployment-task-no'}">
-                  ${story.has_deployment_task ? 'Yes' : 'No'}
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
-  } else {
-    content += `<div class="section"><p class="no-data">No blocked stories found.</p></div>`;
+    ids.forEach(id => {
+      if (!byStory.has(id)) {
+        byStory.set(id, {
+          story_id: id,
+          developer: 'Unknown',
+          conflict_components: [],
+          conflicting_with: new Set(),
+          resolution_status: 'Potential Conflict',
+          has_deployment_task: false
+        });
+      }
+      const entry = byStory.get(id);
+      entry.conflict_components.push(compName);
+      ids.forEach(other => { if (other !== id) entry.conflicting_with.add(other); });
+      if (latestId && latestId === id) entry.resolution_status = 'Latest Commit (primary)';
+    });
   }
 
-  // Conflict Stories Table with Deployment Task Column
-  if (conflictStories.length > 0) {
-    content += `
-      <div class="section">
-        <h2>Conflict Stories Report (${conflictStories.length})</h2>
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Story ID</th>
-              <th>Developer</th>
-              <th>Conflict Components</th>
-              <th>Resolution Status</th>
-              <th>Conflicting With</th>
-              <th>Deployment Task</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${conflictStories.map(story => `
-              <tr>
-                <td><strong>${escapeHtml(story.story_id || 'N/A')}</strong></td>
-                <td>${escapeHtml(story.developer || 'Unknown')}</td>
-                <td class="component-cell">${escapeHtml(Array.isArray(story.conflict_components) ? 
-                  (story.conflict_components.length > 5 ? 
-                    story.conflict_components.slice(0, 5).join(', ') + '...' : 
-                    story.conflict_components.join(', ')) 
-                  : 'No components')}</td>
-                <td class="status-cell">${escapeHtml(Array.isArray(story.resolution_status) ? 
-                  story.resolution_status.join(', ') : 'N/A')}</td>
-                <td>${escapeHtml(Array.isArray(story.conflicts) && story.conflicts.length > 0 ? 
-                  `${story.conflicts[0].conflicting_story.id} (${story.conflicts[0].conflicting_story.developer})` : 'None')}</td>
-                <td class="${story.has_deployment_task ? 'deployment-task-yes' : 'deployment-task-no'}">
-                  ${story.has_deployment_task ? 'Yes' : 'No'}
-                </td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
-  } else {
-    content += `<div class="section"><p class="no-data">No conflict stories found.</p></div>`;
+  // try to backfill developer from other buckets
+  const devIndex = new Map();
+  for (const bucket of [
+    reportData.safeWithCommitStories, reportData.safeStories,
+    reportData.blockedStories, reportData.conflictStories
+  ]) {
+    (Array.isArray(bucket) ? bucket : []).forEach(s => {
+      if (s.story_id && s.developer) devIndex.set(s.story_id, s.developer);
+    });
   }
 
-  // Safe Stories Table (already has Deployment Task column)
-  if (safeStories.length > 0) {
-    content += `
-      <div class="section">
-        <h2>Safe Stories Report (${safeStories.length})</h2>
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Story ID</th>
-              <th>Developer</th>
-              <th>Component Count</th>
-              <th>Has Commits</th>
-              <th>Deployment Task</th>
-              <th>Task Type</th>
-              <th>Timing</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${safeStories.map(story => `
-              <tr>
-                <td><strong>${escapeHtml(story.story_id || 'N/A')}</strong></td>
-                <td>${escapeHtml(story.developer || 'Unknown')}</td>
-                <td class="center-cell">${story.component_count || 0}</td>
-                <td class="center-cell">${story.has_commits ? 'Yes' : 'No'}</td>
-                <td class="${story.has_deployment_task ? 'deployment-task-yes' : 'deployment-task-no'}">
-                  ${story.has_deployment_task ? 'Yes' : 'No'}
-                </td>
-                <td class="status-cell">${escapeHtml(story.task_type || 'N/A')}</td>
-                <td class="status-cell">${escapeHtml(story.timing || 'N/A')}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
-  } else {
-    content += `<div class="section"><p class="no-data">No safe stories found.</p></div>`;
+  const result = [];
+  for (const v of byStory.values()) {
+    v.developer = devIndex.get(v.story_id) || v.developer;
+    v.conflicting_with = Array.from(v.conflicting_with);
+    result.push(v);
   }
-
-  // Safe with Commit Stories Table (already has Deployment Task column)
-  if (safeWithCommitStories.length > 0) {
-    content += `
-      <div class="section">
-        <h2>Safe with Commit Stories Report (${safeWithCommitStories.length})</h2>
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Story ID</th>
-              <th>Developer</th>
-              <th>Component Count</th>
-              <th>Latest Commit</th>
-              <th>Deployment Task</th>
-              <th>Task Type</th>
-              <th>Timing</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${safeWithCommitStories.map(story => `
-              <tr>
-                <td><strong>${escapeHtml(story.story_id || 'N/A')}</strong></td>
-                <td>${escapeHtml(story.developer || 'Unknown')}</td>
-                <td class="center-cell">${story.component_count || 0}</td>
-                <td>${escapeHtml(story.commit_date || 'N/A')}</td>
-                <td class="${story.has_deployment_task ? 'deployment-task-yes' : 'deployment-task-no'}">
-                  ${story.has_deployment_task ? 'Yes' : 'No'}
-                </td>
-                <td class="status-cell">${escapeHtml(story.task_type || 'N/A')}</td>
-                <td class="status-cell">${escapeHtml(story.timing || 'N/A')}</td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
-  } else {
-    content += `<div class="section"><p class="no-data">No safe with commit stories found.</p></div>`;
-  }
-
-  return content;
+  result.sort((a,b) => (b.conflicting_with.length - a.conflicting_with.length) || (a.story_id.localeCompare(b.story_id)));
+  return result;
 }
 
-function generateDeveloperPDFContent(reportData, analysis) {
-  const assignments = Array.isArray(reportData.developerAssignments) ? reportData.developerAssignments : [];
-  const blockedActions = Array.isArray(reportData.blockedActions) ? reportData.blockedActions : [];
-  const conflictActions = Array.isArray(reportData.conflictActions) ? reportData.conflictActions : [];
-  const safeDeployments = Array.isArray(reportData.safeDeployments) ? reportData.safeDeployments : [];
-  const safeWithCommitDeployments = Array.isArray(reportData.safeWithCommitDeployments) ? reportData.safeWithCommitDeployments : [];
+/* ------------------------------ Section builders ------------------------------ */
 
-  let content = `
-    <div class="section">
-      <h2>Developer Assignments - Workload Overview</h2>
-  `;
+function buildHeaderHTML(reportData, analysis, reportType) {
+  const title = escapeHtml(reportData.title || 'Technical Analysis Report - Component Health');
+  const generatedAt = escapeHtml(reportData.generatedAt || new Date().toLocaleString());
+  const type = escapeHtml((reportType || reportData.type || 'Technical Analysis'));
+  const analysisTime = escapeHtml(getAnalysisTime(analysis));
 
-  if (assignments.length > 0) {
-    content += `
-      <table class="table">
+  return `
+  <header class="titlebar">
+    <h1 class="title">${title}</h1>
+    <div class="meta">
+      <span><strong>Generated:</strong> ${generatedAt}</span>
+      <span><strong>Type:</strong> ${type}</span>
+      <span><strong>Analysis Time:</strong> ${analysisTime}</span>
+    </div>
+    <div class="divider"></div>
+    <h2 class="section-lead">Technical Analysis - All Story Types</h2>
+  </header>`;
+}
+
+function buildKPIHTML(summary) {
+  const s = summary || emptySummary();
+  return `
+  <section class="kpi">
+    <div class="kpi-grid">
+      <div class="kpi-card total"><div class="val">${s.totalStories}</div><div class="lab">Total Stories</div></div>
+      <div class="kpi-card blocked"><div class="val">${s.blockedStories}</div><div class="lab">Blocked Stories</div></div>
+      <div class="kpi-card conflict"><div class="val">${s.conflictStories}</div><div class="lab">Conflict Stories</div></div>
+      <div class="kpi-card safe"><div class="val">${s.safeStories}</div><div class="lab">Safe Stories</div></div>
+      <div class="kpi-card safewc"><div class="val">${s.safeWithCommitStories}</div><div class="lab">Safe with Commit</div></div>
+    </div>
+  </section>`;
+}
+
+function buildComponentConflictsHTML(rows) {
+  rows = Array.isArray(rows) ? rows : [];
+  if (!rows.length) {
+    return `<section class="section"><p class="nodata">No component conflicts found.</p></section>`;
+  }
+  return `
+  <section class="section">
+    <h2>Component Conflict Analysis (${rows.length} Unique Components)</h2>
+    <div class="table-wrap">
+      <table class="tbl">
+        <colgroup>
+          <col class="col-type"><col class="col-name"><col class="col-num"><col class="col-dev">
+          <col class="col-story"><col class="col-dev2"><col class="col-date"><col class="col-hash"><col class="col-involved">
+        </colgroup>
         <thead>
           <tr>
-            <th>Developer</th>
-            <th>Blocked</th>
-            <th>Conflicts</th>
-            <th>Safe</th>
-            <th>Safe with Commit</th>
-            <th>Total</th>
+            <th>Component Type</th>
+            <th>Component Name</th>
+            <th>Unique Stories</th>
+            <th>Developers</th>
+            <th>Latest Story</th>
+            <th>Latest Developer</th>
+            <th>Latest Commit</th>
+            <th>Commit Hash</th>
+            <th>Involved Stories</th>
           </tr>
         </thead>
         <tbody>
-          ${assignments.map(dev => `
+          ${rows.map(r => `
             <tr>
-              <td>${escapeHtml(dev.developer || 'Unknown')}</td>
-              <td class="center-cell">${dev.blocked || 0}</td>
-              <td class="center-cell">${dev.conflicts || 0}</td>
-              <td class="center-cell">${dev.safe || 0}</td>
-              <td class="center-cell">${dev.safeWithCommit || 0}</td>
-              <td class="center-cell"><strong>${dev.total || 0}</strong></td>
-            </tr>
-          `).join('')}
+              <td>${escapeHtml(r.componentType || 'N/A')}</td>
+              <td>${escapeHtml(r.componentName || 'N/A')}</td>
+              <td class="td-right">${Number.isFinite(r.uniqueStories) ? r.uniqueStories : 0}</td>
+              <td>${escapeHtml(r.developers || 'N/A')}</td>
+              <td>${escapeHtml(r.latestStory || 'N/A')}</td>
+              <td>${escapeHtml(r.latestDeveloper || 'N/A')}</td>
+              <td>${escapeHtml(r.latestCommitDate || 'N/A')}</td>
+              <td class="td-mono">${escapeHtml(r.latestCommitHash || 'N/A')}</td>
+              <td>${escapeHtml(r.involvedStories || 'N/A')}</td>
+            </tr>`).join('')}
         </tbody>
       </table>
-    `;
-  } else {
-    content += `<p class="no-data">No developer assignments found.</p>`;
-  }
-
-  content += `</div>`;
-
-  // Blocked Actions
-  if (blockedActions.length > 0) {
-    content += `
-      <div class="section">
-        <h2>Blocked Story Actions (${blockedActions.length})</h2>
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Developer</th>
-              <th>Story ID</th>
-              <th>Action</th>
-              <th>Priority</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${blockedActions.map(action => `
-              <tr>
-                <td>${escapeHtml(action.developer || 'Unknown')}</td>
-                <td>${escapeHtml(action.story_id || 'N/A')}</td>
-                <td>${escapeHtml(action.action || 'No action specified')}</td>
-                <td><strong>High</strong></td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
-  }
-
-  // Conflict Actions
-  if (conflictActions.length > 0) {
-    content += `
-      <div class="section">
-        <h2>Conflict Resolution Actions (${conflictActions.length})</h2>
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Developer</th>
-              <th>Story ID</th>
-              <th>Action</th>
-              <th>Priority</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${conflictActions.map(action => `
-              <tr>
-                <td>${escapeHtml(action.developer || 'Unknown')}</td>
-                <td>${escapeHtml(action.story_id || 'N/A')}</td>
-                <td>${escapeHtml(action.action || 'No action specified')}</td>
-                <td><strong>Medium</strong></td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
-  }
-
-  // Safe with Commit Actions
-  if (safeWithCommitDeployments.length > 0) {
-    content += `
-      <div class="section">
-        <h2>Safe with Commit Deployment Actions (${safeWithCommitDeployments.length})</h2>
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Developer</th>
-              <th>Story ID</th>
-              <th>Action</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${safeWithCommitDeployments.map(action => `
-              <tr>
-                <td>${escapeHtml(action.developer || 'Unknown')}</td>
-                <td>${escapeHtml(action.story_id || 'N/A')}</td>
-                <td>${escapeHtml(action.action || 'No action specified')}</td>
-                <td><strong>Ready</strong></td>
-              </tr>
-            `).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
-  }
-
-  return content;
+    </div>
+  </section>`;
 }
 
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
+function buildConflictStoriesHTML(rows) {
+  rows = Array.isArray(rows) ? rows : [];
+  if (!rows.length) return `<section class="section"><h2>Conflict Stories (0)</h2><p class="nodata">No conflict stories found.</p></section>`;
+  return `
+  <section class="section">
+    <h2>Conflict Stories (${rows.length})</h2>
+    <div class="table-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Story ID</th>
+            <th>Developer</th>
+            <th>Conflict Components</th>
+            <th>Resolution Status</th>
+            <th>Conflicting With</th>
+            <th>Deployment Task</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(s => `
+            <tr>
+              <td>${escapeHtml(s.story_id || 'N/A')}</td>
+              <td>${escapeHtml(s.developer || 'Unknown')}</td>
+              <td>${escapeHtml((s.conflict_components||[]).join(', ') || '—')}</td>
+              <td>${escapeHtml(s.resolution_status || 'Potential Conflict')}</td>
+              <td>${escapeHtml((s.conflicting_with||[]).join(', ') || '—')}</td>
+              <td>${s.has_deployment_task ? 'Yes' : 'No'}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  </section>`;
 }
+
+function buildSafeStoriesHTML(rows) {
+  rows = Array.isArray(rows) ? rows : [];
+  return `
+  <section class="section">
+    <h2>Safe Stories (${rows.length})</h2>
+    <div class="table-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Story ID</th>
+            <th>Developer</th>
+            <th>Component Count</th>
+            <th>Latest Commit</th>
+            <th>Deployment Task</th>
+            <th>Task Type</th>
+            <th>Timing</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(s => `
+            <tr>
+              <td>${escapeHtml(s.story_id || 'N/A')}</td>
+              <td>${escapeHtml(s.developer || 'N/A')}</td>
+              <td class="td-right">${Number.isFinite(s.component_count) ? s.component_count : 0}</td>
+              <td>N/A</td>
+              <td>${s.has_deployment_task ? 'Yes' : 'No'}</td>
+              <td>${escapeHtml(s.task_type || 'N/A')}</td>
+              <td>${escapeHtml(s.timing || 'N/A')}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+  </section>`;
+}
+
+function buildSafeWithCommitHTML(rows) {
+  rows = Array.isArray(rows) ? rows : [];
+  return `
+  <section class="section">
+    <h2>Safe Stories with Commit (${rows.length})</h2>
+    <div class="table-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Story ID</th>
+            <th>Developer</th>
+            <th>Component Count</th>
+            <th>Latest Commit</th>
+            <th>Deployment Task</th>
+            <th>Task Type</th>
+            <th>Timing</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(s => {
+            const latest = (s.commit_date && s.commit_date !== 'N/A')
+              ? `${(s.commit_hash && s.commit_hash !== 'N/A') ? (s.commit_hash.slice(0,8) + '…') : 'N/A'} · ${s.commit_date}`
+              : 'N/A';
+            return `
+              <tr>
+                <td>${escapeHtml(s.story_id || 'N/A')}</td>
+                <td>${escapeHtml(s.developer || 'N/A')}</td>
+                <td class="td-right">${Number.isFinite(s.component_count) ? s.component_count : 0}</td>
+                <td class="td-mono">${escapeHtml(latest)}</td>
+                <td>${s.has_deployment_task ? 'Yes' : 'No'}</td>
+                <td>${escapeHtml(s.task_type || 'N/A')}</td>
+                <td>${escapeHtml(s.timing || 'N/A')}</td>
+              </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  </section>`;
+}
+
+/* ------------------------------ HTML builder ------------------------------ */
+
+function buildPDFHtml(reportData, analysis, reportType) {
+  const data = normalizeReportForExport(reportData);
+  const header = buildHeaderHTML(data, analysis, reportType);
+  const kpis = buildKPIHTML(data.summary);
+
+  const synthesizedConflicts =
+    (Array.isArray(data.conflictStories) && data.conflictStories.length)
+      ? data.conflictStories
+      : synthesizeConflictStoriesFromComponents(data);
+
+  const comp = buildComponentConflictsHTML(data.componentConflicts);
+  const conflicts = buildConflictStoriesHTML(synthesizedConflicts);
+  const safe = buildSafeStoriesHTML(data.safeStories);
+  const safec = buildSafeWithCommitHTML(data.safeWithCommitStories);
+  const blocked = buildBlockedStoriesHTML(data.blockedStories);
+
+  return `
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${escapeHtml(data.title || 'Deployment Report')}</title>
+  <style>
+    :root{
+      --blue:#2a5da6; --blueDeep:#1f4fbf; --border:#dfe3ec; --muted:#555; --bg:#ffffff;
+      --thead:#f5f7fb; --rowEven:#fbfcff;
+    }
+    *{ box-sizing:border-box; }
+    html,body{ margin:0; padding:0; }
+    body{ background:#f3f6fb; color:#111; font-family:Inter,system-ui,Segoe UI,Roboto,Arial,sans-serif; }
+
+    .page{ max-width:1200px; margin:24px auto 36px; background:var(--bg);
+           border:1px solid var(--border); border-radius:14px; padding:24px 24px 32px; }
+
+    .titlebar{ text-align:center; }
+    .title{ margin:.25rem 0; font-size:28px; font-weight:800; color:var(--blueDeep); }
+    .meta{ display:flex; gap:16px; justify-content:center; flex-wrap:wrap; color:#444; margin-top:6px; }
+    .divider{ height:3px; background:var(--blue); opacity:.35; margin:14px 0 10px; border-radius:2px; }
+    .section-lead{ margin:0 0 12px; font-size:20px; color:#123; }
+
+    .kpi{ margin:10px 0 18px; }
+    .kpi-grid{ display:grid; grid-template-columns:repeat(5, 1fr); gap:12px; }
+    .kpi-card{ border:1px solid var(--border); border-radius:14px; padding:14px; background:#fff;
+               box-shadow:0 1px 2px rgba(0,0,0,.04), inset 0 2px 6px rgba(0,0,0,.03); text-align:center; }
+    .kpi-card .val{ font-size:26px; font-weight:800; margin-bottom:4px; }
+    .kpi-card .lab{ color:var(--muted); font-weight:600; font-size:14px; }
+    .kpi-card.total{ background:linear-gradient(135deg, #1f4fbf, #1954a8); color:#fff; }
+    .kpi-card.blocked{ background:#fff5f5; } .kpi-card.blocked .val{ color:#c62828; }
+    .kpi-card.conflict{ background:#fff8ec; } .kpi-card.conflict .val{ color:#f57c00; }
+    .kpi-card.safe{ background:#f0fbf3; } .kpi-card.safe .val{ color:#1b8a3e; }
+    .kpi-card.safewc{ background:#f4f8ff; } .kpi-card.safewc .val{ color:#1f4fbf; }
+
+    .section{ margin:20px 0; page-break-inside:avoid; }
+    .section h2{ margin:0 0 10px; font-size:18px; color:#123; }
+    .nodata{ color:#777; font-style:italic; }
+
+    .table-wrap{ width:100%; overflow:auto; border:1px solid var(--border); border-radius:10px; background:#fff; }
+    table.tbl{
+      width:100%;
+      border-collapse:collapse; /* crisp grid */
+      table-layout:fixed;       /* consistent column widths */
+      font-size:13px;
+      min-width:1000px;
+    }
+    .tbl colgroup col.col-type{ width:140px }
+    .tbl colgroup col.col-name{ width:320px }
+    .tbl colgroup col.col-num{ width:120px }
+    .tbl colgroup col.col-dev{ width:220px }
+    .tbl colgroup col.col-story{ width:120px }
+    .tbl colgroup col.col-dev2{ width:160px }
+    .tbl colgroup col.col-date{ width:170px }
+    .tbl colgroup col.col-hash{ width:140px }
+    .tbl colgroup col.col-involved{ width:auto }
+
+    .tbl thead th{
+      background:var(--thead); color:#223;
+      border:1px solid var(--border); padding:9px 10px; font-weight:700; text-align:left;
+    }
+    .tbl tbody td{
+      border:1px solid var(--border);
+      padding:8px 10px; vertical-align:top; color:#111;
+      word-break:break-word;
+    }
+    .tbl tbody tr:nth-child(even){ background:var(--rowEven); }
+    .td-right{ text-align:right; }
+    .td-mono{ font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+    thead{ display:table-header-group; }
+    tfoot{ display:table-footer-group; }
+
+    @page{ size:A4; margin:14mm 12mm; }
+    @media print{
+      body{ background:#fff; }
+      .page{ border:none; margin:0; border-radius:0; }
+      .table-wrap{ overflow:visible; }
+      .kpi-grid{ grid-template-columns:repeat(5, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    ${header}
+    ${kpis}
+    ${comp}
+    ${conflicts}
+    ${safe}
+    ${safec}
+    ${blocked}
+  </div>
+  <script>
+    setTimeout(() => { try { window.print(); } catch(e) {} }, 100);
+  </script>
+</body>
+</html>`;
+}
+
+function buildBlockedStoriesHTML(rows) {
+  rows = Array.isArray(rows) ? rows : [];
+  if (!rows.length) return `<section class="section"><h2>Blocked Stories (0)</h2><p class="nodata">No blocked stories found.</p></section>`;
+  return `
+  <section class="section">
+    <h2>Blocked Stories (${rows.length})</h2>
+    <div class="table-wrap">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Story ID</th>
+            <th>Developer</th>
+            <th>Blocking Components</th>
+            <th>Why Blocked (Reasons)</th>
+            <th>Conflicting With</th>
+            <th>Deployment Task</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map(s => {
+            const comps = (s.blocking_components || []).join(', ') || '—';
+            const reasons = (s.blocking_reasons || []).join(' | ') || '—';
+            const blockers = (s.production_blockers || [])
+              .map(b => `${b.production_story_id || ''}${b.production_developer ? ' (' + b.production_developer + ')' : ''}`)
+              .filter(Boolean)
+              .join(', ') || '—';
+            return `
+              <tr>
+                <td>${escapeHtml(s.story_id || 'N/A')}</td>
+                <td>${escapeHtml(s.developer || 'N/A')}</td>
+                <td>${escapeHtml(comps)}</td>
+                <td>${escapeHtml(reasons)}</td>
+                <td>${escapeHtml(blockers)}</td>
+                <td>${s.has_deployment_task ? 'Yes' : 'No'}</td>
+              </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+  </section>`;
+}
+
+/* ------------------------------ Public API ------------------------------ */
+
+// Popup-safe, non-throwing on popup block (falls back to hidden iframe)
+export function exportToPDF(reportData, analysis = {}, reportType = 'technical') {
+  try {
+    const html = buildPDFHtml(reportData, analysis, reportType);
+
+    // Try new window/tab first
+    let win = null;
+    try { win = window.open('', '_blank', 'noopener,noreferrer,width=1280,height=900'); } catch {}
+    if (win && !win.closed) {
+      try {
+        win.document.open();
+        win.document.write(html);
+        win.document.close();
+        return;
+      } catch (e) {
+        console.warn('PDF: popup write failed, falling back to iframe.', e);
+      }
+    }
+
+    // Fallback: hidden iframe (no popup needed)
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(iframe);
+
+    const idoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!idoc) throw new Error('No iframe document');
+    idoc.open();
+    idoc.write(html);
+    idoc.close();
+
+    setTimeout(() => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch (e) {
+        console.warn('PDF: iframe print failed; offering HTML download fallback.', e);
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = (reportData?.title || 'deployment-report') + '.html';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } finally {
+        setTimeout(() => { try { document.body.removeChild(iframe); } catch {} }, 2000);
+      }
+    }, 200);
+  } catch (err) {
+    // Non-fatal: log only
+    console.error('PDF export error:', err);
+  }
+}
+
+export default { exportToPDF };

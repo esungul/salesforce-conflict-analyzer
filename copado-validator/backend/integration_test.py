@@ -1,22 +1,22 @@
-# integration_test.py
-"""
-Test the specific integration points your existing app will use
-"""
-from deployment_prover import DeploymentProver
+# test_pattern.py
+import re
 
-# Test the exact methods your app will call
-prover = DeploymentProver(mock_mode=True)
+test_strings = [
+    "Apple iPad 9th Gen 10.2 inch (LLA_Apple_iPad_9th_Gen_2021_64GB / 35121504-36d6-7cf1-2cad-9e129a18598f)",
+    "Samsung Galaxy S25 Ultra (LLA_Samsung_Galaxy_S25_Ultra / 9d95bc32-06da-b97f-60ce-808047f576bd)"
+]
 
-# 1. Single story deployment
-result1 = prover.prove_story_deployment("US-0033960", "QASales")
+pattern = "\\(([^/]+)"
 
-# 2. Multiple stories
-result2 = prover.prove_deployment(["US-0033960", "US-0033961"], "QASales")
+print("🧪 Testing Pattern Matching:")
+print("=" * 80)
 
-# 3. Release deployment  
-result3 = prover.prove_release_deployment("R2024-10", "UAT")
-
-print("✅ All integration points work")
-print(f"Single story: {result1['overall_proof']['verdict']}")
-print(f"Multiple stories: {result2['overall_proof']['verdict']}") 
-print(f"Release: {result3['overall_proof']['verdict']}")
+for test_string in test_strings:
+    match = re.search(pattern, test_string)
+    if match:
+        print(f"✅ INPUT:  {test_string}")
+        print(f"   MATCH:  '{match.group(1)}'")
+    else:
+        print(f"❌ INPUT:  {test_string}")
+        print(f"   NO MATCH for pattern: {pattern}")
+    print("-" * 60)

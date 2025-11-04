@@ -1,700 +1,1322 @@
 // ui/src/ui/tabs/reports-enhanced.js
 import { createFilterBar } from '../components/filterBar.js';
 import { generateDeploymentReport } from '../components/report-generator.js';
-import { exportToHTML } from '../utils/export-html.js';
-import { exportToCSV } from '../utils/export-csv.js';
+import { exportToPDF } from '../utils/export-pdf-simple.js';
+import { exportToXLS } from '../utils/export-xls.js';
 
 const $ = (s, r=document) => r.querySelector(s);
 
-let REPORTS_STATE = {
-  reportType: localStorage.getItem('ui.reports.type') || 'executive',
-  includeDetails: localStorage.getItem('ui.reports.details') === 'true',
-  includeTimeline: localStorage.getItem('ui.reports.timeline') === 'true'
-};
+// Fallback if createElement isn't globally provided
+function createElement(tag, props = {}, children = []) {
+  const el = document.createElement(tag);
+  Object.assign(el, props);
+  if (!Array.isArray(children)) children = [children];
+  children.forEach(c => el.append(c));
+  return el;
+}
 
+// Only allow 'technical' or 'developer'
+let REPORTS_STATE = {
+  reportType: localStorage.getItem('ui.reports.type') || 'technical'
+};
+const _ALLOWED_TYPES = new Set(['technical', 'developer']);
+if (!_ALLOWED_TYPES.has(REPORTS_STATE.reportType)) {
+  REPORTS_STATE.reportType = 'technical';
+  localStorage.setItem('ui.reports.type', 'technical');
+}
+
+let CURRENT_ANALYSIS = {};
+let CURRENT_REPORT_DATA = {};
+
+// -----------------------------
+// Public entry
+// -----------------------------
 export function renderReportsTab(analysis = {}) {
   const panel = $('#tab-reports');
   if (!panel) return;
+
+  CURRENT_ANALYSIS = analysis;
+  if (!analysis || typeof analysis !== 'object') {
+    console.warn('⚠ No analysis passed to renderReportsTab; showing placeholder.');
+  }
 
   panel.innerHTML = '';
 
   // Header
   const header = createElement('div', { className: 'section-header' }, [
-    createElement('h2', {}, 'Deployment Reports'),
-    createElement('p', { className: 'muted' }, 'Generate comprehensive deployment readiness reports')
+    createElement('h2', { className: 'section-title' }, '📊 Deployment Reports'),
+    createElement('p', { className: 'section-subtitle' }, 'Generate comprehensive deployment readiness reports with detailed component analysis')
   ]);
   panel.append(header);
 
-  // Report Type Selection
-  const typeSection = createElement('div', { className: 'report-type-section' });
+  // Type chooser
+  const typeSection = createElement('div', { className: 'report-type-section card' });
   typeSection.innerHTML = `
-    <h3>📋 Report Type</h3>
+    <h3 class="section-heading">📋 Report Type</h3>
     <div class="report-type-grid">
-      <div class="report-type-card ${REPORTS_STATE.reportType === 'executive' ? 'selected' : ''}" data-type="executive">
-        <div class="type-icon">📈</div>
-        <div class="type-info">
-          <h4>Executive Summary</h4>
-          <p>High-level overview for managers</p>
-        </div>
-      </div>
-      <div class="report-type-card ${REPORTS_STATE.reportType === 'developer' ? 'selected' : ''}" data-type="developer">
-        <div class="type-icon">👤</div>
-        <div class="type-info">
-          <h4>Developer Focused</h4>
-          <p>Individual assignments & actions</p>
-        </div>
-      </div>
       <div class="report-type-card ${REPORTS_STATE.reportType === 'technical' ? 'selected' : ''}" data-type="technical">
         <div class="type-icon">🔧</div>
         <div class="type-info">
-          <h4>Technical Deep Dive</h4>
-          <p>Component-level analysis</p>
+          <h4>Technical Analysis</h4>
+          <p>Component-level conflict details</p>
+          <div class="type-features">
+            <span class="feature-item">• Component conflict mapping</span>
+            <span class="feature-item">• Resolution priority</span>
+            <span class="feature-item">• Copado status details</span>
+          </div>
+        </div>
+      </div>
+      <div class="report-type-card ${REPORTS_STATE.reportType === 'developer' ? 'selected' : ''}" data-type="developer">
+        <div class="type-icon">👥</div>
+        <div class="type-info">
+          <h4>Developer Focused</h4>
+          <p>Individual assignments & actions</p>
+          <div class="type-features">
+            <span class="feature-item">• Developer-specific actions</span>
+            <span class="feature-item">• Conflict resolution tasks</span>
+            <span class="feature-item">• Deployment readiness</span>
+          </div>
         </div>
       </div>
     </div>
   `;
   panel.append(typeSection);
 
-  // Report Options
-  const optionsSection = createElement('div', { className: 'report-options-section' });
-  optionsSection.innerHTML = `
-    <h3>⚙️ Report Options</h3>
-    <div class="options-grid">
-      <label class="option-checkbox">
-        <input type="checkbox" ${REPORTS_STATE.includeDetails ? 'checked' : ''} id="include-details">
-        <span class="checkmark"></span>
-        Include component details
-      </label>
-      <label class="option-checkbox">
-        <input type="checkbox" ${REPORTS_STATE.includeTimeline ? 'checked' : ''} id="include-timeline">
-        <span class="checkmark"></span>
-        Include timeline data
-      </label>
-      <label class="option-checkbox">
-        <input type="checkbox" checked id="include-recommendations">
-        <span class="checkmark"></span>
-        Include recommendations
-      </label>
-    </div>
-  `;
-  panel.append(optionsSection);
-
-  // Action Buttons
-  const actionsSection = createElement('div', { className: 'report-actions-section' });
-  actionsSection.innerHTML = `
-    <h3>🎯 Generate Report</h3>
+  // Actions
+  const actionsSection = createElement('div', { className: 'report-actions-section card' });
+   actionsSection.innerHTML = `
+    <h3 class="section-heading">🎯 Generate Report</h3>
     <div class="actions-grid">
       <button class="btn btn-primary generate-btn" id="generate-report">
-        🚀 Generate Deployment Report
+        <span class="btn-icon">🚀</span>
+        Generate Enhanced Report
       </button>
-      <div class="export-buttons">
-        <button class="btn btn-secondary export-btn" data-format="html" disabled>
-          📄 Export as HTML
-        </button>
-        <button class="btn btn-secondary export-btn" data-format="csv" disabled>
-          📊 Export as CSV
-        </button>
-        <button class="btn btn-secondary export-btn" data-format="pdf" disabled>
-          📑 Export as PDF
-        </button>
-      </div>
     </div>
   `;
   panel.append(actionsSection);
 
-  // Report Preview
-  const previewSection = createElement('div', { className: 'report-preview-section' });
+  // Preview container
+  const previewSection = createElement('div', { className: 'report-preview-section card' });
   previewSection.innerHTML = `
-    <h3>📊 Report Preview</h3>
+    <h3 class="section-heading">📋 Report Preview</h3>
     <div class="report-preview" id="report-preview">
       <div class="preview-placeholder">
         <div class="placeholder-icon">📋</div>
         <h4>No Report Generated</h4>
-        <p>Click "Generate Deployment Report" to create your first report</p>
+        <p>Click "Generate Enhanced Report" to create your first detailed analysis</p>
+        <div class="preview-features">
+          <div class="feature">
+            <span class="feature-icon">🔍</span>
+            <span class="feature-text">Component-level blocking reasons</span>
+          </div>
+          <div class="feature">
+            <span class="feature-icon">🔄</span>
+            <span class="feature-text">Conflict story mapping</span>
+          </div>
+          <div class="feature">
+            <span class="feature-icon">✅</span>
+            <span class="feature-text">Deployment readiness status</span>
+          </div>
+        </div>
       </div>
     </div>
   `;
   panel.append(previewSection);
 
-  // Event Listeners
   setupEventListeners(panel, analysis);
-  injectCss();
+  injectEnhancedCss();
 }
 
 function setupEventListeners(panel, analysis) {
-  // Report type selection
+  // Type selection
   panel.querySelectorAll('.report-type-card').forEach(card => {
     card.addEventListener('click', () => {
       panel.querySelectorAll('.report-type-card').forEach(c => c.classList.remove('selected'));
       card.classList.add('selected');
       REPORTS_STATE.reportType = card.dataset.type;
       localStorage.setItem('ui.reports.type', REPORTS_STATE.reportType);
+      console.log('🧭 Report type set to:', REPORTS_STATE.reportType);
     });
   });
 
-  // Options checkboxes
-  panel.querySelector('#include-details').addEventListener('change', (e) => {
-    REPORTS_STATE.includeDetails = e.target.checked;
-    localStorage.setItem('ui.reports.details', REPORTS_STATE.includeDetails);
-  });
-
-  panel.querySelector('#include-timeline').addEventListener('change', (e) => {
-    REPORTS_STATE.includeTimeline = e.target.checked;
-    localStorage.setItem('ui.reports.timeline', REPORTS_STATE.includeTimeline);
-  });
-
-  // Generate report button
-  panel.querySelector('#generate-report').addEventListener('click', () => {
-    generateAndDisplayReport(analysis, panel);
-  });
-
-  // Export buttons
-  panel.querySelectorAll('.export-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const format = e.target.dataset.format;
-      exportReport(format, analysis, panel);
+  // Generate button only
+  const generateBtn = panel.querySelector('#generate-report');
+  if (generateBtn) {
+    generateBtn.addEventListener('click', () => {
+      generateAndDisplayReport(analysis, panel);
     });
-  });
+  }
+
+  // Export buttons removed from here
 }
 
+// -----------------------------
+// Generation + Preview
+// -----------------------------
 function generateAndDisplayReport(analysis, panel) {
   const generateBtn = panel.querySelector('#generate-report');
   const preview = panel.querySelector('#report-preview');
-  
-  // Show loading state
-  generateBtn.innerHTML = '⏳ Generating Report...';
-  generateBtn.disabled = true;
-  preview.innerHTML = '<div class="loading-report">Generating deployment report...</div>';
+  if (!generateBtn || !preview) return;
 
-  // Simulate processing time
+  generateBtn.innerHTML = '⏳ Generating Enhanced Report...';
+  generateBtn.disabled = true;
+  preview.innerHTML = `
+    <div class="loading-report">
+      <div class="loading-spinner"></div>
+      <h4>Generating Enhanced Analysis</h4>
+      <p>Analyzing component conflicts, blocking reasons, and deployment readiness...</p>
+    </div>
+  `;
+
   setTimeout(() => {
     try {
-      const reportData = generateDeploymentReport(analysis, REPORTS_STATE);
-      displayReportPreview(reportData, panel);
-      
-      // Enable export buttons
-      panel.querySelectorAll('.export-btn').forEach(btn => {
-        btn.disabled = false;
-      });
-      
+      const type = _ALLOWED_TYPES.has(REPORTS_STATE.reportType) ? REPORTS_STATE.reportType : 'technical';
+      console.log('🚀 Generating report', { type, analysisKeys: Object.keys(analysis || {}) });
+
+      const reportData = generateDeploymentReport(analysis || {}, { ...REPORTS_STATE, reportType: type });
+      if (!reportData || typeof reportData !== 'object') throw new Error('Report generator returned no data');
+
+      if (reportData.type === 'technical' && !Array.isArray(reportData.componentConflicts)) {
+        console.warn('⚠ componentConflicts missing for technical report; defaulting to empty array');
+        reportData.componentConflicts = [];
+      }
+
+      CURRENT_REPORT_DATA = reportData;
+      window.__report = reportData; // debug helper
+      window.__conflicts = reportData.componentConflicts || [];
+
+   panel.querySelectorAll('.export-btn').forEach(btn => { btn.disabled = false; });
+      const copyBtn = panel.querySelector('#copy-conflicts-json');
+      if (copyBtn) {
+        copyBtn.disabled = false;
+        copyBtn.onclick = async () => {
+          try {
+            await navigator.clipboard.writeText(JSON.stringify(reportData.componentConflicts || [], null, 2));
+            copyBtn.textContent = '✅ Copied!';
+            setTimeout(() => (copyBtn.innerHTML = '<span class="btn-icon">📋</span> Copy Component Conflicts (JSON)'), 1200);
+          } catch (e) {
+            console.error('❌ Copy failed:', e);
+            copyBtn.textContent = '❌ Copy failed';
+            setTimeout(() => (copyBtn.innerHTML = '<span class="btn-icon">📋</span> Copy Component Conflicts (JSON)'), 1200);
+          }
+        };
+      }
+
+      displayEnhancedReportPreview(reportData, panel, analysis);
     } catch (error) {
-      console.error('Error generating report:', error);
+      console.error('❌ Error generating enhanced report:', error);
       preview.innerHTML = `
         <div class="error-report">
           <div class="error-icon">❌</div>
-          <h4>Error Generating Report</h4>
-          <p>${error.message}</p>
-          <button class="btn btn-secondary" onclick="renderReportsTab(analysis)">Try Again</button>
+          <h4>Error Generating Enhanced Report</h4>
+          <p>${error?.message || 'Unknown error'}</p>
+          <pre style="text-align:left;white-space:pre-wrap;background:#fff;border:1px solid #eee;border-radius:8px;padding:8px;max-height:160px;overflow:auto;">
+${(error && error.stack) || ''}
+          </pre>
+          <button class="btn btn-secondary retry-btn">Try Again</button>
         </div>
       `;
+      preview.querySelector('.retry-btn')?.addEventListener('click', () => generateAndDisplayReport(analysis, panel));
     } finally {
-      generateBtn.innerHTML = '🚀 Generate Deployment Report';
+      generateBtn.innerHTML = '🚀 Generate Enhanced Report';
       generateBtn.disabled = false;
     }
-  }, 1000);
+  }, 400);
 }
 
-function displayReportPreview(reportData, panel) {
+function displayEnhancedReportPreview(reportData, panel, analysis) {
   const preview = panel.querySelector('#report-preview');
-  
+  if (!preview) return;
+
+  // Early exit if empty
+  if (!reportData || typeof reportData !== 'object') {
+    preview.innerHTML = `
+      <div class="error-report">
+        <div class="error-icon">⚠️</div>
+        <h4>No Report Data</h4>
+        <p>The report object is empty. Try generating again.</p>
+      </div>`;
+    return;
+  }
+
+  const reportType = reportData.type || 'technical';
+  const titleHTML = renderReportTitleBar(reportData, analysis);
+  const kpiHTML = renderKPISection(reportData);
+
   preview.innerHTML = `
-    <div class="report-content">
-      <header class="report-header">
-        <h1>${reportData.title}</h1>
-        <div class="report-meta">
-          <span class="report-date">Generated: ${reportData.generatedAt}</span>
-          <span class="report-type">Type: ${reportData.type}</span>
-        </div>
-      </header>
-      
-      <section class="executive-summary">
-        <h2>📈 Executive Summary</h2>
-        <div class="summary-grid">
-          <div class="summary-card total">
-            <div class="summary-value">${reportData.summary.totalStories}</div>
-            <div class="summary-label">Total Stories</div>
+    <div class="enhanced-preview">
+      ${titleHTML}
+      ${kpiHTML}
+
+      <!-- Export Toolbar -->
+      <div class="export-toolbar">
+       
+        <button id="export-xls" class="export-btn">📊 Export XLS</button>
+        
+      </div>
+
+      <div id="preview-scroll-container">
+        ${generateTechnicalPreview(reportData, analysis)}
+      </div>
+    </div>`;
+  
+  // Wire up export buttons
+  //const btnPdf = panel.querySelector('#export-pdf');
+  const btnXls = panel.querySelector('#export-xls');
+  //const btnPrint = panel.querySelector('#export-print');
+
+  //if (btnPdf) btnPdf.onclick = () => exportToPDF(reportData, analysis, reportType);
+  //if (btnPrint) btnPrint.onclick = () => window.print();
+
+  if (btnXls) {
+  btnXls.onclick = () => {
+    try {
+      const data = typeof normalizeReportForExport === 'function'
+        ? normalizeReportForExport(CURRENT_REPORT_DATA)
+        : CURRENT_REPORT_DATA;
+      const type = data?.type || 'technical';
+      exportToXLS(data, analysis || window.CURRENT_ANALYSIS || {}, type);
+    } catch (e) {
+      console.error('Export failed:', e);
+    }
+  };
+}
+}
+
+
+
+
+function generateTechnicalPreview(reportData/*, analysis*/) {
+  const componentConflicts = Array.isArray(reportData.componentConflicts) ? reportData.componentConflicts : [];
+  const blocked = Array.isArray(reportData.blockedStories) ? reportData.blockedStories : [];
+  const safe = Array.isArray(reportData.safeStories) ? reportData.safeStories : [];
+  const safeWC = Array.isArray(reportData.safeWithCommitStories) ? reportData.safeWithCommitStories : [];
+
+  // --- Component conflicts (unchanged) ---
+  const conflictsTable = `
+    <section class="component-conflicts">
+      <h2>🔗 Component Conflict Analysis (${componentConflicts.length} Unique Components)</h2>
+      <p class="section-description">Each component appears once with all affected stories and developers.</p>
+      <div class="table-container">
+        <div class="details-table component-conflict-table">
+          <div class="table-header">
+            <span class="col-comp-type">Component Type</span>
+            <span class="col-comp-name">Component Name</span>
+            <span class="col-unique-stories">Unique Stories</span>
+            <span class="col-developers">Developers</span>
+            <span class="col-latest-story">Latest Story</span>
+            <span class="col-latest-developer">Latest Developer</span>
+            <span class="col-latest-commit">Latest Commit</span>
+            <span class="col-commit-hash">Commit Hash</span>
+            <span class="col-involved-stories">Involved Stories</span>
           </div>
-          <div class="summary-card ready">
-            <div class="summary-value">${reportData.summary.readyStories}</div>
-            <div class="summary-label">Ready to Deploy</div>
-            <div class="summary-percent">${reportData.summary.readyPercent}%</div>
-          </div>
-          <div class="summary-card conflicts">
-            <div class="summary-value">${reportData.summary.conflictStories}</div>
-            <div class="summary-label">With Conflicts</div>
-            <div class="summary-percent">${reportData.summary.conflictPercent}%</div>
-          </div>
-          <div class="summary-card blocked">
-            <div class="summary-value">${reportData.summary.blockedStories}</div>
-            <div class="summary-label">Blocked</div>
-            <div class="summary-percent">${reportData.summary.blockedPercent}%</div>
-          </div>
-        </div>
-      </section>
-      
-      <section class="critical-actions">
-        <h2>🔴 Critical Actions</h2>
-        <div class="actions-list">
-          ${reportData.criticalActions.map((action, index) => `
-            <div class="action-item">
-              <span class="action-number">${index + 1}.</span>
-              <span class="action-text">${action}</span>
+          ${componentConflicts.map(comp => `
+            <div class="table-row">
+              <span class="col-comp-type" title="${comp.componentType || 'N/A'}">${comp.componentType || 'N/A'}</span>
+              <span class="col-comp-name" title="${comp.componentName || 'N/A'}">${comp.componentName || 'N/A'}</span>
+              <span class="col-unique-stories">${comp.uniqueStories ?? 0}</span>
+              <span class="col-developers" title="${comp.developers || 'N/A'}">${comp.developers || 'N/A'}</span>
+              <span class="col-latest-story">${comp.latestStory || 'N/A'}</span>
+              <span class="col-latest-developer" title="${comp.latestDeveloper || 'N/A'}">${comp.latestDeveloper || 'N/A'}</span>
+              <span class="col-latest-commit">${comp.latestCommitDate || 'N/A'}</span>
+              <span class="col-commit-hash" title="${comp.latestCommitHash || 'N/A'}">
+                ${comp.latestCommitHash && comp.latestCommitHash !== 'N/A' ? comp.latestCommitHash.slice(0,8) + '…' : 'N/A'}
+              </span>
+              <span class="col-involved-stories" title="${comp.involvedStories || 'N/A'}">${comp.involvedStories || 'N/A'}</span>
             </div>
           `).join('')}
         </div>
-      </section>
-      
-      ${REPORTS_STATE.includeDetails ? `
-      <section class="team-assignments">
-        <h2>👥 Team Assignments</h2>
-        <div class="assignments-grid">
-          ${reportData.teamAssignments.map(dev => `
-            <div class="developer-card">
-              <h4>${dev.name}</h4>
-              <div class="developer-stats">
-                <span class="stat ready">${dev.ready} ready</span>
-                <span class="stat conflicts">${dev.conflicts} conflicts</span>
-                <span class="stat blocked">${dev.blocked} blocked</span>
+      </div>
+    </section>
+  `;
+
+  // --- Safe Stories (exact columns you requested) ---
+  const safeTable = `
+    <section class="safe-stories">
+      <h2>✅ Safe Stories (${safe.length})</h2>
+      <div class="table-container">
+        <div class="details-table safe-table">
+          <div class="table-header">
+            <span>Story ID</span>
+            <span>Developer</span>
+            <span>Component Count</span>
+            <span>Latest Commit</span>
+            <span>Deployment Task</span>
+            <span>Task Type</span>
+            <span>Timing</span>
+          </div>
+          ${safe.map(s => `
+            <div class="table-row">
+              <span title="${s.story_id || 'N/A'}">${s.story_id || 'N/A'}</span>
+              <span title="${s.developer || 'N/A'}">${s.developer || 'N/A'}</span>
+              <span>${s.component_count ?? 0}</span>
+              <span>${'N/A'}</span>
+              <span class="${s.has_deployment_task ? 'deployment-yes' : 'deployment-no'}">
+                ${s.has_deployment_task ? 'Yes' : 'No'}
+              </span>
+              <span>${s.task_type || 'N/A'}</span>
+              <span>${s.timing || 'N/A'}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </section>
+  `;
+
+  // --- Safe with Commit (exact columns; Latest Commit = short hash · ISO date) ---
+  const safeWithCommitTable = `
+    <section class="safe-commit-stories">
+      <h2>🟩 Safe Stories with Commit (${safeWC.length})</h2>
+      <div class="table-container">
+        <div class="details-table safecommit-table">
+          <div class="table-header">
+            <span>Story ID</span>
+            <span>Developer</span>
+            <span>Component Count</span>
+            <span>Latest Commit</span>
+            <span>Deployment Task</span>
+            <span>Task Type</span>
+            <span>Timing</span>
+          </div>
+          ${safeWC.map(s => `
+            <div class="table-row">
+              <span title="${s.story_id || 'N/A'}">${s.story_id || 'N/A'}</span>
+              <span title="${s.developer || 'N/A'}">${s.developer || 'N/A'}</span>
+              <span>${s.component_count ?? 0}</span>
+              <span title="${s.commit_hash || 'N/A'}">
+                ${
+                  s.commit_date && s.commit_date !== 'N/A'
+                    ? `${(s.commit_hash && s.commit_hash !== 'N/A') ? s.commit_hash.slice(0,8)+'…' : 'N/A'} · ${s.commit_date}`
+                    : 'N/A'
+                }
+              </span>
+              <span class="${s.has_deployment_task ? 'deployment-yes' : 'deployment-no'}">
+                ${s.has_deployment_task ? 'Yes' : 'No'}
+              </span>
+              <span>${s.task_type || 'N/A'}</span>
+              <span>${s.timing || 'N/A'}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    </section>
+  `;
+
+  // --- Blocked Stories (restored): includes WHY blocked ---
+  const blockedTable = `
+    <section class="blocked-stories">
+      <h2>⛔ Blocked Stories (${blocked.length})</h2>
+      <div class="table-container">
+        <div class="details-table blocked-table">
+          <div class="table-header">
+            <span>Story ID</span>
+            <span>Developer</span>
+            <span>Blocking Components</span>
+            <span>Why Blocked (Reasons)</span>
+            <span>Conflicting With</span>
+            <span>Deployment Task</span>
+          </div>
+          ${blocked.map(s => {
+            // Join reasons & blockers as in legacy table
+            const reasons = (s.blocking_reasons || []).join(' | ') || '—';
+            const blockers = (s.production_blockers || [])
+              .map(b =>
+                `${b.production_story_id || ''}${
+                  b.production_developer ? ' (' + b.production_developer + ')' : ''
+                }`
+              )
+              .filter(Boolean)
+              .join(', ') || '—';
+
+            return `
+              <div class="table-row">
+                <span title="${s.story_id || 'N/A'}">${s.story_id || 'N/A'}</span>
+                <span title="${s.developer || 'N/A'}">${s.developer || 'N/A'}</span>
+                <span title="${(s.blocking_components||[]).join(', ') || '—'}">${(s.blocking_components||[]).join(', ') || '—'}</span>
+                <span title="${reasons}">${reasons}</span>
+                <span title="${blockers}">${blockers}</span>
+                <span class="${s.has_deployment_task ? 'deployment-yes' : 'deployment-no'}">
+                  ${s.has_deployment_task ? 'Yes' : 'No'}
+                </span>
               </div>
-              ${dev.actions.length > 0 ? `
-                <div class="developer-actions">
-                  ${dev.actions.map(action => `<div class="dev-action">• ${action}</div>`).join('')}
-                </div>
-              ` : ''}
-            </div>
-          `).join('')}
+            `;
+          }).join('')}
         </div>
-      </section>
-      ` : ''}
-      
-      ${REPORTS_STATE.includeTimeline ? `
-      <section class="timeline-overview">
-        <h2>🕐 Timeline Overview</h2>
-        <div class="timeline-summary">
-          <p>Earliest conflict: ${reportData.timeline.earliestDate}</p>
-          <p>Latest update: ${reportData.timeline.latestDate}</p>
-          <p>Active development period: ${reportData.timeline.periodDays} days</p>
-        </div>
-      </section>
-      ` : ''}
-      
-      <section class="recommendations">
-        <h2>💡 Recommendations</h2>
-        <div class="recommendations-list">
-          ${reportData.recommendations.map((rec, index) => `
-            <div class="recommendation-item">
-              <span class="rec-number">${index + 1}.</span>
-              <span class="rec-text">${rec}</span>
-            </div>
-          `).join('')}
-        </div>
-      </section>
-    </div>
+      </div>
+    </section>
+  `;
+
+  // Order: Component → Safe → Safe with Commit → Blocked (or move Blocked up if you prefer)
+  return conflictsTable + safeTable + safeWithCommitTable + blockedTable + renderConflictStoriesSection(reportData);
+}
+
+
+
+// Developer preview stub (kept minimal)
+function generateDeveloperPreview(reportData/*, analysis*/) {
+  return `
+    <section class="developer-preview">
+      <h2>👥 Developer Focused View</h2>
+      <p>Use Technical view for component-centric conflicts. Developer view can be expanded later.</p>
+    </section>
   `;
 }
 
-function exportReport(format, analysis, panel) {
-  const reportData = generateDeploymentReport(analysis, REPORTS_STATE);
-  
-  switch (format) {
-    case 'html':
-      exportToHTML(reportData);
-      break;
-    case 'csv':
-      exportToCSV(reportData, analysis);
-      break;
-    case 'pdf':
-      // PDF export would go here (would require jsPDF library)
-      alert('PDF export coming soon!');
-      break;
+// Build the KPI numbers robustly from reportData (or compute if missing)
+function computeKPIs(reportData) {
+  const blocked = Array.isArray(reportData.blockedStories) ? reportData.blockedStories.length : 0;
+  const conflict = Array.isArray(reportData.conflictStories) ? reportData.conflictStories.length : 0;
+  const safe = Array.isArray(reportData.safeStories) ? reportData.safeStories.length : 0;
+  const safeWC = Array.isArray(reportData.safeWithCommitStories) ? reportData.safeWithCommitStories.length : 0;
+
+  // Prefer generator's total if present; else compute
+  const totalFromSummary = reportData.technicalSummary?.totalStories
+    ?? reportData.summary?.totalStories
+    ?? null;
+  const total = Number.isFinite(totalFromSummary)
+    ? totalFromSummary
+    : (blocked + conflict + safe + safeWC);
+
+  return { total, blocked, conflict, safe, safeWC };
+}
+
+// Use analysis to show "Analysis Time" like your screenshot
+function getAnalysisTime(analysis) {
+  // Try a few likely fields; fallback to now
+  const raw =
+    analysis?.analysis_time ||
+    analysis?.summary?.analyzed_at ||
+    analysis?.generated_at ||
+    analysis?.timestamp ||
+    null;
+  try {
+    const d = raw ? new Date(raw) : new Date();
+    return isNaN(d) ? new Date().toISOString() : d.toISOString();
+  } catch {
+    return new Date().toISOString();
   }
 }
 
-function createElement(tag, props = {}, children = []) {
-  const node = document.createElement(tag);
-  Object.assign(node, props);
-  const childArray = Array.isArray(children) ? children : children ? [children] : [];
-  childArray.forEach(child => {
-    if (typeof child === 'string') {
-      node.appendChild(document.createTextNode(child));
-    } else if (child instanceof Node) {
-      node.appendChild(child);
-    }
-  });
-  return node;
+// Renders the title + meta row (matches your style)
+function renderReportTitleBar(reportData, analysis) {
+  const generated = reportData.generatedAt || new Date().toLocaleString();
+  const type = (reportData.type || 'Technical Analysis')
+    .replace(/^./, s => s.toUpperCase());
+  const analysisTime = getAnalysisTime(analysis);
+
+  return `
+    <header class="report-titlebar">
+      <h1 class="report-title">Technical Analysis Report - Component Health</h1>
+      <div class="report-title-meta">
+        <span><strong>Generated:</strong> ${generated}</span>
+        <span><strong>Type:</strong> ${type}</span>
+        <span><strong>Analysis Time:</strong> ${analysisTime}</span>
+      </div>
+      <div class="report-divider"></div>
+      <h2 class="report-section-title">Technical Analysis - All Story Types</h2>
+    </header>
+  `;
 }
 
-const injectCss = (() => {
-  let done = false;
-  return () => {
-    if (done) return;
-    done = true;
+// Renders the 5 KPI cards like your screenshot
+function renderKPISection(reportData) {
+  const { total, blocked, conflict, safe, safeWC } = computeKPIs(reportData);
 
-    const css = `
-      .report-type-section, .report-options-section, .report-actions-section, .report-preview-section {
-        margin-bottom: 24px;
-        padding: 16px;
-        background: white;
-        border-radius: 8px;
-        border: 1px solid #e5e5e7;
-      }
+  return `
+    <section class="kpi-section">
+      <div class="kpi-grid">
+        <div class="kpi-card kpi-total">
+          <div class="kpi-value">${total}</div>
+          <div class="kpi-label">Total Stories</div>
+        </div>
+        <div class="kpi-card kpi-blocked">
+          <div class="kpi-value">${blocked}</div>
+          <div class="kpi-label">Blocked Stories</div>
+        </div>
+        <div class="kpi-card kpi-conflict">
+          <div class="kpi-value">${conflict}</div>
+          <div class="kpi-label">Conflict Stories</div>
+        </div>
+        <div class="kpi-card kpi-safe">
+          <div class="kpi-value">${safe}</div>
+          <div class="kpi-label">Safe Stories</div>
+        </div>
+        <div class="kpi-card kpi-safewc">
+          <div class="kpi-value">${safeWC}</div>
+          <div class="kpi-label">Safe with Commit</div>
+        </div>
+      </div>
+    </section>
+  `;
+}
 
-      .report-type-section h3, .report-options-section h3, .report-actions-section h3, .report-preview-section h3 {
-        margin: 0 0 16px;
-        font-size: 16px;
-        font-weight: 600;
-        color: #1d1d1f;
-      }
 
-      .report-type-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 12px;
-      }
 
-      .report-type-card {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 16px;
-        border: 2px solid #e5e5e7;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-      }
+// put once near the top (or above exportReport)
+function normalizeReportForExport(reportData) {
+  if (!reportData || typeof reportData !== 'object') return reportData;
+  if (reportData.summary) return reportData; // already compatible
 
-      .report-type-card:hover {
-        border-color: #0071e3;
-        background: #f8f9fa;
-      }
-
-      .report-type-card.selected {
-        border-color: #0071e3;
-        background: #e8f0ff;
-      }
-
-      .type-icon {
-        font-size: 24px;
-        flex-shrink: 0;
-      }
-
-      .type-info h4 {
-        margin: 0 0 4px;
-        font-size: 14px;
-        font-weight: 600;
-        color: #1d1d1f;
-      }
-
-      .type-info p {
-        margin: 0;
-        font-size: 12px;
-        color: #86868b;
-      }
-
-      .options-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 12px;
-      }
-
-      .option-checkbox {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        cursor: pointer;
-        font-size: 14px;
-        color: #1d1d1f;
-      }
-
-      .option-checkbox input {
-        margin: 0;
-      }
-
-      .actions-grid {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-      }
-
-      .generate-btn {
-        padding: 12px 24px;
-        font-size: 16px;
-        font-weight: 600;
-      }
-
-      .export-buttons {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-
-      .export-btn {
-        flex: 1;
-        min-width: 120px;
-      }
-
-      .export-btn:disabled {
-        opacity: 0.5;
-        cursor: not-allowed;
-      }
-
-      .report-preview {
-        min-height: 400px;
-        border: 1px solid #e5e5e7;
-        border-radius: 8px;
-        background: white;
-        overflow: auto;
-      }
-
-      .preview-placeholder, .loading-report, .error-report {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 400px;
-        color: #86868b;
-        text-align: center;
-      }
-
-      .placeholder-icon, .error-icon {
-        font-size: 48px;
-        margin-bottom: 12px;
-      }
-
-      .preview-placeholder h4, .error-report h4 {
-        margin: 0 0 8px;
-        font-size: 16px;
-        font-weight: 600;
-        color: #1d1d1f;
-      }
-
-      .preview-placeholder p, .error-report p {
-        margin: 0;
-        font-size: 14px;
-      }
-
-      .report-content {
-        padding: 24px;
-      }
-
-      .report-header {
-        text-align: center;
-        margin-bottom: 32px;
-        padding-bottom: 16px;
-        border-bottom: 2px solid #e5e5e7;
-      }
-
-      .report-header h1 {
-        margin: 0 0 8px;
-        font-size: 24px;
-        font-weight: 700;
-        color: #1d1d1f;
-      }
-
-      .report-meta {
-        display: flex;
-        justify-content: center;
-        gap: 16px;
-        font-size: 14px;
-        color: #86868b;
-      }
-
-      .executive-summary, .critical-actions, .team-assignments, .timeline-overview, .recommendations {
-        margin-bottom: 32px;
-      }
-
-      .executive-summary h2, .critical-actions h2, .team-assignments h2, .timeline-overview h2, .recommendations h2 {
-        margin: 0 0 16px;
-        font-size: 18px;
-        font-weight: 600;
-        color: #1d1d1f;
-        border-bottom: 1px solid #e5e5e7;
-        padding-bottom: 8px;
-      }
-
-      .summary-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-        gap: 16px;
-      }
-
-      .summary-card {
-        text-align: center;
-        padding: 16px;
-        border-radius: 8px;
-        background: #f5f5f7;
-      }
-
-      .summary-card.ready {
-        background: #d1f4e0;
-        border: 1px solid #34C759;
-      }
-
-      .summary-card.conflicts {
-        background: #ffd4a3;
-        border: 1px solid #FF9500;
-      }
-
-      .summary-card.blocked {
-        background: #ffcccb;
-        border: 1px solid #FF3B30;
-      }
-
-      .summary-value {
-        font-size: 32px;
-        font-weight: 700;
-        margin-bottom: 4px;
-      }
-
-      .summary-label {
-        font-size: 14px;
-        color: #86868b;
-        margin-bottom: 4px;
-      }
-
-      .summary-percent {
-        font-size: 12px;
-        font-weight: 600;
-        color: #1d1d1f;
-      }
-
-      .actions-list, .recommendations-list {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-      }
-
-      .action-item, .recommendation-item {
-        display: flex;
-        gap: 8px;
-        padding: 8px 12px;
-        background: #fff3f3;
-        border-radius: 6px;
-        border-left: 4px solid #FF3B30;
-      }
-
-      .recommendation-item {
-        background: #e8f0ff;
-        border-left-color: #0071e3;
-      }
-
-      .action-number, .rec-number {
-        font-weight: 600;
-        color: #FF3B30;
-        min-width: 20px;
-      }
-
-      .rec-number {
-        color: #0071e3;
-      }
-
-      .action-text, .rec-text {
-        flex: 1;
-        color: #1d1d1f;
-      }
-
-      .assignments-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 16px;
-      }
-
-      .developer-card {
-        padding: 16px;
-        border: 1px solid #e5e5e7;
-        border-radius: 8px;
-        background: white;
-      }
-
-      .developer-card h4 {
-        margin: 0 0 12px;
-        font-size: 16px;
-        font-weight: 600;
-        color: #1d1d1f;
-      }
-
-      .developer-stats {
-        display: flex;
-        gap: 8px;
-        margin-bottom: 12px;
-        flex-wrap: wrap;
-      }
-
-      .developer-stats .stat {
-        font-size: 12px;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-weight: 600;
-      }
-
-      .stat.ready {
-        background: #d1f4e0;
-        color: #1d8a4a;
-      }
-
-      .stat.conflicts {
-        background: #ffd4a3;
-        color: #cc7000;
-      }
-
-      .stat.blocked {
-        background: #ffcccb;
-        color: #d70015;
-      }
-
-      .developer-actions {
-        font-size: 12px;
-        color: #1d1d1f;
-      }
-
-      .dev-action {
-        margin-bottom: 4px;
-        line-height: 1.4;
-      }
-
-      .timeline-summary {
-        padding: 16px;
-        background: #f5f5f7;
-        border-radius: 8px;
-        font-size: 14px;
-      }
-
-      .timeline-summary p {
-        margin: 0 0 8px;
-      }
-
-      .timeline-summary p:last-child {
-        margin-bottom: 0;
-      }
-
-      @media (max-width: 768px) {
-        .report-type-grid {
-          grid-template-columns: 1fr;
-        }
-        
-        .options-grid {
-          grid-template-columns: 1fr;
-        }
-        
-        .export-buttons {
-          flex-direction: column;
-        }
-        
-        .summary-grid {
-          grid-template-columns: repeat(2, 1fr);
-        }
-        
-        .assignments-grid {
-          grid-template-columns: 1fr;
-        }
-        
-        .report-meta {
-          flex-direction: column;
-          gap: 4px;
-        }
-      }
-    `;
-
-    document.head.appendChild(Object.assign(document.createElement('style'), { textContent: css }));
+  const ts = reportData.technicalSummary || {};
+  const n = (arr) => Array.isArray(arr) ? arr.length : 0;
+  const summary = {
+    totalStories: Number.isFinite(ts.totalStories) ? ts.totalStories
+                  : n(reportData.blockedStories) + n(reportData.conflictStories)
+                  + n(reportData.safeStories) + n(reportData.safeWithCommitStories),
+    blockedStories: Number.isFinite(ts.blockedStories) ? ts.blockedStories : n(reportData.blockedStories),
+    conflictStories: Number.isFinite(ts.conflictStories) ? ts.conflictStories : n(reportData.conflictStories),
+    safeStories: Number.isFinite(ts.safeStories) ? ts.safeStories : n(reportData.safeStories),
+    safeWithCommitStories: Number.isFinite(ts.safeWithCommitStories) ? ts.safeWithCommitStories : n(reportData.safeWithCommitStories),
+    componentsWithConflicts: Number.isFinite(ts.conflictedComponents) ? ts.conflictedComponents
+                              : n(reportData.componentConflicts),
+    componentConflicts: Number.isFinite(ts.componentConflicts) ? ts.componentConflicts
+                              : n(reportData.componentConflicts),
   };
-})();
+  return { ...reportData, summary };
+}
+
+
+function exportReportToXLS(analysis, panel) {
+  if (!CURRENT_REPORT_DATA) return console.warn('⚠ Nothing to export');
+  try {
+    const data = typeof normalizeReportForExport === 'function'
+      ? normalizeReportForExport(CURRENT_REPORT_DATA)
+      : CURRENT_REPORT_DATA;
+    exportToXLS(data, analysis || window.CURRENT_ANALYSIS || {}, data.type || 'technical');
+  } catch (e) {
+    console.error('Export failed:', e);
+  }
+}
+
+
+
+// Build story-centric conflicts from componentConflicts when reportData.conflictStories is missing
+function synthesizeConflictStoriesFromComponents(reportData) {
+  const rows = Array.isArray(reportData.componentConflicts) ? reportData.componentConflicts : [];
+  if (!rows.length) return [];
+
+  // map: storyId -> { story_id, developer, conflict_components[], conflicting_with:Set, has_deployment_task? }
+  const byStory = new Map();
+  const storyIdRe = /US-\d{6,}/g;
+
+  for (const comp of rows) {
+    const compName = comp?.componentName || 'Unknown';
+    // Try to extract story ids from "Involved Stories" column (e.g., "US-0034117, US-0034110 …")
+    const involved = String(comp?.involvedStories || '');
+    const ids = involved.match(storyIdRe) || [];
+    // Choose a "latest" story (if present in the row), to mark as primary
+    const latestId = (String(comp?.latestStory || '').match(storyIdRe) || [null])[0];
+
+    // Update each story's conflicts
+    ids.forEach(id => {
+      if (!byStory.has(id)) {
+        byStory.set(id, {
+          story_id: id,
+          developer: 'Unknown',
+          conflict_components: [],
+          conflicting_with: new Set(),
+          resolution_status: 'Potential Conflict',
+          has_deployment_task: false
+        });
+      }
+      const entry = byStory.get(id);
+      entry.conflict_components.push(compName);
+
+      // other stories in the same component become "conflicting with"
+      ids.forEach(other => { if (other !== id) entry.conflicting_with.add(other); });
+
+      // Prefer the row's latest to be considered "primary"
+      if (latestId && latestId === id) {
+        entry.resolution_status = 'Latest Commit (primary)';
+      }
+    });
+  }
+
+  // Best effort: developer attribution from reportData.safe*/blocked if available
+  const devIndex = new Map();
+  for (const bucket of [
+    reportData.safeWithCommitStories, reportData.safeStories,
+    reportData.blockedStories, reportData.conflictStories
+  ]) {
+    (Array.isArray(bucket) ? bucket : []).forEach(s => {
+      if (s.story_id && s.developer) devIndex.set(s.story_id, s.developer);
+    });
+  }
+
+  // Finalize
+  const result = [];
+  for (const v of byStory.values()) {
+    v.developer = devIndex.get(v.story_id) || v.developer;
+    v.conflicting_with = Array.from(v.conflicting_with);
+    result.push(v);
+  }
+  // Sort by number of conflicting_with descending, then story id
+  result.sort((a,b) => (b.conflicting_with.length - a.conflicting_with.length) || (a.story_id.localeCompare(b.story_id)));
+  return result;
+}
+
+function renderConflictStoriesSection(reportData) {
+  // Prefer existing conflictStories; otherwise synthesize from componentConflicts
+  let conflicts = Array.isArray(reportData.conflictStories) ? reportData.conflictStories : [];
+  if (!conflicts.length) conflicts = synthesizeConflictStoriesFromComponents(reportData);
+
+    
+}
+
+
+
+function injectEnhancedCss() {
+  if (document.getElementById('reports-enhanced-css')) return;
+
+  const css = `
+  /* Enhanced CSS with proper theming */
+  .tab-reports {
+    padding: 20px;
+    background: #f8f9fa;
+    min-height: 100vh;
+  }
+
+  .section-header {
+    text-align: center;
+    margin-bottom: 32px;
+    padding: 24px;
+    background: linear-gradient(135deg, #2a5da6 0%, #1e3a8a 100%);
+    border-radius: 12px;
+    color: white;
+  }
+
+  .section-title {
+    font-size: 32px;
+    font-weight: 700;
+    margin: 0 0 12px;
+    color: white;
+    line-height: 1.2;
+  }
+
+  .section-subtitle {
+    font-size: 16px;
+    margin: 0;
+    opacity: 0.9;
+    color: white;
+    line-height: 1.5;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .card {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    border: 1px solid #e5e7eb;
+  }
+
+  .section-heading {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0 0 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .report-type-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+    margin-top: 16px;
+  }
+
+  .report-type-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 24px;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: white;
+    min-height: 140px;
+  }
+
+  .report-type-card:hover {
+    border-color: #2a5da6;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(42, 93, 166, 0.15);
+  }
+
+  .report-type-card.selected {
+    border-color: #2a5da6;
+    background: #f0f7ff;
+    box-shadow: 0 4px 12px rgba(42, 93, 166, 0.1);
+  }
+
+  .type-icon {
+    font-size: 36px;
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+
+  .type-info h4 {
+    margin: 0 0 8px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  .type-info p {
+    margin: 0 0 16px;
+    font-size: 14px;
+    color: #6b7280;
+    line-height: 1.4;
+  }
+
+  .type-features {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .feature-item {
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.3;
+  }
+
+  .actions-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .export-buttons {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn {
+    appearance: none;
+    border: 1px solid #dcdcdc;
+    background: #fff;
+    padding: 8px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+
+  .btn:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+  }
+
+  .btn-primary {
+    background: #2a5da6;
+    border-color: #1e3a8a;
+    color: #fff;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: #1e3a8a;
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary {
+    background: #6b7280;
+    color: white;
+    border: none;
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    background: #4b5563;
+  }
+
+  .report-preview {
+    min-height: 500px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: white;
+    overflow: auto;
+  }
+
+  .preview-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 500px;
+    color: #6b7280;
+    text-align: center;
+  }
+
+  .placeholder-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+    opacity: 0.5;
+  }
+
+  .preview-placeholder h4 {
+    margin: 0 0 8px;
+    font-size: 20px;
+    font-weight: 600;
+    color: #374151;
+  }
+
+  .preview-placeholder p {
+    margin: 0 0 24px;
+    font-size: 14px;
+  }
+
+  .preview-features {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .feature {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    color: #6b7280;
+  }
+
+  .feature-icon {
+    font-size: 16px;
+  }
+
+  .feature-text {
+    font-weight: 500;
+  }
+
+  /* Loading and error states */
+  .loading-report {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 400px;
+    text-align: center;
+  }
+
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f4f6;
+    border-top: 4px solid #2a5da6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .error-report, .export-success {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 400px;
+    text-align: center;
+  }
+
+  .error-icon, .success-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+  }
+
+  .error-icon {
+    color: #dc3545;
+  }
+
+  .success-icon {
+    color: #198754;
+  }
+
+  /* Enhanced Preview Styles */
+  .enhanced-preview {
+    background: #fff;
+    padding: 32px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+
+  /* Title bar & divider */
+  .report-titlebar {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 24px;
+    text-align: center;
+  }
+
+  .report-title {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #1f4fbf;
+    margin: 0;
+  }
+
+  .report-title-meta {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+    color: #444;
+    font-size: 14px;
+  }
+
+  .report-divider {
+    border-bottom: 3px solid #1f4fbf;
+    opacity: .35;
+    margin: 16px 0;
+  }
+
+  .report-section-title {
+    margin: 0;
+    font-size: 1.4rem;
+    color: #124;
+    font-weight: 600;
+  }
+
+  /* KPI cards row */
+  .kpi-section {
+    margin: 20px 0;
+  }
+
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(160px, 1fr));
+    gap: 16px;
+    margin: 24px 0;
+  }
+
+  .kpi-card {
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    border: 2px solid #e5e7eb;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    background: #fff;
+    transition: all 0.2s ease;
+  }
+
+  .kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .kpi-value {
+    font-size: 2.2rem;
+    font-weight: 800;
+    margin-bottom: 8px;
+    line-height: 1;
+  }
+
+  .kpi-label {
+    color: #555;
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  /* Color accents per card */
+  .kpi-total {
+    background: linear-gradient(135deg, #2a5da6 0%, #1e3a8a 100%);
+    color: #fff;
+    border: none;
+  }
+
+  .kpi-total .kpi-label {
+    color: rgba(255,255,255,0.9);
+  }
+
+  .kpi-blocked {
+    border-left: 4px solid #dc3545;
+    background: #fef2f2;
+  }
+
+  .kpi-conflict {
+    border-left: 4px solid #fd7e14;
+    background: #fff7ed;
+  }
+
+  .kpi-safe {
+    border-left: 4px solid #198754;
+    background: #f0f9ff;
+  }
+
+  .kpi-safewc {
+    border-left: 4px solid #0d6efd;
+    background: #eff6ff;
+  }
+
+  .kpi-blocked .kpi-value {
+    color: #dc3545;
+  }
+
+  .kpi-conflict .kpi-value {
+    color: #fd7e14;
+  }
+
+  .kpi-safe .kpi-value {
+    color: #198754;
+  }
+
+  .kpi-safewc .kpi-value {
+    color: #0d6efd;
+  }
+
+  /* Export toolbar */
+  .export-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin: 20px 0;
+  }
+
+  .export-btn {
+    background: #2a5da6;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 16px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .export-btn:hover {
+    background: #1e3a8a;
+  }
+
+  /* Table Styles */
+  .table-container {
+    overflow-x: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: white;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  }
+
+  .details-table {
+    min-width: 100%;
+    width: auto;
+    border-collapse: collapse;
+  }
+
+  .table-header {
+    display: grid;
+    background: #f8fafc;
+    padding: 16px 20px;
+    font-weight: 600;
+    font-size: 14px;
+    color: #374151;
+    border-bottom: 2px solid #e5e7eb;
+    gap: 16px;
+  }
+
+  .table-row {
+    display: grid;
+    padding: 14px 20px;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 14px;
+    align-items: start;
+    gap: 16px;
+    transition: background-color 0.2s ease;
+  }
+
+  .table-row:hover {
+    background: #f9fafb;
+  }
+
+  .table-row:last-child {
+    border-bottom: none;
+  }
+
+  /* Column-specific styles */
+  .col-story-id {
+    font-weight: 600;
+    color: #2a5da6;
+    word-break: break-word;
+  }
+
+  .col-developer {
+    word-break: break-word;
+    font-weight: 500;
+  }
+
+  .deployment-yes {
+    color: #198754;
+    font-weight: 600;
+  }
+
+  .deployment-no {
+    color: #dc3545;
+    font-weight: 600;
+  }
+
+  /* Component Conflict table (9 columns) */
+  .component-conflict-table .table-header,
+  .component-conflict-table .table-row {
+    grid-template-columns: 140px minmax(220px, 1.4fr) 120px minmax(180px, 1.1fr) 120px 160px 170px 120px minmax(260px, 2fr);
+  }
+
+  /* Blocked Stories table (6 columns) */
+  .blocked-table .table-header,
+  .blocked-table .table-row {
+    grid-template-columns: 130px 180px 1.4fr 1.2fr 240px 120px;
+  }
+
+  /* Safe Stories table (7 columns) */
+  .safe-table .table-header,
+  .safe-table .table-row {
+    grid-template-columns: 130px 180px 150px 260px 150px 160px 160px;
+  }
+
+  /* Safe with Commit table (7 columns) */
+  .safecommit-table .table-header,
+  .safecommit-table .table-row {
+    grid-template-columns: 130px 180px 150px 260px 150px 160px 160px;
+  }
+
+  /* Conflict Stories table (6 columns) */
+  .conflict-table .table-header,
+  .conflict-table .table-row {
+    grid-template-columns: 130px 180px 1.5fr 180px 1.2fr 130px;
+  }
+
+  /* Section headers in preview */
+  .component-conflicts h2,
+  .safe-stories h2,
+  .safe-commit-stories h2,
+  .blocked-stories h2,
+  .conflict-stories h2 {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin: 0 0 16px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e5e7eb;
+  }
+
+  .section-description {
+    font-size: 14px;
+    color: #6b7280;
+    margin: -10px 0 20px 0;
+    font-style: italic;
+  }
+
+  /* Responsive design */
+  @media (max-width: 1200px) {
+    .kpi-grid {
+      grid-template-columns: repeat(3, minmax(160px, 1fr));
+    }
+    
+    .kpi-total {
+      grid-column: span 3;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .tab-reports {
+      padding: 16px;
+    }
+
+    .section-header {
+      padding: 20px 16px;
+    }
+
+    .section-title {
+      font-size: 24px;
+    }
+
+    .section-subtitle {
+      font-size: 14px;
+    }
+
+    .report-type-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .kpi-grid {
+      grid-template-columns: repeat(2, minmax(140px, 1fr));
+      gap: 12px;
+    }
+
+    .kpi-total {
+      grid-column: span 2;
+    }
+
+    .kpi-card {
+      padding: 16px 12px;
+    }
+
+    .kpi-value {
+      font-size: 1.8rem;
+    }
+
+    .actions-grid {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .export-buttons {
+      justify-content: center;
+    }
+
+    .export-toolbar {
+      justify-content: center;
+    }
+
+    .report-title {
+      font-size: 1.5rem;
+    }
+
+    .report-title-meta {
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .enhanced-preview {
+      padding: 20px 16px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .kpi-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .kpi-total {
+      grid-column: span 1;
+    }
+
+    .kpi-value {
+      font-size: 1.6rem;
+    }
+  }
+  `;
+
+  const style = document.createElement('style');
+  style.id = 'reports-enhanced-css';
+  style.textContent = css;
+  document.head.appendChild(style);
+}

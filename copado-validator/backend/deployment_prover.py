@@ -44,9 +44,17 @@ except ImportError:
 try:
     from validation_config import get_enabled_validators, can_run_validator, get_validator_config
     VALIDATION_CONFIG_AVAILABLE = True
-except ImportError:
+    log.info("✅ validation_config.py imported successfully")
+except ImportError as e:
     VALIDATION_CONFIG_AVAILABLE = False
-    log.warning("validation_config not available - using default validators")
+    log.error(f"❌ Cannot import validation_config.py: {e}")
+    log.error("   Please check:")
+    log.error("   1. validation_config.py exists in the same directory")
+    log.error("   2. There are no syntax errors in validation_config.py")
+    log.error("   3. All required modules are imported in validation_config.py")
+except Exception as e:
+    VALIDATION_CONFIG_AVAILABLE = False
+    log.error(f"❌ Error importing validation_config.py: {e}")
 
 
 class DeploymentProver:
@@ -92,6 +100,10 @@ class DeploymentProver:
             story_metadata: Metadata including validation_level or is_critical
         """
         story_metadata = story_metadata or {}
+        log.info(f"📖 Story: {story_name}")
+        log.info(f"   Target Environment: {target_env}")
+        log.info(f"   Story Metadata Received: {story_metadata}")
+        log.info(f"   Metadata Keys: {list(story_metadata.keys())}")
         validation_level = self._determine_validation_level(story_metadata, target_env)
         
         log.info(f"🔍 Validation level: {validation_level} for story {story_name}")
@@ -248,28 +260,45 @@ class DeploymentProver:
             "mock_mode": self.mock_mode
         }
 
+    def _determine_validation_level(self, story_metadata: Dict, target_env: str) -> str:
+        """Determine validation level from metadata with detailed logging"""
+        
+        log.info("🔍 Determining validation level...")
+        log.info(f"   Story metadata: {story_metadata}")
+        log.info(f"   Target environment: {target_env}")
+        
+        # Check explicit validation_level in metadata
+        if 'validation_level' in story_metadata:
+            level = story_metadata['validation_level'].lower()
+            if level in ['basic', 'standard', 'high', 'maximum']:
+                log.info(f"   🎯 Using explicit validation level: {level}")
+                return level
+            else:
+                log.warning(f"   ⚠️  Invalid validation_level '{level}', using fallback")
+        
+        # Check critical stories
+        if story_metadata.get('is_critical', False):
+            log.info("   🚨 Story is critical, using 'high' level")
+            return 'high'
+        
+        # Check hotfix stories
+        if story_metadata.get('is_hotfix', False):
+            log.info("   🔥 Story is hotfix, using 'basic' level")
+            return 'basic'
+        
+        # Check production environment
+        if target_env and 'prod' in target_env.lower():
+            log.info("   🏭 Production environment, using 'high' level")
+            return 'high'
+        
+        # Default level
+        log.info("   📋 Using default 'standard' level")
+        return 'standard'
     
     # =========================================================================
     # VALIDATION LEVEL DETERMINATION
     # =========================================================================
     
-    def _determine_validation_level(self, story_metadata: Dict, target_env: str) -> str:
-        """Determine validation level from metadata"""
-        if 'validation_level' in story_metadata:
-            level = story_metadata['validation_level'].lower()
-            if level in ['basic', 'standard', 'high', 'maximum']:
-                return level
-        
-        if story_metadata.get('is_critical', False):
-            return 'high'
-        
-        if story_metadata.get('is_hotfix', False):
-            return 'basic'
-        
-        if target_env and 'prod' in target_env.lower():
-            return 'high'
-        
-        return 'standard'
     
     # =========================================================================
     # VALIDATOR EXECUTION ENGINE
@@ -281,13 +310,28 @@ class DeploymentProver:
         """Execute validators with graceful failure handling"""
         start_time = time.time()
         
+        log.info(f"🔧 VALIDATION_CONFIG_AVAILABLE: {VALIDATION_CONFIG_AVAILABLE}")
         # Get validators for this level
         if VALIDATION_CONFIG_AVAILABLE:
             validators_to_run = get_enabled_validators(validation_level)
+            log.info(f"🔧 VALIDATION_CONFIG_AVAILABLE I am in if class: {VALIDATION_CONFIG_AVAILABLE}")
         else:
             validators_to_run = self._get_fallback_validators(validation_level)
+            
         
         log.info(f"🔧 Executing {len(validators_to_run)} validators for level: {validation_level}")
+            
+        
+        log.info(f"🔧 Validation Level: {validation_level}")
+        log.info(f"   Validators configured for this level: {validators_to_run}")
+        log.info(f"   Total validators to execute: {len(validators_to_run)}")
+        
+        
+        log.info(f"🔧 Executing {len(validators_to_run)} validators for level: {validation_level}")
+        production_components = context.get('production_components', [])
+        log.info(f"🔧 START - Production components: {len(production_components)}")
+        log.info(f"🔧 START - Commit SHAs: {context.get('commit_shas', [])}")
+        
         
         validation_results = []
         successful = 0
@@ -301,6 +345,10 @@ class DeploymentProver:
             
             # Check access
             if VALIDATION_CONFIG_AVAILABLE and not can_run_validator(validator_name):
+                validator_config = get_validator_config(validator_name)
+                requires_access = validator_config.get('requires_access', 'none')
+            
+                log.info(f"  ⊘ Skipping: {validator_name} (requires: {requires_access})")
                 log.info(f"  ⊘ Skipping: {validator_name} (no access)")
                 no_access += 1
                 validation_results.append({
@@ -427,7 +475,7 @@ class DeploymentProver:
             log.error(f"      ✗ Tooling API query failed: {e}")
             return None
     
-    
+
     
     def _validate_component_exists(self, components: List[Dict], context: Dict) -> Dict:
         """Verify component exists using pre-fetched production data"""
@@ -445,25 +493,6 @@ class DeploymentProver:
             
             log.info(f"    🔵 Querying Salesforce for {len(components)} components...")
             log.info(f"    📚 Using {len(production_components)} pre-fetched production records")
-            log.info("    🔍 DEBUG: First production component fields:")
-            if production_components:
-                first = production_components[0]
-                log.info(f"       All fields: {list(first.keys())}")
-                log.info(f"       Name: {first.get('Name')}")
-                log.info(f"       ProcedureKey__c: {first.get('vlocity_cmt__ProcedureKey__c')}")
-                log.info(f"       DRMapName__c: {first.get('vlocity_cmt__DRMapName__c')}")
-            
-            # ========== ADD THIS DEBUG SECTION ==========
-            log.info("    🔍 DEBUG: Production components structure:")
-            for i, pc in enumerate(production_components[:3], 1):
-                log.info(f"       [{i}] Type: {pc.get('_component_type')}")
-                log.info(f"           Name: {pc.get('Name')}")
-                log.info(f"           ProcedureKey: {pc.get('vlocity_cmt__ProcedureKey__c')}")
-                log.info(f"           DRMapName: {pc.get('vlocity_cmt__DRMapName__c')}")
-                log.info(f"           Keys: {list(pc.keys())[:5]}...")
-            if len(production_components) > 3:
-                log.info(f"       ... and {len(production_components)-3} more")
-            # ============================================
             
             from vlocity_query_builder import VlocityQueryBuilder
             builder = VlocityQueryBuilder()
@@ -478,75 +507,69 @@ class DeploymentProver:
                     api_name = comp['api_name']
                     cleaned_name = builder._clean_component_name(api_name, comp_type)
                     
-                    log.debug(f"      Checking: {api_name} -> {cleaned_name}")
+                    log.info(f"      Checking: {comp_type}.{cleaned_name} (original: {api_name})")
                     
-                    # ========== ADD MORE DEBUG ==========
-                    log.debug(f"         Looking for: type={comp_type}, name={cleaned_name}")
-                    # ====================================
+                    # 🎯 GET COMPARISON FIELD FROM CONFIGURATION
+                    comp_config = builder.config.get('components', {}).get(comp_type, {})
+                    compare_field = comp_config.get('compare_field', comp_config.get('search_field', 'Name'))
+                    
+                    log.debug(f"         Compare field: {compare_field}, Cleaned name: {cleaned_name}")
+                    # 🎯 TEMPORARY DEBUG
+                    log.info(f"         🐛 CONFIG DEBUG: comp_type={comp_type}")
+                    log.info(f"         🐛 comp_config keys: {list(comp_config.keys())}")
+                    log.info(f"         🐛 compare_field from config: {compare_field}")
+                    log.info(f"         🐛 search_field from config: {comp_config.get('search_field')}")
                     
                     prod_record = None
                     for prod_comp in production_components:
                         prod_type = prod_comp.get('_component_type')
                         
-                        # ========== ADD DEBUG ==========
-                        if comp_type in ['IntegrationProcedure', 'OmniScript', 'DataRaptor']:
-                            log.debug(f"         Comparing with: type={prod_type}")
-                        # ===============================
-                        
                         if prod_type != comp_type:
                             continue
                         
-                            
-                            
-                               # Get production name based on component type
-                        if comp_type == 'IntegrationProcedure':
-                            prod_name = prod_comp.get('vlocity_cmt__ProcedureKey__c', '')
-                        elif comp_type == 'OmniScript':
-                            prod_name = prod_comp.get('Name', '')
-                        elif comp_type == 'DataRaptor':
-                            prod_name = prod_comp.get('vlocity_cmt__DRMapName__c', '')
-                        elif comp_type in ['LightningComponentBundle', 'Flow', 'CustomObject', 
-                                        'CustomField', 'EmailTemplate', 'PermissionSetGroup']:
-                            # These use DeveloperName
-                            prod_name = prod_comp.get('DeveloperName', prod_comp.get('Name', ''))
-                        elif comp_type == 'ValidationRule':
-                            # ValidationRule uses ValidationName
-                            prod_name = prod_comp.get('ValidationName', prod_comp.get('Name', ''))
-                        else:
-                            # Standard components - try Name first, then DeveloperName
-                            prod_name = prod_comp.get('Name', prod_comp.get('DeveloperName', ''))
-                            
+                        # 🎯 USE CONFIGURED COMPARISON FIELD
+                        prod_value = prod_comp.get(compare_field, '')
                         
-                        # ========== ADD DEBUG ==========
-                        log.debug(f"            prod_name='{prod_name}' vs cleaned='{cleaned_name}'")
-                        # ===============================
+                        log.debug(f"            {compare_field}='{prod_value}' vs cleaned='{cleaned_name}'")
                         
-                        if prod_name.lower() == cleaned_name.lower(): 
+                        if prod_value and prod_value.lower() == cleaned_name.lower(): 
                             prod_record = prod_comp
                             break
                             
                     if prod_record:
                         found_count += 1
                         component_details.append({
-                            'name': api_name,
+                            'name': api_name,  # 🎯 KEEP ORIGINAL NAME for reporting
+                            'cleaned_name': cleaned_name,  # 🎯 ADD CLEANED NAME for debugging
                             'type': comp_type,
                             'found': True,
                             'last_modified': prod_record.get('LastModifiedDate'),
-                            'salesforce_id': prod_record.get('Id', 'N/A')
+                            'salesforce_id': prod_record.get('Id', 'N/A'),
+                            'matched_field': compare_field  # 🎯 Track which field matched
                         })
-                        log.info(f"      ✓ Found: {api_name}")
+                        log.info(f"      ✅ Found: {api_name} -> {cleaned_name} (matched on {compare_field})")
                     else:
-                        not_found.append(api_name)
-                        component_details.append({
-                            'name': api_name,
-                            'type': comp_type,
-                            'found': False
+                        not_found.append({
+                            'original_name': api_name,  # 🎯 STORE BOTH NAMES
+                            'cleaned_name': cleaned_name,
+                            'type': comp_type
                         })
-                        log.warning(f"      ✗ Not found: {api_name}")
+                        component_details.append({
+                            'name': api_name,  # 🎯 KEEP ORIGINAL NAME
+                            'cleaned_name': cleaned_name,
+                            'type': comp_type,
+                            'found': False,
+                            'compare_field': compare_field  # 🎯 Track which field was used
+                        })
+                        log.warning(f"      ❌ Not found: {api_name} -> {cleaned_name} (no match on {compare_field})")
                         
                 except Exception as e:
                     log.error(f"      Error checking {comp.get('api_name')}: {e}")
-                    not_found.append(comp.get('api_name', 'unknown'))
+                    not_found.append({
+                        'original_name': comp.get('api_name', 'unknown'),
+                        'cleaned_name': 'error',
+                        'type': comp_type
+                    })
             
             log.info(f"    📊 Found: {found_count}/{len(components)}")
             
@@ -576,111 +599,8 @@ class DeploymentProver:
                 'validator': 'component_exists',
                 'status': 'warning',
                 'error': str(e)
-            }
-    
-    def _validate_component_existsbackup(self, components: List[Dict], context: Dict) -> Dict:
-        """Verify component exists using pre-fetched production data"""
-        
-        if self.mock_mode:
-            return {
-                'validator': 'component_exists',
-                'status': 'success',
-                'checks_performed': ['mock_salesforce'],
-                'details': {'mock': True, 'found': len(components)}
-            }
-        
-        try:
-            production_components = context.get('production_components', [])
-            
-            log.info(f"    🔵 Querying Salesforce for {len(components)} components...")
-            log.info(f"    📚 Using {len(production_components)} pre-fetched production records")
-            
-            from vlocity_query_builder import VlocityQueryBuilder
-            builder = VlocityQueryBuilder()
-            
-            found_count = 0
-            not_found = []
-            component_details = []
-            
-            for comp in components:
-                try:
-                    comp_type = comp['type']
-                    api_name = comp['api_name']
-                    cleaned_name = builder._clean_component_name(api_name, comp_type)
-                    
-                    log.debug(f"      Checking: {api_name} -> {cleaned_name}")
-                    
-                    prod_record = None
-                    for prod_comp in production_components:
-                        if prod_comp.get('_component_type') != comp_type:
-                            continue
-                        
-                        if comp_type == 'IntegrationProcedure':
-                            prod_name = prod_comp.get('vlocity_cmt__ProcedureKey__c', '')
-                        elif comp_type == 'OmniScript':
-                            prod_name = prod_comp.get('Name', '')
-                        elif comp_type == 'DataRaptor':
-                            prod_name = prod_comp.get('vlocity_cmt__DRMapName__c', '')
-                        else:
-                            prod_name = prod_comp.get('Name', '')
-                        
-                        if prod_name == cleaned_name:
-                            prod_record = prod_comp
-                            break
-                    
-                    if prod_record:
-                        found_count += 1
-                        component_details.append({
-                            'name': api_name,
-                            'type': comp_type,
-                            'found': True,
-                            'last_modified': prod_record.get('LastModifiedDate'),
-                            'salesforce_id': prod_record.get('Id', 'N/A')
-                        })
-                        log.info(f"      ✓ Found: {api_name}")
-                    else:
-                        not_found.append(api_name)
-                        component_details.append({
-                            'name': api_name,
-                            'type': comp_type,
-                            'found': False
-                        })
-                        log.warning(f"      ✗ Not found: {api_name}")
-                        
-                except Exception as e:
-                    log.error(f"      Error checking {comp.get('api_name')}: {e}")
-                    not_found.append(comp.get('api_name', 'unknown'))
-            
-            log.info(f"    📊 Found: {found_count}/{len(components)}")
-            
-            if found_count == 0:
-                status = 'failed'
-            elif len(not_found) > 0:
-                status = 'warning'
-            else:
-                status = 'success'
-            
-            return {
-                'validator': 'component_exists',
-                'status': status,
-                'checks_performed': ['production_components_match'],
-                'details': {
-                    'total_components': len(components),
-                    'found': found_count,
-                    'not_found': len(not_found),
-                    'not_found_list': not_found,
-                    'components': component_details
-                }
-            }
-            
-        except Exception as e:
-            log.error(f"    ❌ Validator error: {e}")
-            return {
-                'validator': 'component_exists',
-                'status': 'warning',
-                'error': str(e)
-            }
-    
+            }    
+
     def _validate_commit_exists(self, components: List[Dict], context: Dict) -> Dict:
         """Verify commit exists in Git"""
         if self.mock_mode:
@@ -793,16 +713,10 @@ class DeploymentProver:
                 'error': str(e)
             }
  
+    
     def _validate_component_timestampbackup(self, components: List[Dict], context: Dict) -> Dict:
         """
         Compare Salesforce modified date vs Git commit date
-        
-        Improvements:
-        - Configuration-driven queries (supports 20+ component types)
-        - Proper Tooling API support
-        - Smart API name cleaning
-        - Handles type-specific field names (Name vs DeveloperName)
-        - Better error messages
         """
         if self.mock_mode:
             return {
@@ -813,181 +727,6 @@ class DeploymentProver:
             }
         
         try:
-            # Get commit SHA
-            commit_sha = context.get('commit_shas', [None])[0]
-            if not commit_sha:
-                return {
-                    'validator': 'component_timestamp',
-                    'status': 'skipped',
-                    'reason': 'No commit SHA provided'
-                }
-            
-            log.info(f"    ⏰ Comparing timestamps for commit {commit_sha[:8]}...")
-            
-            # Get commit date from Git
-            workspace = self.git.workspace
-            repo = self.git.repo
-            url = f"https://api.bitbucket.org/2.0/repositories/{workspace}/{repo}/commit/{commit_sha}"
-            
-            response = self.git.session.get(url, timeout=5)
-            if response.status_code != 200:
-                return {
-                    'validator': 'component_timestamp',
-                    'status': 'warning',
-                    'reason': f'Could not get commit date (HTTP {response.status_code})'
-                }
-            
-            commit_data = response.json()
-            commit_date_str = commit_data.get('date')
-            commit_date = datetime.fromisoformat(commit_date_str.replace('Z', '+00:00'))
-            log.info(f"      Git commit date: {commit_date.isoformat()}")
-            
-            # Get first component for timestamp check
-            comp = components[0]
-            comp_type = comp['type']
-            api_name = comp['api_name']
-            
-            # Clean API name
-            cleaned_name = self._clean_api_name(comp_type, api_name)
-            log.info(f"      Checking: {comp_type}.{cleaned_name}")
-            
-            # Get query configuration
-            query_config = None
-            if VALIDATION_CONFIG_AVAILABLE:
-                from validation_config import get_component_query_config
-                query_config = get_component_query_config(comp_type)
-            
-            sf_date = None
-            query_used = None
-            
-            # Try configuration-driven query
-            if query_config:
-                query_api = query_config['api']
-                object_name = query_config['object']
-                name_field = query_config['name_field']
-                date_field = query_config['date_field']
-                
-                query = f"""
-                    SELECT {date_field}, {name_field}
-                    FROM {object_name}
-                    WHERE {name_field} = '{cleaned_name}'
-                    LIMIT 1
-                """
-                
-                query_used = f"{query_api.upper()}: {object_name}"
-                
-                try:
-                    # Execute based on API type
-                    if query_api == 'soql':
-                        result = self.sf.query(query)
-                        records = result.get('records', []) if result else []
-                    elif query_api == 'tooling':
-                        records = self._query_tooling(query)
-                    else:
-                        records = []
-                    
-                    if records and len(records) > 0:
-                        sf_date_str = records[0][date_field]
-                        sf_date = datetime.fromisoformat(sf_date_str.replace('Z', '+00:00'))
-                        log.info(f"      ✓ Found via {query_used}")
-                        log.info(f"      Salesforce date: {sf_date.isoformat()}")
-                    else:
-                        log.warning(f"      ⚠️  Component not found in Salesforce")
-                        
-                except Exception as e:
-                    log.error(f"      ✗ Query failed: {e}")
-            
-            # Fallback: Try standard Apex types
-            elif comp_type in ['ApexClass', 'ApexTrigger', 'ApexPage', 'ApexComponent']:
-                query = f"""
-                    SELECT LastModifiedDate
-                    FROM {comp_type}
-                    WHERE Name = '{cleaned_name}'
-                    LIMIT 1
-                """
-                query_used = f"SOQL: {comp_type} (fallback)"
-                
-                try:
-                    result = self.sf.query(query)
-                    if result and result.get('records'):
-                        sf_date_str = result['records'][0]['LastModifiedDate']
-                        sf_date = datetime.fromisoformat(sf_date_str.replace('Z', '+00:00'))
-                        log.info(f"      ✓ Found via fallback SOQL")
-                except Exception as e:
-                    log.error(f"      ✗ Fallback query failed: {e}")
-            
-            # If we couldn't get Salesforce date
-            if not sf_date:
-                return {
-                    'validator': 'component_timestamp',
-                    'status': 'skipped',
-                    'reason': f'Could not query timestamp for {comp_type}',
-                    'details': {
-                        'component_type': comp_type,
-                        'api_name': cleaned_name,
-                        'query_attempted': query_used or 'No query config available'
-                    }
-                }
-            
-            # Compare timestamps
-            deployed_after_commit = sf_date > commit_date
-            time_diff_hours = (sf_date - commit_date).total_seconds() / 3600
-            
-            if deployed_after_commit:
-                log.info(f"      ✓ Component modified AFTER commit ({time_diff_hours:.1f}h later)")
-                status = 'success'
-            else:
-                log.warning(f"      ⚠️  Component is OLDER than commit ({abs(time_diff_hours):.1f}h)")
-                status = 'warning'
-            
-            return {
-                'validator': 'component_timestamp',
-                'status': status,
-                'checks_performed': ['timestamp_comparison', query_used],
-                'details': {
-                    'component_type': comp_type,
-                    'component_name': cleaned_name,
-                    'commit_sha': commit_sha[:8],
-                    'commit_date': commit_date.isoformat(),
-                    'salesforce_date': sf_date.isoformat(),
-                    'deployed_after_commit': deployed_after_commit,
-                    'time_difference_hours': round(time_diff_hours, 2),
-                    'query_method': query_used
-                }
-            }
-            
-        except Exception as e:
-            log.error(f"      ✗ Timestamp comparison error: {e}")
-            return {
-                'validator': 'component_timestamp',
-                'status': 'warning',
-                'error': str(e),
-                'details': {
-                    'error_type': type(e).__name__,
-                    'error_message': str(e)
-                }
-            }
-  
-    def _validate_component_timestamp(self, components: List[Dict], context: Dict) -> Dict:
-        """
-        Compare Salesforce modified date vs Git commit date
-        
-        New approach:
-        - Uses production_components from context (already fetched)
-        - Handles ALL components (not just first one)
-        - Works with Vlocity components
-        - Proper name matching using VlocityQueryBuilder
-        """
-        if self.mock_mode:
-            return {
-                'validator': 'component_timestamp',
-                'status': 'success',
-                'checks_performed': ['mock_comparison'],
-                'details': {'mock': True}
-            }
-        
-        try:
-            # Get production components and commit info
             production_components = context.get('production_components', [])
             commit_shas = context.get('commit_shas', [])
             
@@ -999,8 +738,10 @@ class DeploymentProver:
                 }
             
             commit_sha = commit_shas[0]
+            production_components = context.get('production_components', [])
+    
             
-            log.info(f"    ⏰ Comparing timestamps for commit {commit_sha[:8]}...")
+       
             
             # Get commit date from Git
             workspace = self.git.workspace
@@ -1020,10 +761,6 @@ class DeploymentProver:
             commit_date = datetime.fromisoformat(commit_date_str.replace('Z', '+00:00'))
             log.info(f"      Git commit date: {commit_date.isoformat()}")
             
-            # Import query builder for name cleaning
-            from vlocity_query_builder import VlocityQueryBuilder
-            builder = VlocityQueryBuilder()
-            
             # Track results for ALL components
             matches = 0
             mismatches = 0
@@ -1034,38 +771,33 @@ class DeploymentProver:
                 try:
                     comp_type = comp['type']
                     api_name = comp['api_name']
-                    cleaned_name = builder._clean_component_name(api_name, comp_type)
+                    
+                    # 🎯 APPLY SAME CUSTOMFIELD CLEANING AS IN OTHER METHODS
+                    if comp_type == 'CustomField':
+                        cleaned_name = api_name.replace('CustomField.PartyConsent.', '').replace('__c', '')
+                        log.debug(f"      🎯 CUSTOMFIELD TIMESTAMP CLEANED: {api_name} → {cleaned_name}")
+                    else:
+                        from vlocity_query_builder import VlocityQueryBuilder
+                        builder = VlocityQueryBuilder()
+                        cleaned_name = builder._clean_component_name(api_name, comp_type)
+                    
                     
                     log.debug(f"      Checking: {comp_type}.{cleaned_name}")
                     
-                    # Find matching production component
+                    # 🎯 GET COMPARISON FIELD - CustomField uses DeveloperName
+                    compare_field = 'DeveloperName' if comp_type == 'CustomField' else 'Name'
+                    
+                    # Find matching production component USING CORRECT FIELD
                     prod_record = None
                     for prod_comp in production_components:
                         if prod_comp.get('_component_type') != comp_type:
                             continue
                         
-                     
-                            
-                                                # Get production name based on component type
-                        if comp_type == 'IntegrationProcedure':
-                            prod_name = prod_comp.get('vlocity_cmt__ProcedureKey__c', '')
-                        elif comp_type == 'OmniScript':
-                            prod_name = prod_comp.get('Name', '')
-                        elif comp_type == 'DataRaptor':
-                            prod_name = prod_comp.get('vlocity_cmt__DRMapName__c', '')
-                        elif comp_type in ['LightningComponentBundle', 'Flow', 'CustomObject', 
-                                        'CustomField', 'EmailTemplate', 'PermissionSetGroup']:
-                            # These use DeveloperName
-                            prod_name = prod_comp.get('DeveloperName', prod_comp.get('Name', ''))
-                        elif comp_type == 'ValidationRule':
-                            # ValidationRule uses ValidationName
-                            prod_name = prod_comp.get('ValidationName', prod_comp.get('Name', ''))
-                        else:
-                            # Standard components - try Name first, then DeveloperName
-                            prod_name = prod_comp.get('Name', prod_comp.get('DeveloperName', ''))  
+                        # 🎯 USE CORRECT COMPARISON FIELD
+                        prod_value = prod_comp.get(compare_field, '')
                         
                         # Check if names match (case-insensitive)
-                        if prod_name.lower() == cleaned_name.lower():
+                        if prod_value and prod_value.lower() == cleaned_name.lower():
                             prod_record = prod_comp
                             break
                     
@@ -1074,7 +806,8 @@ class DeploymentProver:
                         log.debug(f"         ⊘ Not in production: {api_name}")
                         details.append({
                             'component': api_name,
-                            'status': 'not_found'
+                            'status': 'not_found',
+                            'compare_field': compare_field
                         })
                         continue
                     
@@ -1102,7 +835,8 @@ class DeploymentProver:
                             'status': 'match',
                             'commit_date': commit_date.isoformat(),
                             'salesforce_date': sf_date.isoformat(),
-                            'time_diff_hours': round(time_diff_hours, 2)
+                            'time_diff_hours': round(time_diff_hours, 2),
+                            'compare_field': compare_field
                         })
                     else:
                         mismatches += 1
@@ -1112,7 +846,199 @@ class DeploymentProver:
                             'status': 'mismatch',
                             'commit_date': commit_date.isoformat(),
                             'salesforce_date': sf_date.isoformat(),
-                            'time_diff_hours': round(time_diff_hours, 2)
+                            'time_diff_hours': round(time_diff_hours, 2),
+                            'compare_field': compare_field
+                        })
+                        
+                except Exception as e:
+                    log.error(f"         ✗ Error checking {comp.get('api_name')}: {e}")
+                    details.append({
+                        'component': comp.get('api_name'),
+                        'status': 'error',
+                        'error': str(e)
+                    })
+            
+            # Summary
+            log.info(f"    📊 Timestamp results: ✓{matches} ✗{mismatches} ⊘{not_found}")
+            
+            # Determine status
+            if matches == len(components):
+                status = 'success'
+            elif matches > 0:
+                status = 'warning'
+            else:
+                status = 'warning'
+            
+            return {
+                'validator': 'component_timestamp',
+                'status': status,
+                'checks_performed': ['timestamp_comparison', 'production_components'],
+                'details': {
+                    'total': len(components),
+                    'matches': matches,
+                    'mismatches': mismatches,
+                    'not_found': not_found,
+                    'commit_sha': commit_sha[:8],
+                    'commit_date': commit_date.isoformat(),
+                    'components': details
+                }
+            }
+            
+        except Exception as e:
+            log.error(f"      ✗ Timestamp comparison error: {e}")
+            import traceback
+            log.error(traceback.format_exc())
+            return {
+                'validator': 'component_timestamp',
+                'status': 'warning',
+                'error': str(e),
+                'details': {
+                    'error_type': type(e).__name__,
+                    'error_message': str(e)
+                }
+            }    
+    
+    
+    def _validate_component_timestamp(self, components: List[Dict], context: Dict) -> Dict:
+        """
+        Compare Salesforce modified date vs Git commit date
+        """
+        if self.mock_mode:
+            return {
+                'validator': 'component_timestamp',
+                'status': 'success',
+                'checks_performed': ['mock_comparison'],
+                'details': {'mock': True}
+            }
+        
+        try:
+            production_components = context.get('production_components', [])
+            commit_shas = context.get('commit_shas', [])
+            
+            if not commit_shas:
+                return {
+                    'validator': 'component_timestamp',
+                    'status': 'skipped',
+                    'reason': 'No commit SHA provided'
+                }
+            
+            commit_sha = commit_shas[0]
+            
+            # Get commit date from Git
+            workspace = self.git.workspace
+            repo = self.git.repo
+            url = f"https://api.bitbucket.org/2.0/repositories/{workspace}/{repo}/commit/{commit_sha}"
+            
+            response = self.git.session.get(url, timeout=5)
+            if response.status_code != 200:
+                return {
+                    'validator': 'component_timestamp',
+                    'status': 'warning',
+                    'reason': f'Could not get commit date (HTTP {response.status_code})'
+                }
+            
+            commit_data = response.json()
+            commit_date_str = commit_data.get('date')
+            commit_date = datetime.fromisoformat(commit_date_str.replace('Z', '+00:00'))
+            log.info(f"      Git commit date: {commit_date.isoformat()}")
+            
+            # Track results for ALL components
+            matches = 0
+            mismatches = 0
+            not_found = 0
+            details = []
+            
+            for comp in components:
+                try:
+                    comp_type = comp['type']
+                    api_name = comp['api_name']
+                    
+                    # 🎯 APPLY SAME CLEANING AS IN OTHER METHODS
+                    if comp_type == 'CustomField':
+                        cleaned_name = api_name.replace('CustomField.PartyConsent.', '').replace('__c', '')
+                        log.debug(f"      🎯 CUSTOMFIELD TIMESTAMP CLEANED: {api_name} → {cleaned_name}")
+                    else:
+                        from vlocity_query_builder import VlocityQueryBuilder
+                        builder = VlocityQueryBuilder()
+                        cleaned_name = builder._clean_component_name(api_name, comp_type)
+                    
+                    log.debug(f"      Checking: {comp_type}.{cleaned_name}")
+                    
+                    # 🎯 FIX: USE CORRECT COMPARISON FIELD FOR EACH COMPONENT TYPE
+                    if comp_type == 'CustomField':
+                        compare_field = 'DeveloperName'
+                    elif comp_type == 'Product2':
+                        compare_field = 'ProductCode'  # 🎯 FIX: Product2 uses ProductCode, not Name
+                        log.debug(f"         🎯 PRODUCT2 using {compare_field}")
+                    else:
+                        compare_field = 'Name'
+                    
+                    # Find matching production component USING CORRECT FIELD
+                    prod_record = None
+                    for prod_comp in production_components:
+                        if prod_comp.get('_component_type') != comp_type:
+                            continue
+                        
+                        # 🎯 USE CORRECT COMPARISON FIELD
+                        prod_value = prod_comp.get(compare_field, '')
+                        
+                        log.debug(f"            {compare_field}='{prod_value}' vs cleaned='{cleaned_name}'")
+                        
+                        # Check if names match (case-insensitive)
+                        if prod_value and prod_value.lower() == cleaned_name.lower():
+                            prod_record = prod_comp
+                            log.debug(f"            ✅ MATCH FOUND for {cleaned_name}")
+                            break
+                    
+                    if not prod_record:
+                        not_found += 1
+                        log.debug(f"         ⊘ Not in production: {api_name}")
+                        log.debug(f"         ⊘ Looking for '{cleaned_name}' in field '{compare_field}'")
+                        details.append({
+                            'component': api_name,
+                            'status': 'not_found',
+                            'compare_field': compare_field,
+                            'looking_for': cleaned_name
+                        })
+                        continue
+                    
+                    # Get production timestamp
+                    sf_date_str = prod_record.get('LastModifiedDate') or prod_record.get('CreatedDate')
+                    
+                    if not sf_date_str:
+                        log.debug(f"         ⚠️  No timestamp: {api_name}")
+                        details.append({
+                            'component': api_name,
+                            'status': 'no_timestamp'
+                        })
+                        continue
+                    
+                    # Parse and compare dates
+                    sf_date = datetime.fromisoformat(sf_date_str.replace('Z', '+00:00'))
+                    deployed_after_commit = sf_date > commit_date
+                    time_diff_hours = (sf_date - commit_date).total_seconds() / 3600
+                    
+                    if deployed_after_commit:
+                        matches += 1
+                        log.info(f"         ✓ {cleaned_name}: Modified AFTER commit (+{time_diff_hours:.1f}h)")
+                        details.append({
+                            'component': api_name,
+                            'status': 'match',
+                            'commit_date': commit_date.isoformat(),
+                            'salesforce_date': sf_date.isoformat(),
+                            'time_diff_hours': round(time_diff_hours, 2),
+                            'compare_field': compare_field
+                        })
+                    else:
+                        mismatches += 1
+                        log.warning(f"         ✗ {cleaned_name}: Modified BEFORE commit ({abs(time_diff_hours):.1f}h)")
+                        details.append({
+                            'component': api_name,
+                            'status': 'mismatch',
+                            'commit_date': commit_date.isoformat(),
+                            'salesforce_date': sf_date.isoformat(),
+                            'time_diff_hours': round(time_diff_hours, 2),
+                            'compare_field': compare_field
                         })
                         
                 except Exception as e:
@@ -1543,14 +1469,17 @@ class DeploymentProver:
         
         try:
             commit_sha = context.get('commit_shas', [None])[0]
-            if not commit_sha:
+            
+            commit_shas = context.get('commit_shas', [])
+            if not commit_sha or not commit_shas[0] :
                 return {
                     'validator': 'commit_contents',
                     'status': 'skipped',
                     'reason': 'No commit SHA provided',
                     'notes': ['No commit SHA available']
                 }
-            
+            commit_sha = commit_shas[0]
+            log.info(f"    📋 Getting commit contents for {commit_sha[:8]}...")
             log.info(f"    📋 Getting commit contents with diffs for {commit_sha[:8]}...")
             
             # Get config options
@@ -2346,105 +2275,6 @@ class DeploymentProver:
         return stories
      
 
-    def _fetch_all_production_componentsbackup(self, components: List[Dict]) -> List[Dict]:
-        """
-        Fetch production components using configuration-driven approach
-        
-        Reads from validation_config.py to determine:
-        - Which API to use (soql vs tooling)
-        - Which object to query
-        - Which field name to use
-        """
-        from salesforce_client import fetch_vlocity_component_state
-        
-        log.info("=" * 80)
-        log.info("🔧 _fetch_all_production_components CALLED")
-        log.info("=" * 80)
-        
-        # Categorize components
-        vlocity_types = ['OmniScript', 'IntegrationProcedure', 'DataRaptor']
-        standard_types = []
-        tooling_types = []
-        
-        # Check if validation_config is available
-        try:
-            from validation_config import get_component_query_config, VALIDATION_CONFIG_AVAILABLE
-            config_available = VALIDATION_CONFIG_AVAILABLE
-        except:
-            config_available = False
-            log.warning("⚠️  validation_config.py not available, using defaults")
-        
-        # Categorize based on config
-        for comp in components:
-            comp_type = comp.get('type')
-            
-            if comp_type in vlocity_types:
-                continue  # Handle separately
-            
-            if config_available:
-                config = get_component_query_config(comp_type)
-                if config and config.get('api') == 'tooling':
-                    tooling_types.append(comp_type)
-                else:
-                    standard_types.append(comp_type)
-            else:
-                # Default: LWC uses tooling, others use soql
-                if comp_type == 'LightningComponentBundle':
-                    tooling_types.append(comp_type)
-                else:
-                    standard_types.append(comp_type)
-        
-        standard_components = [c for c in components if c.get('type') in standard_types]
-        tooling_components = [c for c in components if c.get('type') in tooling_types]
-        vlocity_components = [c for c in components if c.get('type') in vlocity_types]
-        
-        log.info(f"📊 Component breakdown:")
-        log.info(f"   ✅ Standard SOQL: {len(standard_components)} ({list(set(standard_types))})")
-        log.info(f"   🔧 Tooling API: {len(tooling_components)} ({list(set(tooling_types))})")
-        log.info(f"   🔷 Vlocity: {len(vlocity_components)}")
-        log.info("=" * 80)
-        
-        all_production = []
-        
-        # Fetch standard SOQL components
-        if standard_components:
-            log.info("🔍 Fetching standard SOQL components...")
-            standard_prod = self._fetch_standard_components(standard_components)
-            all_production.extend(standard_prod)
-            log.info(f"   ✅ Standard: Found {len(standard_prod)} records")
-        
-        # Fetch Tooling API components
-        if tooling_components:
-            log.info("=" * 80)
-            log.info("🔧 FETCHING TOOLING API COMPONENTS...")
-            log.info("=" * 80)
-            
-            tooling_prod = self._fetch_components_by_api(tooling_components, api_type='tooling')
-            all_production.extend(tooling_prod)
-            
-            log.info("=" * 80)
-            log.info(f"   ✅ Tooling API: Found {len(tooling_prod)} records")
-            log.info("=" * 80)
-        
-        # Fetch Vlocity components
-        if vlocity_components:
-            log.info("=" * 80)
-            log.info("🔷 FETCHING VLOCITY COMPONENTS...")
-            log.info("=" * 80)
-            
-            vlocity_prod = fetch_vlocity_component_state(self.sf, vlocity_components)
-            all_production.extend(vlocity_prod)
-            
-            log.info("=" * 80)
-            log.info(f"   ✅ Vlocity: Found {len(vlocity_prod)} records")
-            log.info("=" * 80)
-        
-        log.info("=" * 80)
-        log.info(f"📦 TOTAL PRODUCTION COMPONENTS: {len(all_production)}")
-        log.info("=" * 80)
-        
-        return all_production
-    
     def _fetch_all_production_components(self, components: List[Dict]) -> List[Dict]:
         """
         Fetch production components using configuration-driven approach
@@ -2547,7 +2377,7 @@ class DeploymentProver:
         return all_production
     
 
-    def _fetch_components_by_api(self, components: List[Dict], api_type: str = 'soql') -> List[Dict]:
+    def _fetch_components_by_apibackup(self, components: List[Dict], api_type: str = 'soql') -> List[Dict]:
         """
         Fetch components using configuration-driven approach
         
@@ -2557,7 +2387,11 @@ class DeploymentProver:
         
         Returns:
             List of production records
+            
+            
         """
+        
+        
         from vlocity_query_builder import VlocityQueryBuilder
         
         try:
@@ -2572,6 +2406,7 @@ class DeploymentProver:
         for comp in components:
             comp_type = comp.get('type')
             api_name = comp.get('api_name', '')
+            
             
             # Clean the component name
             cleaned_name = builder._clean_component_name(api_name, comp_type)
@@ -2633,6 +2468,315 @@ class DeploymentProver:
                 log.debug(traceback.format_exc())
         
         return all_records
+    
+        """
+        Fetch components using configuration-driven approach
+        
+        Args:
+            components: List of components to fetch
+            api_type: 'soql' or 'tooling'
+        
+        Returns:
+            List of production records
+        """
+        
+        try:
+            from validation_config import get_component_query_config
+            config_available = True
+        except ImportError:
+            config_available = False
+        
+        from vlocity_query_builder import VlocityQueryBuilder
+        builder = VlocityQueryBuilder()
+        all_records = []
+        
+        for comp in components:
+            comp_type = comp.get('type')
+            api_name = comp.get('api_name', '')
+            
+            # 🎯 CUSTOMFIELD CLEANING
+            if comp_type == 'CustomField':
+                cleaned_name = api_name.replace('CustomField.PartyConsent.', '').replace('__c', '')
+                log.info(f"   🎯 CUSTOMFIELD CLEANED: {api_name} → {cleaned_name}")
+            else:
+                # Use vlocity_query_builder for other components
+                cleaned_name = builder._clean_component_name(api_name, comp_type)
+            
+            log.info(f"   🔍 Querying {api_type.upper()} for: {comp_type}.{cleaned_name}")
+            
+            try:
+                # Get query configuration
+                if config_available:
+                    config = get_component_query_config(comp_type)
+                else:
+                    config = None
+                
+                if not config:
+                    log.warning(f"      ⚠️  No config for {comp_type}, skipping")
+                    continue
+                
+                # Extract config
+                object_name = config['object']
+                name_field = config['name_field']
+                date_field = config.get('date_field', 'LastModifiedDate')
+                query_api = config.get('api', 'soql')
+                
+                # Build query
+                query = f"""
+                    SELECT Id, {name_field}, {date_field}, CreatedDate
+                    FROM {object_name}
+                    WHERE {name_field} = '{cleaned_name}'
+                    LIMIT 1
+                """
+                
+                log.debug(f"      Query: {query}")
+                
+                # Execute based on API type
+                if query_api == 'tooling' or api_type == 'tooling':
+                    # Use Tooling API
+                    result = self._query_tooling(query)
+                    records = result if result else []
+                else:
+                    # Use standard SOQL
+                    result = self.sf.query(query)
+                    records = result.get('records', []) if result else []
+                
+                if records:
+                    for record in records:
+                        # Tag with component type
+                        record['_component_type'] = comp_type
+                        # Normalize field name
+                        if name_field != 'Name' and 'Name' not in record:
+                            record['Name'] = record.get(name_field)
+                        all_records.append(record)
+                    log.info(f"      ✅ Found: {cleaned_name}")
+                else:
+                    log.warning(f"      ✗ Not found: {cleaned_name}")
+                    
+            except Exception as e:
+                log.error(f"      ❌ Error fetching {api_name}: {e}")
+                import traceback
+                log.debug(traceback.format_exc())
+        
+        return all_records
+    
+    def _fetch_components_by_api(self, components: List[Dict], api_type: str = 'soql') -> List[Dict]:
+        """
+        Fetch components using configuration-driven approach
+        
+        Args:
+            components: List of components to fetch
+            api_type: 'soql' or 'tooling'
+        
+        Returns:
+            List of production records
+        """
+        
+        try:
+            from validation_config import get_component_query_config
+            config_available = True
+        except ImportError:
+            config_available = False
+        
+        from vlocity_query_builder import VlocityQueryBuilder
+        builder = VlocityQueryBuilder()
+        all_records = []
+        
+        for comp in components:
+            comp_type = comp.get('type')
+            api_name = comp.get('api_name', '')
+            
+            # 🎯 CUSTOMFIELD CLEANING
+            if comp_type == 'CustomField':
+                cleaned_name = api_name.replace('CustomField.PartyConsent.', '').replace('__c', '')
+                log.info(f"   🎯 CUSTOMFIELD CLEANED: {api_name} → {cleaned_name}")
+            else:
+                # Use vlocity_query_builder for other components
+                cleaned_name = builder._clean_component_name(api_name, comp_type)
+            
+            log.info(f"   🔍 Querying {api_type.upper()} for: {comp_type}.{cleaned_name}")
+            
+            try:
+                # Get query configuration
+                if config_available:
+                    config = get_component_query_config(comp_type)
+                else:
+                    config = None
+                
+                if not config:
+                    log.warning(f"      ⚠️  No config for {comp_type}, skipping")
+                    continue
+                
+                # Extract config
+                object_name = config['object']
+                name_field = config['name_field']
+                date_field = config.get('date_field', 'LastModifiedDate')
+                query_api = config.get('api', 'soql')
+                
+                # Build query
+                query = f"""
+                    SELECT Id, {name_field}, {date_field}, CreatedDate
+                    FROM {object_name}
+                    WHERE {name_field} = '{cleaned_name}'
+                    LIMIT 1
+                """
+                
+                log.debug(f"      Query: {query}")
+                
+                # Execute based on API type
+                if query_api == 'tooling' or api_type == 'tooling':
+                    # Use Tooling API
+                    result = self._query_tooling(query)
+                    records = result if result else []
+                else:
+                    # Use standard SOQL
+                    result = self.sf.query(query)
+                    records = result.get('records', []) if result else []
+                
+                if records:
+                    for record in records:
+                        # Tag with component type
+                        record['_component_type'] = comp_type
+                        # Normalize field name
+                        if name_field != 'Name' and 'Name' not in record:
+                            record['Name'] = record.get(name_field)
+                        all_records.append(record)
+                    log.info(f"      ✅ Found: {cleaned_name}")
+                else:
+                    log.warning(f"      ✗ Not found: {cleaned_name}")
+                    
+            except Exception as e:
+                log.error(f"      ❌ Error fetching {api_name}: {e}")
+                import traceback
+                log.debug(traceback.format_exc())
+        
+        return all_records
+    
+    def _validate_component_existsbackup(self, components: List[Dict], context: Dict) -> Dict:
+        """Verify component exists using pre-fetched production data"""
+        
+        if self.mock_mode:
+            return {
+                'validator': 'component_exists',
+                'status': 'success',
+                'checks_performed': ['mock_salesforce'],
+                'details': {'mock': True, 'found': len(components)}
+            }
+        
+        try:
+            production_components = context.get('production_components', [])
+            
+            log.info(f"    📦 component_exists - Production components count: {len(production_components)}")
+            product2_count = sum(1 for pc in production_components if pc.get('_component_type') == 'Product2')
+            log.info(f"    📦 Product2 components in production: {product2_count}")
+            
+            log.info(f"    🔵 Validating {len(components)} components...")
+            
+            found_count = 0
+            not_found = []
+            component_details = []
+            
+            for comp in components:
+                try:
+                    comp_type = comp['type']
+                    api_name = comp['api_name']
+                    
+                    # 🎯 APPLY SAME CUSTOMFIELD CLEANING AS IN FETCH
+                    if comp_type == 'CustomField':
+                        cleaned_name = api_name.replace('CustomField.PartyConsent.', '').replace('__c', '')
+                        log.debug(f"      🎯 CUSTOMFIELD VALIDATION CLEANED: {api_name} → {cleaned_name}")
+                    else:
+                        from vlocity_query_builder import VlocityQueryBuilder
+                        builder = VlocityQueryBuilder()
+                        cleaned_name = builder._clean_component_name(api_name, comp_type)
+                    
+                    log.debug(f"      Checking: {comp_type}.{cleaned_name} (original: {api_name})")
+                    
+                    # Get comparison field - CustomField uses DeveloperName
+                    compare_field = 'DeveloperName' if comp_type == 'CustomField' else 'Name'
+                    
+                    log.debug(f"         Compare field: {compare_field}, Cleaned name: {cleaned_name}")
+                    
+                    prod_record = None
+                    for prod_comp in production_components:
+                        prod_type = prod_comp.get('_component_type')
+                        
+                        if prod_type != comp_type:
+                            continue
+                        
+                        # 🎯 USE CORRECT COMPARISON FIELD
+                        prod_value = prod_comp.get(compare_field, '')
+                        
+                        log.debug(f"            {compare_field}='{prod_value}' vs cleaned='{cleaned_name}'")
+                        
+                        if prod_value and prod_value.lower() == cleaned_name.lower(): 
+                            prod_record = prod_comp
+                            break
+                            
+                    if prod_record:
+                        found_count += 1
+                        component_details.append({
+                            'name': api_name,
+                            'cleaned_name': cleaned_name,
+                            'type': comp_type,
+                            'found': True,
+                            'last_modified': prod_record.get('LastModifiedDate'),
+                            'salesforce_id': prod_record.get('Id', 'N/A'),
+                            'matched_field': compare_field
+                        })
+                        log.info(f"      ✅ Found: {api_name} -> {cleaned_name} (matched on {compare_field})")
+                    else:
+                        not_found.append({
+                            'original_name': api_name,
+                            'cleaned_name': cleaned_name,
+                            'type': comp_type
+                        })
+                        component_details.append({
+                            'name': api_name,
+                            'cleaned_name': cleaned_name,
+                            'type': comp_type,
+                            'found': False,
+                            'compare_field': compare_field
+                        })
+                        log.warning(f"      ❌ Not found: {api_name} -> {cleaned_name} (no match on {compare_field})")
+                        
+                except Exception as e:
+                    log.error(f"      Error checking {comp.get('api_name')}: {e}")
+                    not_found.append({
+                        'original_name': comp.get('api_name', 'unknown'),
+                        'cleaned_name': 'error',
+                        'type': comp_type
+                    })
+            
+            log.info(f"    📊 Found: {found_count}/{len(components)}")
+            
+            if found_count == 0:
+                status = 'failed'
+            elif len(not_found) > 0:
+                status = 'warning'
+            else:
+                status = 'success'
+            
+            return {
+                'validator': 'component_exists',
+                'status': status,
+                'checks_performed': ['production_components_match'],
+                'details': {
+                    'total_components': len(components),
+                    'found': found_count,
+                    'not_found': len(not_found),
+                    'not_found_list': not_found,
+                    'components': component_details
+                }
+            }
+            
+        except Exception as e:
+            log.error(f"    ❌ Validator error: {e}")
+            return {
+                'validator': 'component_exists',
+                'status': 'warning',
+                'error': str(e)
+            }
     
     def _fetch_standard_components(self, components: List[Dict]) -> List[Dict]:
         """Fetch standard components using SOQL (uses existing logic)"""

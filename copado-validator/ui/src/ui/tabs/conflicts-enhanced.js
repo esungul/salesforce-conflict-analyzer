@@ -236,7 +236,7 @@ function renderConflictsUI(panel, filteredConflicts, totalStoriesWithConflicts, 
   const header = createElement('div', { className: 'section-header' }, [
     createElement('h2', {}, 'Conflicts'),
     createElement('p', { className: 'muted' }, 
-      `${filteredConflicts.length} Component conflicts across ${totalStoriesWithConflicts} stories`)
+      `${filteredConflicts.length} Components conflicts across ${totalStoriesWithConflicts} stories`)
   ]);
   panel.append(header);
 

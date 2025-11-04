@@ -1,0 +1,203 @@
+# vlocity_config.yaml - COMPLETE CONFIGURATION-DRIVEN APPROACH
+
+namespace: "vlocity_cmt"
+
+components:
+
+
+
+
+  # ==========================================================================
+  # OMNISCRIPT
+  # ==========================================================================
+  OmniScript:
+    object: "vlocity_cmt__OmniScript__c"
+    fields:
+      - "Id"
+      - "Name"
+      - "CreatedDate"
+      - "LastModifiedDate"
+      - "vlocity_cmt__Type__c"
+      - "vlocity_cmt__SubType__c"
+      - "vlocity_cmt__Version__c"
+      - "vlocity_cmt__OmniProcessType__c"
+    search_field: "Name"
+    compare_field: "Name"
+    filter_field: "vlocity_cmt__OmniProcessType__c"
+    filter_value: "OmniScript"
+    order_by: "CreatedDate DESC"
+    limit: 100
+    strip_type_prefix: true
+    url_decode: false
+    extract_pattern: "^([^_]+)"  # Remove language suffix (_English, _Spanish)
+    strip_suffixes:
+      - "_English"
+      - "_Spanish"
+      - "_French"
+      - "_German"
+
+  CustomField:
+    object: "CustomField"
+    fields:
+      - "Id"
+      - "DeveloperName"
+      - "TableEnumOrId"
+      - "NamespacePrefix"
+      - "CreatedDate"
+      - "LastModifiedDate"
+    search_field: "DeveloperName"
+    compare_field: "DeveloperName"
+    order_by: "LastModifiedDate DESC"
+    limit: 100
+    # Custom name cleaning for CustomField
+    strip_type_prefix: true
+    url_decode: false
+    extract_pattern: '^[^.]+\\.([^.]+\\.)?(.+?)(__c)?$
+    remove_patterns:
+      - "__c$"  # Remove __c suffi
+  # ==========================================================================
+  # INTEGRATION PROCEDURE
+  # ==========================================================================
+  IntegrationProcedure:
+    object: "vlocity_cmt__OmniScript__c"  # Same object as OmniScript!
+    fields:
+      - "Id"
+      - "Name"
+      - "CreatedDate"
+      - "LastModifiedDate"
+      - "vlocity_cmt__Type__c"
+      - "vlocity_cmt__SubType__c"
+      - "vlocity_cmt__ProcedureKey__c"
+      - "vlocity_cmt__IsProcedure__c"
+    search_field: "vlocity_cmt__ProcedureKey__c"
+    compare_field: "vlocity_cmt__ProcedureKey__c"
+    filter_field: "vlocity_cmt__IsProcedure__c"
+    filter_value: "true"
+    order_by: "CreatedDate DESC"
+    limit: 100
+    strip_type_prefix: true
+    url_decode: false
+    extract_pattern: "^(.+)$"  # No transformation needed
+
+  # ==========================================================================
+  # DATARAPTOR
+  # ==========================================================================
+  DataRaptor:
+    object: "vlocity_cmt__DRBundle__c"
+    fields:
+      - "Id"
+      - "Name"
+      - "vlocity_cmt__DRMapName__c"
+      - "CreatedDate"
+      - "LastModifiedDate"
+      - "vlocity_cmt__Description__c"
+    search_field: "vlocity_cmt__DRMapName__c"
+    compare_field: "vlocity_cmt__DRMapName__c"
+    order_by: "CreatedDate DESC"
+    limit: 100
+    strip_type_prefix: true
+    url_decode: false
+    extract_pattern: "^(.+)$"  # No transformation needed
+
+  # ==========================================================================
+  # PRODUCT2 (Already Working)
+  # ==========================================================================
+  Product2:
+    object: "Product2"
+    fields:
+      - "Id"
+      - "Name"
+      - "ProductCode"
+      - "Description"
+      - "IsActive"
+      - "CreatedDate"
+      - "LastModifiedDate"
+      - "vlocity_cmt__GlobalKey__c"
+    search_field: "ProductCode"
+    compare_field: "ProductCode"
+    order_by: "LastModifiedDate DESC"
+    limit: 100
+    strip_type_prefix: true
+    url_decode: true
+    extract_pattern: ".*\\(([^/]+)"  # Extract ProductCode between ( and /
+
+  # ==========================================================================
+  # CALCULATION MATRIX VERSION
+  # ==========================================================================
+  CalculationMatrixVersion:
+    object: "vlocity_cmt__CalculationMatrixVersion__c"
+    fields:
+      - "Id"
+      - "Name"
+      - "CreatedDate"
+      - "LastModifiedDate"
+      - "vlocity_cmt__CalculationMatrixId__c"
+      - "vlocity_cmt__CurrentStatus__c"
+      - "vlocity_cmt__VersionNumber__c"
+    search_field: "Name"
+    compare_field: "Name"
+    order_by: "LastModifiedDate DESC"
+    limit: 100
+    strip_type_prefix: true
+    url_decode: false
+    extract_pattern: "^(.+)$"  # No transformation needed
+
+  # ==========================================================================
+  # VLOCITY PICKLIST
+  # ==========================================================================
+  VlocityPicklist:
+    object: "vlocity_cmt__Picklist__c"
+    fields:
+      - "Id"
+      - "Name"
+      - "CreatedDate"
+      - "LastModifiedDate"
+      - "vlocity_cmt__GlobalKey__c"
+      - "vlocity_cmt__VersionLabel__c"
+    search_field: "Name"
+    compare_field: "Name"
+    order_by: "LastModifiedDate DESC"
+    limit: 100
+    strip_type_prefix: true
+    url_decode: true
+    extract_pattern: "^([^(]+)"  # Extract before parentheses (remove UUID)
+
+  # ==========================================================================
+  # ADD MORE VLOCITY COMPONENTS AS NEEDED
+  # ==========================================================================
+  VlocityCard:
+    object: "vlocity_cmt__VlocityCard__c"
+    fields:
+      - "Id"
+      - "Name"
+      - "CreatedDate"
+      - "LastModifiedDate"
+      - "vlocity_cmt__GlobalKey__c"
+    search_field: "Name"
+    compare_field: "Name"
+    order_by: "CreatedDate DESC"
+    limit: 100
+    strip_type_prefix: true
+    url_decode: false
+    extract_pattern: "^(.+)$"
+
+  VlocityUITemplate:
+    object: "vlocity_cmt__VlocityUITemplate__c"
+    fields:
+      - "Id"
+      - "Name"
+      - "CreatedDate"
+      - "LastModifiedDate"
+      - "vlocity_cmt__GlobalKey__c"
+    search_field: "Name"
+    compare_field: "Name"
+    order_by: "CreatedDate DESC"
+    limit: 100
+    strip_type_prefix: true
+    url_decode: false
+    extract_pattern: "^(.+)$"
+
+# Global settings
+settings:
+  strip_type_prefix: true
+  fix_doubled_prefix: true

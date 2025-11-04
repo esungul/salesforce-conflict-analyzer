@@ -34,10 +34,6 @@
     <button class="tab-button" role="tab" aria-selected="false" data-tab="conflicts">Conflicts</button>
     <button class="tab-button" role="tab" aria-selected="false" data-tab="enforcement">Enforcement</button>
     
-    <!-- DevOps-Focused Tabs -->
-    <button class="tab-button" role="tab" aria-selected="false" data-tab="decisions">Decisions</button>
-    <button class="tab-button" role="tab" aria-selected="false" data-tab="plan">Plan</button>
-    
     <!-- Shared Tab -->
     <button class="tab-button" role="tab" aria-selected="false" data-tab="reports">Reports</button>
   </nav>
@@ -67,18 +63,6 @@
     </section>
 
     <section id="tab-enforcement" class="tab-panel" role="tabpanel" aria-labelledby="tab-enforcement" hidden>
-    </section>
-
-    <!-- DevOps-Focused Tabs -->
-    <section id="tab-decisions" class="tab-panel" role="tabpanel" aria-labelledby="tab-decisions" hidden>
-      <div class="section-header">
-        <h2>Decisions</h2>
-        <p class="muted">Deployment decisions and recommendations</p>
-      </div>
-      <div class="loading-message">Content for Decisions tab</div>
-    </section>
-
-    <section id="tab-plan" class="tab-panel" role="tabpanel" aria-labelledby="tab-plan" hidden>
     </section>
 
     <!-- Shared Tab -->
@@ -127,27 +111,27 @@
       --error-text: #b71c1c;
     }
 
-    /* Header styling inspired by precheck.js modals */
+    /* Clean white and blue header styling */
     #app-header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
+      background: white;
+      color: var(--primary-blue);
       padding: 16px 24px;
-      border-bottom: none;
-      box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+      border-bottom: 1px solid var(--border-light);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
     .brand {
       font-size: 22px;
-      font-weight: 700;
-      color: white;
+      font-weight: 600;
+      color: var(--primary-blue);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
     }
 
-    /* Tab styling inspired by precheck.js buttons */
+    /* Tab styling */
     .tabs {
       background: white;
       border-bottom: 1px solid var(--border-light);
       padding: 0 24px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
     .tab-button {
@@ -183,8 +167,8 @@
       padding: 24px;
       background: white;
       margin: 20px;
-      border-radius: 12px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
     .section-header h2 {

@@ -1,17 +1,11 @@
 """
-Vlocity Query Builder - Updated with actual Salesforce queries
-
-This version handles the real Vlocity structure:
-- OmniScript and IntegrationProcedure are in vlocity_cmt__OmniScript__c
-- DataRaptor is in vlocity_cmt__DRBundle__c
-- OmniScript: Strip language suffixes (_English, etc.)
-- IntegrationProcedure: Use ProcedureKey__c field
-- DataRaptor: Use DRMapName__c field
+Vlocity Query Builder - Updated with configuration-driven name cleaning
 """
 
 import yaml
 import logging
 import re
+import urllib.parse
 from typing import Dict, List, Optional
 from pathlib import Path
 
@@ -19,7 +13,7 @@ log = logging.getLogger(__name__)
 
 
 class VlocityQueryBuilder:
-    """Build SOQL queries for Vlocity components based on actual Salesforce structure"""
+    """Build SOQL queries for Vlocity components with configuration-driven name cleaning"""
     
     def __init__(self, config_path: str = "vlocity_config.yaml"):
         """Load configuration from YAML file"""
@@ -76,6 +70,23 @@ class VlocityQueryBuilder:
                     'search_field': 'vlocity_cmt__DRMapName__c',
                     'order_by': 'CreatedDate DESC',
                     'limit': 100
+                },
+                'Product2ss': {
+                    'object': 'Product2',
+                    'fields': ['Id', 'Name', 'ProductCode', 'Description', 'IsActive',
+                              'CreatedDate', 'LastModifiedDate'],
+                    'search_field': 'Name',
+                    'order_by': 'CreatedDate DESC',
+                    'limit': 100,
+                    # NAME CLEANING RULES FOR PRODUCT2
+                    'strip_type_prefix': True,
+                    'url_decode': True,
+                    'extract_pattern': '^([^(]+)',
+                    'remove_patterns': [
+                        '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}',
+                        '\\s*/\\s*$',
+                        '\\s*\\([^)]*\\)\\s*$'
+                    ]
                 }
             },
             'settings': {
@@ -84,59 +95,127 @@ class VlocityQueryBuilder:
             }
         }
     
-    def _clean_component_name(self, api_name: str, component_type: str) -> str:
+    def _clean_component_nameback(self, api_name: str, component_type: str) -> str:
         """
-        Clean component name from Git format to Salesforce format
-        
-        Examples:
-        - "OmniScript.OmniScript.PR_MultiLineorderMobileDigital_English" 
-          -> "PR_MultiLineorderMobileDigital" (for OmniScript)
-        - "IntegrationProcedure.IntegrationProcedure.PR_UpdateReservationIdDigital"
-          -> "PR_UpdateReservationIdDigital" (for IntegrationProcedure)
-        - "DataRaptor.PRDRgetDeviceSKU"
-          -> "PRDRgetDeviceSKU" (for DataRaptor)
+        Clean component name using configuration-driven rules
         """
-        settings = self.config.get('settings', {})
         name = api_name
+        log.debug(f"🧹 Cleaning {component_type}: {name}")
         
-        # Step 1: Fix doubled prefix (e.g., OmniScript.OmniScript.PR_Name)
-        if settings.get('fix_doubled_prefix', True):
-            # Pattern: Type.Type.Name -> Type.Name
-            pattern = f"{component_type}\\.{component_type}\\."
-            if re.search(pattern, name):
-                name = re.sub(pattern, f"{component_type}.", name)
-                log.debug(f"   Fixed doubled prefix: {api_name} -> {name}")
+        # Get component configuration
+        comp_config = self.config.get('components', {}).get(component_type, {})
         
-        # Step 2: Strip type prefix (e.g., OmniScript.PR_Name -> PR_Name)
-        if settings.get('strip_type_prefix', True):
+        # Step 1: Strip type prefix
+        if comp_config.get('strip_type_prefix', True):
             if '.' in name:
                 name = name.split('.')[-1]
                 log.debug(f"   Stripped type prefix: -> {name}")
         
-        # Step 3: Strip language suffix for OmniScript
-        if component_type == 'OmniScript':
-            comp_config = self.config.get('components', {}).get('OmniScript', {})
-            suffixes = comp_config.get('strip_suffixes', ['_English'])
-            
-            for suffix in suffixes:
-                if name.endswith(suffix):
-                    name = name[:-len(suffix)]
-                    log.debug(f"   Stripped language suffix: -> {name}")
-                    break
+        # Step 2: URL decode if configured
+        if comp_config.get('url_decode', False):
+            try:
+                decoded_name = urllib.parse.unquote(name)
+                if decoded_name != name:
+                    log.debug(f"   URL decoded: {name} -> {decoded_name}")
+                name = decoded_name
+            except Exception as e:
+                log.warning(f"   URL decode failed: {e}")
+                
+        if component_type == 'Product2':
+            # Try to extract Product Code between ( and /
+            pattern = r"\(([^/]+)"
+            match = re.search(pattern, name)
+            if match:
+                product_code = match.group(1).strip()
+                log.debug(f"   🎯 EXTRACTED Product Code: '{product_code}'")
+                return product_code
+            else:
+                log.debug(f"   ⚠️  No Product Code pattern matched")
         
-        log.debug(f"   Final cleaned name: {name}")
+        # Step 3: Extract pattern if configured
+        extract_pattern = comp_config.get('extract_pattern')
+        if extract_pattern:
+            match = re.match(extract_pattern, name.strip())
+            if match:
+                extracted = match.group(1).strip()
+                log.debug(f"   Extracted pattern '{extract_pattern}': {name} -> {extracted}")
+                name = extracted
+        
+        # Step 4: Remove patterns if configured
+        remove_patterns = comp_config.get('remove_patterns', [])
+        for pattern in remove_patterns:
+            original = name
+            name = re.sub(pattern, '', name)
+            if name != original:
+                log.debug(f"   Removed pattern '{pattern}': {original} -> {name}")
+        
+        # Step 5: Strip suffixes (for OmniScript, etc.)
+        strip_suffixes = comp_config.get('strip_suffixes', [])
+        for suffix in strip_suffixes:
+            if name.endswith(suffix):
+                name = name[:-len(suffix)]
+                log.debug(f"   Stripped suffix '{suffix}': -> {name}")
+                break
+        
+        # Step 6: Final cleanup
+        name = name.strip()
+        
+        log.debug(f"   ✅ Final cleaned name: {name}")
         return name
     
+        # vlocity_query_builder.py - FIX PATTERN MATCHING
+
+    def _clean_component_name(self, api_name: str, component_type: str) -> str:
+        """
+        Clean component name using configuration-driven rules
+        """
+        name = api_name
+        log.debug(f"🧹 Cleaning {component_type}: {name}")
+        
+        comp_config = self.config.get('components', {}).get(component_type, {})
+        
+        # Step 1: Strip type prefix
+        if comp_config.get('strip_type_prefix', True):
+            if '.' in name:
+                name = name.split('.')[-1]
+                log.debug(f"   Stripped type prefix: -> {name}")
+        
+        # Step 2: URL decode if configured
+        if comp_config.get('url_decode', False):
+            try:
+                decoded_name = urllib.parse.unquote(name)
+                if decoded_name != name:
+                    log.debug(f"   URL decoded: {name} -> {decoded_name}")
+                name = decoded_name
+            except Exception as e:
+                log.warning(f"   URL decode failed: {e}")
+        
+        # Step 3: Extract pattern if configured - FIXED: use re.search() instead of re.match()
+        extract_pattern = comp_config.get('extract_pattern')
+        if extract_pattern:
+            log.debug(f"   🎯 Applying extract_pattern: '{extract_pattern}'")
+            # ✅ FIX: Change from re.match() to re.search()
+            match = re.search(extract_pattern, name.strip())
+            if match:
+                # Check if we have capturing groups
+                if match.lastindex and match.lastindex >= 1:
+                    extracted = match.group(1).strip()
+                    log.debug(f"   Extracted: '{name}' -> '{extracted}'")
+                    name = extracted
+                else:
+                    log.debug(f"   ⚠️  Pattern matched but no capturing groups found")
+            else:
+                log.debug(f"   ⚠️  Pattern '{extract_pattern}' didn't match '{name}'")
+        
+        # Step 4: Final cleanup
+        name = name.strip()
+        
+        log.debug(f"   ✅ Final cleaned name: {name}")
+        return name
+        
     def build_query_for_component(self, component_name: str, component_type: str) -> Optional[str]:
         """
         Build SOQL query for a specific component using actual Salesforce structure
-        
-        Args:
-            component_name: Component API name (e.g., "OmniScript.PR_MultiLineorderMobileDigital_English")
-            component_type: Component type (e.g., "OmniScript")
-        
-        Returns:
-            SOQL query string or None if type not supported
         """
         components_config = self.config.get('components', {})
         
@@ -146,7 +225,7 @@ class VlocityQueryBuilder:
         
         comp_config = components_config[component_type]
         
-        # Clean the component name
+        # Clean the component name USING CONFIGURED RULES
         clean_name = self._clean_component_name(component_name, component_type)
         
         # Build query
@@ -193,12 +272,6 @@ class VlocityQueryBuilder:
     def build_bulk_query(self, components: List[Dict]) -> Dict[str, str]:
         """
         Build queries for multiple components, grouped by type
-        
-        Args:
-            components: List of components with 'api_name' and 'type'
-        
-        Returns:
-            Dict mapping component type to SOQL query
         """
         queries = {}
         
@@ -211,7 +284,7 @@ class VlocityQueryBuilder:
             if comp_type not in by_type:
                 by_type[comp_type] = []
             
-            # Clean the name
+            # Clean the name USING CONFIGURED RULES
             clean_name = self._clean_component_name(api_name, comp_type)
             by_type[comp_type].append(clean_name)
         
@@ -264,57 +337,31 @@ class VlocityQueryBuilder:
         return queries
 
 
-# Example usage and testing
-if __name__ == "__main__":
+# Quick test function
+def test_product2_cleaning():
+    """Test Product2 name cleaning"""
     logging.basicConfig(level=logging.DEBUG)
     
     builder = VlocityQueryBuilder()
     
-    print("=" * 100)
-    print("VLOCITY QUERY BUILDER - TEST WITH ACTUAL SALESFORCE STRUCTURE")
-    print("=" * 100)
-    
-    # Test 1: OmniScript with language suffix
-    print("\n=== Test 1: OmniScript (with _English suffix) ===")
-    api_name = "OmniScript.OmniScript.PR_MultiLineorderMobileDigital_English"
-    print(f"Input: {api_name}")
-    query = builder.build_query_for_component(api_name, "OmniScript")
-    print(f"\nQuery:\n{query}")
-    print("\nExpected: Should search for 'PR_MultiLineorderMobileDigital' (without _English)")
-    
-    # Test 2: IntegrationProcedure
-    print("\n" + "=" * 100)
-    print("=== Test 2: IntegrationProcedure ===")
-    api_name = "IntegrationProcedure.IntegrationProcedure.PR_UpdateReservationIdDigital"
-    print(f"Input: {api_name}")
-    query = builder.build_query_for_component(api_name, "IntegrationProcedure")
-    print(f"\nQuery:\n{query}")
-    print("\nExpected: Should use ProcedureKey__c = 'PR_UpdateReservationIdDigital'")
-    
-    # Test 3: DataRaptor
-    print("\n" + "=" * 100)
-    print("=== Test 3: DataRaptor ===")
-    api_name = "DataRaptor.PRDRgetDeviceSKU"
-    print(f"Input: {api_name}")
-    query = builder.build_query_for_component(api_name, "DataRaptor")
-    print(f"\nQuery:\n{query}")
-    print("\nExpected: Should use DRMapName__c = 'PRDRgetDeviceSKU'")
-    
-    # Test 4: Bulk query
-    print("\n" + "=" * 100)
-    print("=== Test 4: Bulk Query ===")
-    components = [
-        {'api_name': 'OmniScript.OmniScript.PR_MultiLineorderMobileDigital_English', 'type': 'OmniScript'},
-        {'api_name': 'IntegrationProcedure.IntegrationProcedure.PR_UpdateReservationIdDigital', 'type': 'IntegrationProcedure'},
-        {'api_name': 'DataRaptor.PRDRgetDeviceSKU', 'type': 'DataRaptor'},
+    test_cases = [
+        "Product2.Samsung Galaxy S25 Ultra %28LLA_Samsung_Galaxy_S25_Ultra / 9d95bc32-06da-b97f-60ce-808047f576bd%29",
+        "Product2.Test%20Product%20%28UUID%29",
+        "Product2.Simple Product"
     ]
     
-    queries = builder.build_bulk_query(components)
+    print("🧪 Testing Product2 Name Cleaning:")
+    print("=" * 80)
     
-    for comp_type, query in queries.items():
-        print(f"\n--- {comp_type} Query ---")
-        print(query)
-    
-    print("\n" + "=" * 100)
-    print("✅ All tests completed!")
-    print("=" * 100)
+    for git_name in test_cases:
+        cleaned = builder._clean_component_name(git_name, "Product2")
+        query = builder.build_query_for_component(git_name, "Product2")
+        
+        print(f"Input:  {git_name}")
+        print(f"Output: {cleaned}")
+        print(f"Query:  {query}")
+        print("-" * 80)
+
+
+if __name__ == "__main__":
+    test_product2_cleaning()

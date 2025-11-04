@@ -61,14 +61,15 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-
+// In main.js - Update the renderTabContent function
 function renderTabContent(tabId, container) {
-  // IMPORTANT: My Work, Conflict Radar, Production Guard are INDEPENDENT
+  // My Work, Conflict Radar, Production Guard are INDEPENDENT
   // They don't need analysis data - they work standalone!
   
   switch(tabId) {
     case 'my-work':
-      container.innerHTML = renderMyWorkTab(ANALYSIS);
+      // ALWAYS show My Work landing page - analysis data not needed
+      container.innerHTML = renderMyWorkTab(null);
       break;
     case 'production-guard':
       container.innerHTML = renderProductionGuardTab(ANALYSIS);
@@ -76,9 +77,17 @@ function renderTabContent(tabId, container) {
     case 'conflict-radar':
       container.innerHTML = renderConflictRadarTab(ANALYSIS);
       break;
-
     case 'production-validator':
-      renderProductionValidatorTab();  // ADD THIS CASE
+      renderProductionValidatorTab();
+      break;
+    case 'overview':
+      // OVERVIEW TAB: Always show landing page when no analysis
+      if (!ANALYSIS) {
+        renderOverviewLanding();
+      } else {
+        // If analysis exists, let the overview tab handle it
+        renderOverviewTab(ANALYSIS);
+      }
       break;
       
     default:
@@ -118,17 +127,194 @@ document.addEventListener('click', (e) => {
 });
 
 
+
+// In main.js - Fix the renderOverviewLanding function
 function renderOverviewLanding() {
   const panel = $('#tab-overview');
   if (!panel) return;
 
-  // Show role-specific landing pages
-  if (STATE.role === 'Developer') {
-    renderDeveloperOverview();
+  console.log('🔍 renderOverviewLanding called - ANALYSIS:', ANALYSIS);
+  
+  // If no analysis exists, ALWAYS show the landing page
+  if (!ANALYSIS) {
+    console.log('✅ No analysis - showing landing page');
+    // Use the existing overview landing page (not role-specific)
+    renderOverviewLandingPage();
   } else {
-    renderDevOpsOverview();
+    console.log('📊 Analysis found - showing overview with data');
+    renderOverviewTab(ANALYSIS);
   }
 }
+
+
+function renderOverviewLandingPage() {
+  const panel = $('#tab-overview');
+  if (!panel) return;
+
+  panel.innerHTML = `
+    <div class="landing-container">
+      <!-- Hero Section -->
+      <div class="hero-section">
+        <div class="hero-content">
+          <div class="hero-badge">Salesforce DevOps</div>
+          <h1 class="hero-title">Deployment Planner</h1>
+          <p class="hero-subtitle">Intelligent analysis for conflict-free Salesforce deployments</p>
+          
+          <div class="hero-stats">
+            <div class="stat">
+              <div class="stat-value">Zero</div>
+              <div class="stat-label">Deployment Conflicts</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value">100%</div>
+              <div class="stat-label">Compliance</div>
+            </div>
+            <div class="stat">
+              <div class="stat-value">24/7</div>
+              <div class="stat-label">Monitoring</div>
+            </div>
+          </div>
+
+          <button id="hero-analyze-btn" class="cta-button">
+            <span class="button-icon">📊</span>
+            Start Analysis
+            <span class="button-arrow">→</span>
+          </button>
+        </div>
+        
+        <div class="hero-visual">
+          <div class="visual-card">
+            <div class="card-header">
+              <div class="card-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+            <div class="card-content">
+              <div class="app-icon">⚡</div>
+              <div class="card-text">Ready to Analyze</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Features Grid -->
+      <div class="features-section">
+        <h2 class="section-title">Why Choose Deployment Planner?</h2>
+        <div class="features-grid">
+          <div class="feature">
+            <div class="feature-icon">🔍</div>
+            <h3>Conflict Detection</h3>
+            <p>Identify component conflicts before they impact your deployment</p>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">🛡️</div>
+            <h3>Safety First</h3>
+            <p>Comprehensive checks ensure deployment safety and compliance</p>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">🚀</div>
+            <h3>Fast Analysis</h3>
+            <p>Quick analysis of user stories and releases in seconds</p>
+          </div>
+          <div class="feature">
+            <div class="feature-icon">📈</div>
+            <h3>Smart Reporting</h3>
+            <p>Detailed reports for stakeholders and deployment teams</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="actions-section">
+        <h2 class="section-title">Get Started</h2>
+        <div class="actions-grid">
+          <div class="action-card" data-action="analyze-stories">
+            <div class="action-icon">📝</div>
+            <h3>Analyze Stories</h3>
+            <p>Check user stories for deployment readiness</p>
+            <div class="action-arrow">→</div>
+          </div>
+          <div class="action-card" data-action="analyze-release">
+            <div class="action-icon">🏷️</div>
+            <h3>Analyze Release</h3>
+            <p>Batch analysis by release name</p>
+            <div class="action-arrow">→</div>
+          </div>
+          <div class="action-card" data-action="view-reports">
+            <div class="action-icon">📊</div>
+            <h3>View Reports</h3>
+            <p>Access deployment analytics</p>
+            <div class="action-arrow">→</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Wire up the analyze button
+  const heroBtn = document.getElementById('hero-analyze-btn');
+  if (heroBtn) {
+    heroBtn.addEventListener('click', () => openAnalyzeModal());
+  }
+
+  // Wire up action cards
+  const actionCards = panel.querySelectorAll('.action-card');
+  actionCards.forEach(card => {
+    card.addEventListener('click', (e) => {
+      const action = e.currentTarget.dataset.action;
+      switch(action) {
+        case 'analyze-stories':
+        case 'analyze-release':
+          openAnalyzeModal();
+          break;
+        case 'view-reports':
+          // Will show landing page since no analysis
+          break;
+      }
+    });
+  });
+
+  // Ensure landing styles are injected
+  if (!document.querySelector('#compact-landing-styles')) {
+    injectCompactLandingStyles();
+  }
+}
+
+// Also update the initial boot to ensure overview shows landing page
+document.addEventListener('DOMContentLoaded', () => {
+  applyHeaderBadges();
+  mountRoleSwitcher();
+  mountThemeSwitcher();
+  wireAnalyzeMenuEnhanced();
+  wireTabsEnhanced();
+  wireAnalysisEvents();
+  
+  // Force overview to show landing page on initial load
+  renderOverviewLanding();
+  
+  injectEnhancedProfessionalStyles();
+  injectRoleBasedStyles();
+  debugLog('boot', CONFIG);
+});
+
+// Also update the initial boot to ensure overview shows landing page
+document.addEventListener('DOMContentLoaded', () => {
+  applyHeaderBadges();
+  mountRoleSwitcher();
+  mountThemeSwitcher();
+  wireAnalyzeMenuEnhanced();
+  wireTabsEnhanced();
+  wireAnalysisEvents();
+  
+  // Force overview to show landing page on initial load
+  renderOverviewLanding();
+  
+  injectEnhancedProfessionalStyles();
+  injectRoleBasedStyles();
+  debugLog('boot', CONFIG);
+});
 
 function renderDeveloperOverview() {
   const panel = $('#tab-overview');
@@ -1561,7 +1747,7 @@ function injectSpinnerStyles() {
   `;
   document.head.appendChild(style);
 }
-/* ---------- wire tabs ---------- */
+
 function wireTabsEnhanced() {
   const buttons = $$('.tab-button');
   const panels = $$('.tab-panel');
@@ -1576,48 +1762,27 @@ function wireTabsEnhanced() {
 
       try {
         if (tab === 'overview') {
-          if (ANALYSIS) {
-            console.log('ANALYSIS for overview:', ANALYSIS);
-            renderOverviewTab(ANALYSIS);
-          } else {
-            renderOverviewLanding();
-          }
+          // Always show landing page when overview tab is clicked
+          // This function handles both with/without analysis internally
+          renderOverviewLanding();
         }
+        // Keep all other tabs the same
         if (tab === 'stories') {
           if (ANALYSIS) renderStoriesTab(ANALYSIS);
-          else renderOverviewLanding();
         }
         if (tab === 'conflicts') {
-          if (ANALYSIS) {
-            console.log('ANALYSIS for conflicts:', ANALYSIS);
-            console.log('component_conflicts:', ANALYSIS.component_conflicts);
-            console.log('conflicts:', ANALYSIS.conflicts);
-            renderConflictsTab(ANALYSIS);
-          } else {
-            renderOverviewLanding();
-          }
+          if (ANALYSIS) renderConflictsTab(ANALYSIS);
         }
         if (tab === 'enforcement') {
-          if (ANALYSIS) {
-            console.log('ANALYSIS for enforcement:', ANALYSIS);
-            console.log('blocked_stories:', ANALYSIS.blocked_stories);
-            renderEnforcementTab(ANALYSIS);
-          } else {
-            renderOverviewLanding();
-          }
+          if (ANALYSIS) renderEnforcementTab(ANALYSIS);
         }
         if (tab === 'plan') {
           if (ANALYSIS) renderDeploymentPlanTab(STORIES_DATA || {}, ENFORCEMENT_RESULTS || [], CONFLICTS_DATA || {});
-          else renderOverviewLanding();
         }
         if (tab === 'reports') {
-          if (ANALYSIS) {
-            console.log('ANALYSIS for reports:', ANALYSIS);
-            renderReportsTab(ANALYSIS);
-          } else {
-            renderOverviewLanding();
-          }
+          if (ANALYSIS) renderReportsTab(ANALYSIS);
         }
+        // My Work tab is independent and works as before
       } catch (err) {
         console.error('Tab render error:', err);
         toast('Error loading tab');
@@ -1682,138 +1847,7 @@ function updateSourceBadge() {
 
 /* ---------- IMPROVED: Overview landing with direct modal integration ---------- */
 
-function renderOverviewLandingtest() {
-  const panel = $('#tab-overview');
-  if (!panel) return;
 
-  panel.innerHTML = `
-    <div class="landing-container">
-      <!-- Hero Section -->
-      <div class="hero-section">
-        <div class="hero-content">
-          <div class="hero-badge">Salesforce DevOps</div>
-          <h1 class="hero-title">Deployment Planner</h1>
-          <p class="hero-subtitle">Intelligent analysis for conflict-free Salesforce deployments</p>
-          
-          <div class="hero-stats">
-            <div class="stat">
-              <div class="stat-value">Zero</div>
-              <div class="stat-label">Deployment Conflicts</div>
-            </div>
-            <div class="stat">
-              <div class="stat-value">100%</div>
-              <div class="stat-label">Compliance</div>
-            </div>
-            <div class="stat">
-              <div class="stat-value">24/7</div>
-              <div class="stat-label">Monitoring</div>
-            </div>
-          </div>
-
-          <button id="hero-analyze-btn" class="cta-button">
-            <span class="button-icon">📊</span>
-            Start Analysis
-            <span class="button-arrow">→</span>
-          </button>
-        </div>
-        
-        <div class="hero-visual">
-          <div class="visual-card">
-            <div class="card-header">
-              <div class="card-dots">
-                <span></span>
-                <span></span>
-                <span></span>
-              </div>
-            </div>
-            <div class="card-content">
-              <div class="app-icon">⚡</div>
-              <div class="card-text">Ready to Analyze</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Features Grid -->
-      <div class="features-section">
-        <h2 class="section-title">Why Choose Deployment Planner?</h2>
-        <div class="features-grid">
-          <div class="feature">
-            <div class="feature-icon">🔍</div>
-            <h3>Conflict Detection</h3>
-            <p>Identify component conflicts before they impact your deployment</p>
-          </div>
-          <div class="feature">
-            <div class="feature-icon">🛡️</div>
-            <h3>Safety First</h3>
-            <p>Comprehensive checks ensure deployment safety and compliance</p>
-          </div>
-          <div class="feature">
-            <div class="feature-icon">🚀</div>
-            <h3>Fast Analysis</h3>
-            <p>Quick analysis of user stories and releases in seconds</p>
-          </div>
-          <div class="feature">
-            <div class="feature-icon">📈</div>
-            <h3>Smart Reporting</h3>
-            <p>Detailed reports for stakeholders and deployment teams</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- Quick Actions -->
-      <div class="actions-section">
-        <h2 class="section-title">Get Started</h2>
-        <div class="actions-grid">
-          <div class="action-card" data-action="analyze-stories">
-            <div class="action-icon">📝</div>
-            <h3>Analyze Stories</h3>
-            <p>Check user stories for deployment readiness</p>
-            <div class="action-arrow">→</div>
-          </div>
-          <div class="action-card" data-action="analyze-release">
-            <div class="action-icon">🏷️</div>
-            <h3>Analyze Release</h3>
-            <p>Batch analysis by release name</p>
-            <div class="action-arrow">→</div>
-          </div>
-          <div class="action-card" data-action="view-reports">
-            <div class="action-icon">📊</div>
-            <h3>View Reports</h3>
-            <p>Access deployment analytics</p>
-            <div class="action-arrow">→</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-
-  // Wire up buttons
-  const heroBtn = document.getElementById('hero-analyze-btn');
-  if (heroBtn) {
-    heroBtn.addEventListener('click', () => openAnalyzeModal());
-  }
-
-  const actionCards = panel.querySelectorAll('.action-card');
-  actionCards.forEach(card => {
-    card.addEventListener('click', (e) => {
-      const action = e.currentTarget.dataset.action;
-      switch(action) {
-        case 'analyze-stories':
-        case 'analyze-release':
-          openAnalyzeModal();
-          break;
-        case 'view-reports':
-          const reportsBtn = document.querySelector('[data-tab="reports"]');
-          if (reportsBtn) reportsBtn.click();
-          break;
-      }
-    });
-  });
-
-  updateHeroButtonState();
-  injectCompactLandingStyles();
-}
 
 function injectCompactLandingStyles() {
   if (document.querySelector('#compact-landing-styles')) return;
@@ -2601,6 +2635,8 @@ const injectOnce = (() => {
 })();
 injectOnce();
 
+
+
 // Expose globally for debugging
 window.STATE = STATE;
 window.ANALYSIS = ANALYSIS;
@@ -2609,6 +2645,7 @@ window.CONFLICTS_DATA = CONFLICTS_DATA;
 window.ENFORCEMENT_RESULTS = ENFORCEMENT_RESULTS;
 window.toast = toast;
 window.updateAnalyzeButton = updateAnalyzeButton;
+window.openAnalyzeModal = openAnalyzeModal; 
 
 // ============================================================================
 // WINDOW FUNCTIONS - Proper Implementation for My Work Tab
@@ -3268,6 +3305,11 @@ window.showHistory = async function() {
 // Comparison Tool (Direct call - for backward compatibility)
 window.compareEnvironments = async function() {
   await window.openComparisonTool();
+};
+
+window.showEnforcementTab = function() {
+  const enforcementTab = document.querySelector('[data-tab="enforcement"]');
+  if (enforcementTab) enforcementTab.click();
 };
 
 console.log('✅ Developer Tools Window Functions Loaded');

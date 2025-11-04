@@ -82,29 +82,27 @@ function createTechnicalWorkbook(wb, reportData, analysis) {
     addSheetWithColorTheme(wb, '🚫 Blocked', blockedData, 'dc3545');
   }
 
-  // Conflict Stories Sheet
-  if (conflictStories.length > 0) {
-    const conflictData = [
-      ['Story ID', 'Title', 'Developer', 'JIRA Key', 'Component Count', 'Conflict Components', 'Resolution Status', 'Conflicting Story ID', 'Conflicting Developer', 'Has Deployment Task']
-    ];
-
-    conflictStories.forEach(story => {
-      conflictData.push([
-        story.story_id || 'N/A',
-        story.title || 'N/A',
-        story.developer || 'Unknown',
-        story.jira_key || 'N/A',
-        story.component_count || 0,
-        Array.isArray(story.conflict_components) ? story.conflict_components.join('; ') : 'No components',
-        Array.isArray(story.resolution_status) ? story.resolution_status.join('; ') : 'N/A',
-        Array.isArray(story.conflicts) && story.conflicts.length > 0 ? story.conflicts[0].conflicting_story.id : 'None',
-        Array.isArray(story.conflicts) && story.conflicts.length > 0 ? story.conflicts[0].conflicting_story.developer : 'None',
-        story.has_deployment_task ? 'Yes' : 'No'
-      ]);
-    });
-
-    addSheetWithColorTheme(wb, '🔄 Conflicts', conflictData, 'fd7e14');
-  }
+  const componentConflicts = Array.isArray(reportData.componentConflicts) ? reportData.componentConflicts : [];
+if (componentConflicts.length > 0) {
+  const compData = [
+    ['Component Type', 'Component Name', 'Unique Stories', 'Developers', 'Latest Story',
+     'Latest Developer', 'Latest Commit', 'Commit Hash', 'Involved Stories']
+  ];
+  componentConflicts.forEach(r => {
+    compData.push([
+      r.componentType || 'N/A',
+      r.componentName || 'N/A',
+      r.uniqueStories ?? 0,
+      r.developers || 'N/A',
+      r.latestStory || 'N/A',
+      r.latestDeveloper || 'N/A',
+      r.latestCommitDate || 'N/A',
+      r.latestCommitHash || 'N/A',
+      r.involvedStories || 'N/A'
+    ]);
+  });
+  addSheetWithColorTheme(wb, '🧩 Components', compData, '2a5da6'); // blue header
+}
 
   // Safe Stories Sheet
   if (safeStories.length > 0) {

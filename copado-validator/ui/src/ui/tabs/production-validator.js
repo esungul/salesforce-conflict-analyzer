@@ -164,37 +164,7 @@ function detectInputType(input) {
   };
 }
 
-async function validateRelease(releaseId) {
-  console.log(`Validating release: ${releaseId}`);
-  
-  showLoading(`Validating release: ${releaseId}`);
-  
-  // ⚠️ IMPORTANT: There is NO separate /release endpoint!
-  // Release validation uses the /bulk endpoint with release_name parameter
-  const apiUrl = `${API_URL}/api/deployment/prove/bulk`;
-  console.log('🔍 API Call:', { url: apiUrl, releaseId });
-  
-  const response = await fetch(apiUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      release_name: releaseId,
-      target_env: 'production',
-      format: 'ui'  // Use UI-friendly response format
-    })
-  });
 
-  if (!response.ok) {
-    const text = await response.text();
-    console.error('❌ API Error:', response.status, text);
-    throw new Error(`API error: ${response.status} ${response.statusText}`);
-  }
-
-  const result = await response.json();
-  console.log('Release validation result:', result);
-  
-  displayReleaseResults(result);
-}
 
 async function validateSingleStory(storyName) {
   console.log(`Validating single story: ${storyName}`);
@@ -204,25 +174,66 @@ async function validateSingleStory(storyName) {
   const apiUrl = `${API_URL}/api/deployment/prove/story`;
   console.log('🔍 API Call:', { url: apiUrl, storyName });
   
-  const response = await fetch(apiUrl, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      story_name: storyName,
-      target_env: 'production'
-    })
-  });
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        story_name: storyName,
+        target_env: 'production'
+      })
+    });
 
-  if (!response.ok) {
-    const text = await response.text();
-    console.error('❌ API Error:', response.status, text);
-    throw new Error(`API error: ${response.status} ${response.statusText}`);
+    if (!response.ok) {
+      const text = await response.text();
+      console.error('❌ API Error:', response.status, text);
+      throw new Error(`API error: ${response.status} ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    console.log('Single story result:', result);
+    
+    // Use the new detailed display for single stories
+    displaySingleStoryDetailed(result, storyName);
+  } catch (error) {
+    console.error('Validation error:', error);
+    showError(`Failed to validate story: ${error.message}`);
   }
+}
 
-  const result = await response.json();
-  console.log('Single story result:', result);
+async function validateRelease(releaseId) {
+  console.log(`Validating release: ${releaseId}`);
   
-  displaySingleResult(result, storyName);
+  showLoading(`Validating release: ${releaseId}`);
+  
+  const apiUrl = `${API_URL}/api/deployment/prove/bulk`;
+  console.log('🔍 API Call:', { url: apiUrl, releaseId });
+  
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        release_name: releaseId,
+        target_env: 'production',
+        format: 'ui'
+      })
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error('❌ API Error:', response.status, text);
+      throw new Error(`API error: ${response.status} ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    console.log('Release validation result:', result);
+    
+    displayReleaseResults(result);
+  } catch (error) {
+    console.error('Validation error:', error);
+    showError(`Failed to validate release: ${error.message}`);
+  }
 }
 
 async function validateMultipleStories(stories) {
@@ -405,27 +416,39 @@ function showLoading(message) {
   resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
+
 function displayReleaseResults(result) {
   const resultsSection = $('#validation-results');
   resultsSection.innerHTML = '';
   
-  // The bulk endpoint returns: { overview: {...}, stories: [...], release: {...} }
+  // Handle different response structures
   const overview = result.overview || {};
   const summary = overview.summary || {};
   const stories = result.stories || [];
   const releaseInfo = result.release || {};
   
+  console.log('📊 Release Data Structure:', {
+    release: releaseInfo.name,
+    totalStories: overview.total_stories,
+    stories: stories.length,
+    summary
+  });
+
   // Release header
   const releaseHeader = createElement('div', { className: 'release-header-card' });
   releaseHeader.innerHTML = `
     <div class="release-icon">📦</div>
     <div class="release-info">
-      <h3>${releaseInfo.name || result.release_name || 'Unknown Release'}</h3>
+      <h3>${releaseInfo.name || 'Unknown Release'}</h3>
       <p class="release-meta">
-        <span class="meta-item">📅 Analyzed: ${new Date().toLocaleString()}</span>
-        <span class="meta-item">📊 Total Stories: ${overview.total_stories || 0}</span>
+        <span class="meta-item">📅 Analyzed: ${overview.timestamp ? new Date(overview.timestamp).toLocaleString() : new Date().toLocaleString()}</span>
+        <span class="meta-item">📊 Total Stories: ${overview.total_stories || stories.length || 0}</span>
         <span class="meta-item">⏱️ Processing Time: ${overview.processing_time || 'N/A'}</span>
       </p>
+    </div>
+    <div class="release-stats">
+      <div class="success-rate">${summary.success_rate || 0}%</div>
+      <div class="success-label">Success Rate</div>
     </div>
   `;
   resultsSection.append(releaseHeader);
@@ -433,25 +456,30 @@ function displayReleaseResults(result) {
   // Summary stats
   const statsGrid = createElement('div', { className: 'stats-grid' });
   
+  const provenCount = summary.proven || stories.filter(s => s.status === 'proven').length;
+  const unprovenCount = summary.unproven || stories.filter(s => s.status === 'unproven').length;
+  const partialCount = summary.partial || stories.filter(s => s.status === 'partial').length;
+  const totalCount = overview.total_stories || stories.length;
+  
   statsGrid.append(
-    createStatCard('Total Stories', overview.total_stories || 0, '#1d1d1f'),
-    createStatCard('Proven', summary.proven || 0, '#34C759'),
-    createStatCard('Partial', summary.partial || 0, '#FF9500'),
-    createStatCard('Unproven', summary.unproven || 0, '#FF3B30')
+    createStatCard('Total Stories', totalCount, '#1d1d1f'),
+    createStatCard('Proven', provenCount, '#34C759'),
+    createStatCard('Partial', partialCount, '#FF9500'),
+    createStatCard('Unproven', unprovenCount, '#FF3B30')
   );
   
   resultsSection.append(statsGrid);
   
   // Success rate bar
-  if (overview.total_stories > 0) {
-    const successRate = summary.success_rate || 0;
+  if (totalCount > 0) {
+    const successRate = summary.success_rate || Math.round((provenCount / totalCount) * 100);
     const successBar = createElement('div', { className: 'success-rate-section' });
     successBar.innerHTML = `
       <h4>Deployment Readiness: ${successRate}%</h4>
       <div class="progress-bar">
         <div class="progress-fill" style="width: ${successRate}%; background: ${successRate === 100 ? '#34C759' : successRate >= 70 ? '#FF9500' : '#FF3B30'}"></div>
       </div>
-      <p class="progress-label">${summary.proven || 0} of ${overview.total_stories} stories proven</p>
+      <p class="progress-label">${provenCount} of ${totalCount} stories proven</p>
     `;
     resultsSection.append(successBar);
   }
@@ -459,17 +487,111 @@ function displayReleaseResults(result) {
   // Individual story results
   if (stories.length > 0) {
     const resultsListSection = createElement('div', { className: 'results-list-section' });
-    resultsListSection.innerHTML = '<h4>Story Results</h4>';
+    resultsListSection.innerHTML = '<h4>📋 Story Results</h4>';
     
-    stories.forEach(story => {
-      const card = createStoryCard(story);
+    // Sort stories: proven first, then partial, then unproven
+    const sortedStories = [...stories].sort((a, b) => {
+      const statusOrder = { proven: 0, partial: 1, unproven: 2, unknown: 3 };
+      return statusOrder[a.status] - statusOrder[b.status];
+    });
+    
+    sortedStories.forEach(story => {
+      const card = createEnhancedStoryCard(story);
       resultsListSection.append(card);
     });
     
     resultsSection.append(resultsListSection);
+  } else {
+    const noStoriesSection = createElement('div', { className: 'no-data-section' });
+    noStoriesSection.innerHTML = `
+      <div class="no-data-icon">📭</div>
+      <h4>No Story Data</h4>
+      <p>No individual story data is available for this release in the response.</p>
+    `;
+    resultsSection.append(noStoriesSection);
   }
 }
 
+
+function createEnhancedStoryCard(story) {
+  const card = createElement('div', { className: 'bulk-result-card enhanced' });
+  
+  const status = story.status || 'unknown';
+  const confidence = story.confidence || 'unknown';
+  const proofScore = story.proof_score || 0;
+  
+  const statusConfig = {
+    proven: { color: '#10b981', label: 'PROVEN', icon: '✅' },
+    partial: { color: '#f97316', label: 'PARTIAL', icon: '⚠️' },
+    unproven: { color: '#ef4444', label: 'UNPROVEN', icon: '❌' },
+    unknown: { color: '#6b7280', label: 'UNKNOWN', icon: '❓' }
+  };
+  
+  const config = statusConfig[status] || statusConfig.unknown;
+  
+  const metrics = story.metrics || {};
+  const componentsText = `${metrics.components_proven || 0}/${metrics.components_total || 0} components`;
+  const validatorsText = `${metrics.validators_passed || 0}/${metrics.validators_total || 0} validators`;
+  
+  card.innerHTML = `
+    <div class="bulk-result-header">
+      <div class="story-title-section">
+        <h5>${story.story_name || story.story_id || 'Unknown Story'}</h5>
+        <div class="story-confidence">
+          <span class="confidence-badge confidence-${confidence}">${confidence}</span>
+          ${proofScore > 0 ? `<span class="proof-score">${proofScore}%</span>` : ''}
+        </div>
+      </div>
+      <span class="status-badge" style="background: ${config.color}">
+        ${config.icon} ${config.label}
+      </span>
+    </div>
+    
+    <div class="story-details-enhanced">
+      <div class="detail-row">
+        <span class="detail-label">👤 Author:</span>
+        <span class="detail-value">${story.commit?.author || 'Unknown'}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">📅 Date:</span>
+        <span class="detail-value">${story.commit?.date ? new Date(story.commit.date).toLocaleDateString() : 'N/A'}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">⚙️ Resources:</span>
+        <span class="detail-value">${componentsText} • ${validatorsText}</span>
+      </div>
+      ${story.execution_time_ms ? `
+        <div class="detail-row">
+          <span class="detail-label">⏱️ Time:</span>
+          <span class="detail-value">${story.execution_time_ms}ms</span>
+        </div>
+      ` : ''}
+    </div>
+    
+    ${(story.components && story.components.length > 0) ? `
+      <div class="story-components-preview">
+        <strong>Components:</strong>
+        <div class="components-tags">
+          ${story.components.slice(0, 3).map(comp => 
+            `<span class="component-tag">${comp.type || 'Unknown'}</span>`
+          ).join('')}
+          ${story.components.length > 3 ? `<span class="component-more">+${story.components.length - 3} more</span>` : ''}
+        </div>
+      </div>
+    ` : ''}
+    
+    <div class="story-actions">
+      <button 
+        class="view-details-btn" 
+        onclick="window.viewStoryDetails('${story.story_name || story.story_id}')"
+      >
+        🔍 View Full Details
+      </button>
+    </div>
+  `;
+  
+  return card;
+}
 function createStoryCard(story) {
   const card = createElement('div', { className: 'bulk-result-card' });
   
@@ -549,20 +671,21 @@ function showDetailsModal(storyId, result) {
   if (existingModal) {
     existingModal.remove();
   }
-  
+
   // Parse the response structure
-  // API returns: { validation: { results: [...] }, component_proofs: [...] }
   const validation = result.validation || {};
   const validators = validation.results || [];
   const componentProofs = result.component_proofs || [];
   const overallProof = result.overall_proof || {};
-  
-  console.log('📊 Parsing modal data:', {
+  const summary = result.summary || {};
+
+  console.log('📊 Modal Data Structure:', {
+    storyId,
+    overallProof,
     validators: validators.length,
-    components: componentProofs.length,
-    verdict: overallProof.verdict
+    componentProofs: componentProofs.length
   });
-  
+
   const modal = document.createElement('div');
   modal.id = 'story-details-modal';
   modal.style.cssText = `
@@ -578,14 +701,14 @@ function showDetailsModal(storyId, result) {
     z-index: 10000;
     animation: fadeIn 0.2s ease;
   `;
-  
+
   modal.innerHTML = `
     <div style="
       background: white;
       border-radius: 16px;
-      width: 90%;
-      max-width: 900px;
-      max-height: 85vh;
+      width: 95%;
+      max-width: 1200px;
+      max-height: 90vh;
       overflow: hidden;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
       display: flex;
@@ -596,292 +719,73 @@ function showDetailsModal(storyId, result) {
       <div style="
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        padding: 24px 32px;
+        padding: 20px 24px;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        flex-shrink: 0;
       ">
-        <div>
-          <h2 style="margin: 0; font-size: 24px; font-weight: 700;">📋 ${storyId}</h2>
-          <p style="margin: 8px 0 0 0; opacity: 0.9; font-size: 14px;">
+        <div style="flex: 1;">
+          <h2 style="margin: 0; font-size: 20px; font-weight: 700;">📋 ${storyId}</h2>
+          <p style="margin: 6px 0 0 0; opacity: 0.9; font-size: 13px;">
             Verdict: ${overallProof.verdict || 'UNKNOWN'} • 
             Confidence: ${overallProof.confidence || 'N/A'} • 
-            Score: ${overallProof.score || 0}%
+            Score: ${overallProof.score || 0}% •
+            Environment: ${result.environment || 'production'}
           </p>
         </div>
         <button onclick="document.getElementById('story-details-modal').remove()" style="
           background: rgba(255,255,255,0.2);
           border: none;
           color: white;
-          width: 40px;
-          height: 40px;
+          width: 36px;
+          height: 36px;
           border-radius: 50%;
-          font-size: 24px;
+          font-size: 20px;
           cursor: pointer;
           transition: background 0.2s;
           line-height: 1;
-        " onmouseover="this.style.background='rgba(255,255,255,0.3)'" onmouseout="this.style.background='rgba(255,255,255,0.2)'">×</button>
+          flex-shrink: 0;
+        ">×</button>
       </div>
       
       <!-- Content -->
       <div style="
-        padding: 32px;
+        padding: 0;
         overflow-y: auto;
         flex: 1;
-      ">
-        <!-- Summary Stats -->
-        ${overallProof.details ? `
-          <div style="
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 12px;
-            margin-bottom: 24px;
-            padding: 16px;
-            background: #f9f9f9;
-            border-radius: 8px;
-          ">
-            <div style="text-align: center;">
-              <div style="font-size: 24px; font-weight: 700; color: #10b981;">${overallProof.details.validators_passed || 0}</div>
-              <div style="font-size: 12px; color: #666; text-transform: uppercase;">Passed</div>
-            </div>
-            <div style="text-align: center;">
-              <div style="font-size: 24px; font-weight: 700; color: #f97316;">${overallProof.details.validators_warnings || 0}</div>
-              <div style="font-size: 12px; color: #666; text-transform: uppercase;">Warnings</div>
-            </div>
-            <div style="text-align: center;">
-              <div style="font-size: 24px; font-weight: 700; color: #ef4444;">${overallProof.details.validators_failed || 0}</div>
-              <div style="font-size: 12px; color: #666; text-transform: uppercase;">Failed</div>
-            </div>
-            <div style="text-align: center;">
-              <div style="font-size: 24px; font-weight: 700; color: #86868b;">${overallProof.details.validators_skipped || 0}</div>
-              <div style="font-size: 12px; color: #666; text-transform: uppercase;">Skipped</div>
-            </div>
-          </div>
-        ` : ''}
-        
-        <!-- Validators Section -->
-        <div style="margin-bottom: 32px;">
-          <h3 style="
-            margin: 0 0 16px 0;
-            font-size: 18px;
-            font-weight: 600;
-            color: #1d1d1f;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-          ">
-            ✅ Validation Results
-            <span style="
-              background: #f0f0f0;
-              color: #666;
-              font-size: 12px;
-              padding: 4px 10px;
-              border-radius: 12px;
-              font-weight: 500;
-            ">${validators.length} validators</span>
-          </h3>
-          
-          <div style="display: grid; gap: 12px;">
-            ${validators.map(v => {
-              const vStatus = v.status || 'unknown';
-              const vIcon = vStatus === 'success' ? '✅' : vStatus === 'warning' ? '⚠️' : vStatus === 'failed' ? '❌' : '⊘';
-              const vBg = vStatus === 'success' ? '#e8f5e9' : vStatus === 'warning' ? '#fff3e0' : vStatus === 'failed' ? '#ffebee' : '#f5f5f5';
-              const vBorder = vStatus === 'success' ? '#4caf50' : vStatus === 'warning' ? '#ff9800' : vStatus === 'failed' ? '#f44336' : '#9e9e9e';
-              
-              // Get notes from details
-              const notes = [];
-              if (v.details) {
-                if (v.details.message) notes.push(v.details.message);
-                if (v.details.notes) notes.push(...(Array.isArray(v.details.notes) ? v.details.notes : [v.details.notes]));
-                if (v.details.error) notes.push('Error: ' + v.details.error);
-              }
-              if (v.error) notes.push('Error: ' + v.error);
-              
-              return `
-                <div style="
-                  background: ${vBg};
-                  border-left: 4px solid ${vBorder};
-                  padding: 16px;
-                  border-radius: 8px;
-                ">
-                  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                      <span style="font-size: 20px;">${vIcon}</span>
-                      <span style="font-weight: 600; color: #1d1d1f; font-size: 14px;">${v.validator || 'Unknown'}</span>
-                    </div>
-                    <div style="display: flex; gap: 8px; align-items: center;">
-                      <span style="
-                        background: white;
-                        padding: 4px 12px;
-                        border-radius: 12px;
-                        font-size: 11px;
-                        font-weight: 600;
-                        text-transform: uppercase;
-                        color: ${vBorder};
-                      ">${vStatus}</span>
-                      ${v.execution_time_ms ? `
-                        <span style="
-                          background: white;
-                          padding: 4px 12px;
-                          border-radius: 12px;
-                          font-size: 11px;
-                          font-weight: 600;
-                          color: #666;
-                        ">${v.execution_time_ms}ms</span>
-                      ` : ''}
-                    </div>
-                  </div>
-                  ${notes.length > 0 ? `
-                    <div style="
-                      font-size: 13px;
-                      color: #555;
-                      line-height: 1.6;
-                      margin-top: 8px;
-                      padding-left: 30px;
-                    ">
-                      ${notes.map(note => `<div style="margin: 4px 0;">• ${note}</div>`).join('')}
-                    </div>
-                  ` : ''}
-                  ${v.checks_performed && v.checks_performed.length > 0 ? `
-                    <div style="
-                      font-size: 12px;
-                      color: #666;
-                      margin-top: 8px;
-                      padding-left: 30px;
-                      font-style: italic;
-                    ">
-                      Checks: ${v.checks_performed.join(', ')}
-                    </div>
-                  ` : ''}
-                </div>
-              `;
-            }).join('')}
-          </div>
-        </div>
-        
-        <!-- Components Section -->
-        ${componentProofs.length > 0 ? `
-          <div>
-            <h3 style="
-              margin: 0 0 16px 0;
-              font-size: 18px;
-              font-weight: 600;
-              color: #1d1d1f;
-              display: flex;
-              align-items: center;
-              gap: 8px;
-            ">
-              📦 Components
-              <span style="
-                background: #f0f0f0;
-                color: #666;
-                font-size: 12px;
-                padding: 4px 10px;
-                border-radius: 12px;
-                font-weight: 500;
-              ">${componentProofs.length} total</span>
-            </h3>
-            
-            <div style="
-              display: grid;
-              grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-              gap: 12px;
-            ">
-              ${componentProofs.map(comp => {
-                const component = comp.component || {};
-                const proven = comp.proven || false;
-                const confidence = comp.confidence || 'unknown';
-                
-                return `
-                  <div style="
-                    background: ${proven ? '#e8f5e9' : '#ffebee'};
-                    border: 1px solid ${proven ? '#4caf50' : '#f44336'};
-                    padding: 14px;
-                    border-radius: 8px;
-                  ">
-                    <div style="
-                      display: flex;
-                      justify-content: between;
-                      align-items: start;
-                      margin-bottom: 8px;
-                    ">
-                      <div style="
-                        font-weight: 600;
-                        color: #667eea;
-                        font-size: 11px;
-                        text-transform: uppercase;
-                        letter-spacing: 0.5px;
-                        flex: 1;
-                      ">${component.type || 'Unknown'}</div>
-                      <div style="
-                        font-size: 18px;
-                      ">${proven ? '✅' : '❌'}</div>
-                    </div>
-                    <div style="
-                      font-size: 14px;
-                      color: #1d1d1f;
-                      font-weight: 500;
-                      font-family: 'SF Mono', monospace;
-                      margin-bottom: 8px;
-                      word-break: break-all;
-                    ">${component.name || component.api_name || 'Unknown'}</div>
-                    <div style="
-                      font-size: 11px;
-                      color: #666;
-                      text-transform: capitalize;
-                    ">
-                      Confidence: ${confidence}
-                    </div>
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          </div>
-        ` : `
-          <div style="
-            text-align: center;
-            padding: 40px;
-            color: #86868b;
-          ">
-            <p style="font-size: 16px; margin: 0;">No component information available</p>
-          </div>
-        `}
-        
-        <!-- Execution Time -->
-        <div style="
-          margin-top: 32px;
-          padding: 16px;
-          background: #f9f9f9;
-          border-radius: 8px;
-          text-align: center;
-          color: #666;
-          font-size: 13px;
-        ">
-          ⏱️ Execution Time: ${result.execution_time || 'N/A'} • 
-          Environment: ${result.environment || 'N/A'}
-        </div>
+        display: flex;
+        flex-direction: column;
+      " id="modal-content-body">
+        <!-- Content will be populated by JavaScript -->
       </div>
       
       <!-- Footer -->
       <div style="
         background: #f9f9f9;
-        padding: 16px 32px;
+        padding: 16px 24px;
         border-top: 1px solid #e5e5e7;
         display: flex;
-        justify-content: flex-end;
-        gap: 12px;
+        justify-content: space-between;
+        align-items: center;
+        flex-shrink: 0;
       ">
+        <div style="font-size: 12px; color: #86868b;">
+          ⏱️ Execution Time: ${result.execution_time || 'N/A'} • 
+          Validators: ${validators.length} • 
+          Components: ${componentProofs.length}
+        </div>
         <button onclick="document.getElementById('story-details-modal').remove()" style="
           background: white;
           border: 1px solid #d2d2d7;
           color: #1d1d1f;
-          padding: 10px 24px;
-          border-radius: 8px;
-          font-size: 14px;
+          padding: 8px 20px;
+          border-radius: 6px;
+          font-size: 13px;
           font-weight: 600;
           cursor: pointer;
           transition: all 0.2s;
-        " onmouseover="this.style.background='#f5f5f7'" onmouseout="this.style.background='white'">Close</button>
+        ">Close</button>
       </div>
     </div>
     
@@ -897,15 +801,311 @@ function showDetailsModal(storyId, result) {
       }
     </style>
   `;
-  
+
   document.body.appendChild(modal);
-  
+
+  // Populate the modal content
+  const modalContentBody = modal.querySelector('#modal-content-body');
+  modalContentBody.appendChild(createModalDetailedContent(result, storyId));
+
   // Close on background click
   modal.addEventListener('click', (e) => {
     if (e.target === modal) {
       modal.remove();
     }
   });
+}
+
+// Create detailed content for the modal
+function createModalDetailedContent(result, storyId) {
+  const container = document.createElement('div');
+  container.style.padding = '20px';
+  
+  const validation = result.validation || {};
+  const validators = validation.results || [];
+  const componentProofs = result.component_proofs || [];
+  const overallProof = result.overall_proof || {};
+  const summary = result.summary || {};
+
+  // Summary Statistics
+  const successfulValidators = validators.filter(v => v.status === 'success').length;
+  const warningValidators = validators.filter(v => v.status === 'warning').length;
+  const failedValidators = validators.filter(v => v.status === 'failed').length;
+
+  const statsGrid = createElement('div', { className: 'stats-grid', style: 'margin-bottom: 20px;' });
+  
+  statsGrid.append(
+    createStatCard('Components', `${summary.proven_components || 0}/${summary.total_components || 0}`, '#667eea'),
+    createStatCard('Successful', successfulValidators, '#10b981'),
+    createStatCard('Warnings', warningValidators, '#f97316'),
+    createStatCard('Failed', failedValidators, '#FF3B30')
+  );
+  
+  container.append(statsGrid);
+
+  // Overall Proof Summary
+  if (overallProof.details) {
+    const proofSummary = createElement('div', {
+      style: `
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 20px;
+        border-left: 4px solid #667eea;
+      `
+    });
+    
+    proofSummary.innerHTML = `
+      <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: #1d1d1f;">
+        📊 Overall Validation Summary
+      </h3>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px;">
+        <div style="text-align: center;">
+          <div style="font-size: 20px; font-weight: 700; color: #10b981;">${overallProof.details.validators_passed || 0}</div>
+          <div style="font-size: 11px; color: #666; text-transform: uppercase;">Passed</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="font-size: 20px; font-weight: 700; color: #f97316;">${overallProof.details.validators_warnings || 0}</div>
+          <div style="font-size: 11px; color: #666; text-transform: uppercase;">Warnings</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="font-size: 20px; font-weight: 700; color: #ef4444;">${overallProof.details.validators_failed || 0}</div>
+          <div style="font-size: 11px; color: #666; text-transform: uppercase;">Failed</div>
+        </div>
+        <div style="text-align: center;">
+          <div style="font-size: 20px; font-weight: 700; color: #86868b;">${overallProof.details.validators_skipped || 0}</div>
+          <div style="font-size: 11px; color: #666; text-transform: uppercase;">Skipped</div>
+        </div>
+      </div>
+    `;
+    
+    container.append(proofSummary);
+  }
+
+  // Detailed Validators Section - Show ALL Validators with Full Details
+  if (validators.length > 0) {
+    const validatorsSection = createElement('div', { 
+      className: 'detailed-section',
+      style: 'margin-bottom: 20px;'
+    });
+    
+    const sectionHeader = createElement('div', {
+      style: 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;'
+    });
+    
+    sectionHeader.innerHTML = `
+      <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #1d1d1f;">
+        🔍 Detailed Validation Results
+      </h3>
+      <span style="
+        background: #f0f0f0;
+        color: #666;
+        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-weight: 500;
+      ">${validators.length} validators</span>
+    `;
+    
+    validatorsSection.append(sectionHeader);
+    
+    const validatorsContainer = createElement('div', {
+      style: 'display: flex; flex-direction: column; gap: 12px; max-height: 500px; overflow-y: auto; padding-right: 8px;'
+    });
+    
+    validators.forEach((validator, index) => {
+      const card = createElement('div', { 
+        className: `validator-detail-card status-${validator.status}`,
+        style: 'margin: 0; border-left: 4px solid;'
+      });
+      
+      // Set border color based on status
+      const borderColor = validator.status === 'success' ? '#10b981' : 
+                         validator.status === 'warning' ? '#f59e0b' : 
+                         validator.status === 'failed' ? '#ef4444' : '#6b7280';
+      card.style.borderLeftColor = borderColor;
+      
+      card.innerHTML = createValidatorCardContent(validator, index);
+      validatorsContainer.append(card);
+    });
+    
+    validatorsSection.append(validatorsContainer);
+    container.append(validatorsSection);
+  }
+
+  // Components Section with Detailed Proofs
+  if (componentProofs.length > 0) {
+    const componentsSection = createElement('div', { 
+      className: 'detailed-section',
+      style: 'margin-bottom: 20px;'
+    });
+    
+    const sectionHeader = createElement('div', {
+      style: 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;'
+    });
+    
+    sectionHeader.innerHTML = `
+      <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #1d1d1f;">
+        📦 Component Validation Details
+      </h3>
+      <span style="
+        background: #f0f0f0;
+        color: #666;
+        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-weight: 500;
+      ">${componentProofs.length} components</span>
+    `;
+    
+    componentsSection.append(sectionHeader);
+    
+    const componentsGrid = createElement('div', {
+      className: 'components-detailed-grid',
+      style: 'grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px;'
+    });
+    
+    componentProofs.forEach((comp, index) => {
+      const component = comp.component || {};
+      const card = createElement('div', { 
+        className: `component-detail-card ${comp.proven ? 'proven' : 'not-proven'}`,
+        style: 'margin: 0; padding: 16px;'
+      });
+      
+      card.innerHTML = `
+        <div class="component-header" style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+          <div class="component-type-badge" style="background: #667eea; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase;">
+            ${component.Type || component.type || 'Unknown'}
+          </div>
+          <div class="component-status ${comp.confidence || 'unknown'}" style="font-size: 11px; font-weight: 600; color: ${getConfidenceColor(comp.confidence)};">
+            ${comp.confidence || 'Unknown'} Confidence
+          </div>
+        </div>
+        <div class="component-name" style="font-family: SF Mono, monospace; font-size: 13px; font-weight: 600; color: #1d1d1f; margin-bottom: 12px; word-break: break-all;">
+          ${component.Name || component.name || component.api_name || 'Unknown Component'}
+        </div>
+        
+        ${comp.confidence_score ? `
+          <div class="component-score" style="background: #f1f5f9; padding: 6px 10px; border-radius: 4px; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 12px; text-align: center;">
+            Confidence Score: ${comp.confidence_score}%
+          </div>
+        ` : ''}
+        
+        ${comp.methods && comp.methods.length > 0 ? `
+          <div class="component-methods" style="margin-bottom: 12px;">
+            <div style="font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 6px;">Validation Methods:</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+              ${comp.methods.map(method => 
+                `<span class="method-tag" style="background: #e2e8f0; color: #475569; padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 600;">${method}</span>`
+              ).join('')}
+            </div>
+          </div>
+        ` : ''}
+        
+        ${comp.method_details && comp.method_details.length > 0 ? `
+          <div class="method-details" style="border-top: 1px solid #e2e8f0; padding-top: 12px;">
+            <div style="font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 6px;">Method Details:</div>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              ${comp.method_details.map(detail => `
+                <div style="display: flex; justify-content: space-between; font-size: 10px;">
+                  <span style="color: #475569;">${detail.method}:</span>
+                  <span style="color: ${detail.status === 'success' ? '#10b981' : detail.status === 'failed' ? '#ef4444' : '#f59e0b'}; font-weight: 600;">${detail.status}</span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
+      `;
+      
+      componentsGrid.append(card);
+    });
+    
+    componentsSection.append(componentsGrid);
+    container.append(componentsSection);
+  }
+
+  // Proof Methods Used
+  if (result.proof_methods_used && result.proof_methods_used.length > 0) {
+    const methodsSection = createElement('div', { 
+      className: 'detailed-section',
+      style: 'margin-bottom: 20px;'
+    });
+    
+    methodsSection.innerHTML = `
+      <h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: #1d1d1f;">
+        🔧 Proof Methods Used
+      </h3>
+      <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+        ${result.proof_methods_used.map(method => `
+          <span style="
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 11px;
+            font-weight: 600;
+          ">${method}</span>
+        `).join('')}
+      </div>
+    `;
+    
+    container.append(methodsSection);
+  }
+
+  // Commit Information
+  if (result.commits && result.commits.length > 0) {
+    const commitSection = createElement('div', { 
+      className: 'detailed-section',
+      style: 'margin-bottom: 20px;'
+    });
+    
+    commitSection.innerHTML = '<h3 style="margin: 0 0 12px 0; font-size: 16px; font-weight: 600; color: #1d1d1f;">🔗 Git Commits</h3>';
+    
+    const commitCard = createElement('div', { 
+      style: 'background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 6px;'
+    });
+    
+    commitCard.innerHTML = `
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        ${result.commits.map(commit => `
+          <div style="font-family: SF Mono, monospace; font-size: 13px; font-weight: 600; color: #1e293b; word-break: break-all;">
+            ${commit}
+          </div>
+        `).join('')}
+      </div>
+    `;
+    
+    commitSection.append(commitCard);
+    container.append(commitSection);
+  }
+
+  // Show message if no detailed data
+  if (validators.length === 0 && componentProofs.length === 0) {
+    const noDataSection = createElement('div', { 
+      style: 'text-align: center; padding: 40px 20px; color: #86868b; background: #f9f9f9; border-radius: 8px;'
+    });
+    
+    noDataSection.innerHTML = `
+      <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
+      <h4 style="margin: 0 0 8px 0; font-size: 16px; color: #1d1d1f;">Limited Data Available</h4>
+      <p style="margin: 0; font-size: 13px;">Detailed validation information is not available for this story.</p>
+    `;
+    
+    container.append(noDataSection);
+  }
+
+  return container;
+}
+
+// Helper function to get confidence color
+function getConfidenceColor(confidence) {
+  switch (confidence?.toLowerCase()) {
+    case 'high': return '#10b981';
+    case 'medium': return '#f59e0b';
+    case 'low': return '#ef4444';
+    default: return '#6b7280';
+  }
 }
 
 // Make viewStoryDetails available globally
@@ -1125,6 +1325,435 @@ function createElement(tag, props = {}, children = []) {
   return node;
 }
 
+
+function displaySingleStoryDetailed(result, storyName) {
+  const resultsSection = $('#validation-results');
+  resultsSection.innerHTML = '';
+  
+  // Parse the response structure
+  const validation = result.validation || {};
+  const validators = validation.results || [];
+  const componentProofs = result.component_proofs || [];
+  const overallProof = result.overall_proof || {};
+  const summary = result.summary || {};
+  
+  console.log('📊 Single Story Data Structure:', {
+    storyName,
+    overallProof,
+    validators: validators.length,
+    componentProofs: componentProofs.length,
+    validators
+  });
+
+  // Story Header Card
+  const headerCard = createElement('div', { className: 'story-header-card' });
+  headerCard.innerHTML = `
+    <div class="story-icon">📋</div>
+    <div class="story-info">
+      <h3>${storyName}</h3>
+      <p class="story-meta">
+        <span class="meta-item">📅 Validated: ${new Date().toLocaleString()}</span>
+        <span class="meta-item">🏭 Environment: ${result.environment || 'production'}</span>
+        <span class="meta-item">⏱️ Duration: ${result.execution_time || 'N/A'}</span>
+        <span class="meta-item">🔧 Validators: ${validators.length}</span>
+      </p>
+    </div>
+    <div class="verdict-section">
+      <div class="verdict-badge verdict-${(overallProof.verdict || 'UNKNOWN').toLowerCase()}">
+        ${overallProof.verdict || 'UNKNOWN'}
+      </div>
+      <div class="confidence-score">
+        <span class="score">${overallProof.score || 0}%</span>
+        <span class="confidence">${overallProof.confidence || 'Unknown'} Confidence</span>
+      </div>
+    </div>
+  `;
+  resultsSection.append(headerCard);
+
+  // Summary Statistics
+  const statsGrid = createElement('div', { className: 'stats-grid' });
+  
+  const successfulValidators = validators.filter(v => v.status === 'success').length;
+  const warningValidators = validators.filter(v => v.status === 'warning').length;
+  const failedValidators = validators.filter(v => v.status === 'failed').length;
+  
+  statsGrid.append(
+    createStatCard('Components', `${summary.proven_components || 0}/${summary.total_components || 0}`, '#667eea'),
+    createStatCard('Successful', successfulValidators, '#10b981'),
+    createStatCard('Warnings', warningValidators, '#f97316'),
+    createStatCard('Failed', failedValidators, '#FF3B30')
+  );
+  
+  resultsSection.append(statsGrid);
+
+  // Detailed Validators Section - Show ALL Validators with Full Details
+  if (validators.length > 0) {
+    const validatorsSection = createElement('div', { className: 'detailed-section' });
+    validatorsSection.innerHTML = '<h4>🔍 Detailed Validation Results</h4>';
+    
+    validators.forEach((validator, index) => {
+      const card = createElement('div', { 
+        className: `validator-detail-card status-${validator.status}`
+      });
+      
+      card.innerHTML = createValidatorCardContent(validator, index);
+      validatorsSection.append(card);
+    });
+    
+    resultsSection.append(validatorsSection);
+  }
+
+  // Components Section
+  if (componentProofs.length > 0) {
+    const componentsSection = createElement('div', { className: 'detailed-section' });
+    componentsSection.innerHTML = '<h4>📦 Components Summary</h4>';
+    
+    const componentsGrid = createElement('div', { className: 'components-detailed-grid' });
+    
+    componentProofs.forEach((comp, index) => {
+      const component = comp.component || {};
+      const card = createElement('div', { 
+        className: `component-detail-card ${comp.proven ? 'proven' : 'not-proven'}` 
+      });
+      
+      card.innerHTML = `
+        <div class="component-header">
+          <div class="component-type-badge">${component.Type || component.type || 'Unknown'}</div>
+          <div class="component-status ${comp.confidence || 'unknown'}">
+            ${comp.confidence || 'Unknown'} Confidence
+          </div>
+        </div>
+        <div class="component-name">${component.Name || component.name || component.api_name || 'Unknown Component'}</div>
+        <div class="component-methods">
+          ${(comp.methods || []).map(method => 
+            `<span class="method-tag">${method}</span>`
+          ).join('')}
+        </div>
+      `;
+      
+      componentsGrid.append(card);
+    });
+    
+    componentsSection.append(componentsGrid);
+    resultsSection.append(componentsSection);
+  }
+
+  // Show message if no detailed data
+  if (validators.length === 0) {
+    const noDataSection = createElement('div', { className: 'no-data-section' });
+    noDataSection.innerHTML = `
+      <div class="no-data-icon">📊</div>
+      <h4>No Validation Data Available</h4>
+      <p>Detailed validation information is not available for this story. The story may not have been deployed to production yet.</p>
+    `;
+    resultsSection.append(noDataSection);
+  }
+}
+
+// Helper function to create detailed validator card content
+function createValidatorCardContent(validator, index) {
+  const details = validator.details || {};
+  const checks = validator.checks_performed || [];
+  
+  let detailsContent = '';
+  
+  // Format details based on validator type
+  switch (validator.validator) {
+    case 'commit_exists':
+      detailsContent = `
+        <div class="validator-detail-group">
+          <div class="detail-item">
+            <span class="detail-label">Commit SHA:</span>
+            <span class="detail-value code">${details.commit_sha || 'N/A'}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Commit Author:</span>
+            <span class="detail-value">${details.commit_author || 'N/A'}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Commit Date:</span>
+            <span class="detail-value">${details.commit_date ? new Date(details.commit_date).toLocaleString() : 'N/A'}</span>
+          </div>
+          ${details.commit_message ? `
+            <div class="detail-item">
+              <span class="detail-label">Commit Message:</span>
+              <span class="detail-value commit-message">${details.commit_message}</span>
+            </div>
+          ` : ''}
+        </div>
+      `;
+      break;
+      
+    case 'files_in_commit':
+      detailsContent = `
+        <div class="validator-detail-group">
+          <div class="detail-item">
+            <span class="detail-label">Commit SHA:</span>
+            <span class="detail-value code">${details.commit_sha || 'N/A'}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Files Changed:</span>
+            <span class="detail-value highlight">${details.files_changed || 0}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Has Changes:</span>
+            <span class="detail-value status-${details.has_changes ? 'success' : 'failed'}">
+              ${details.has_changes ? 'Yes' : 'No'}
+            </span>
+          </div>
+          ${details.git_diffstat ? `
+            <div class="detail-item">
+              <span class="detail-label">Diff Stat:</span>
+              <span class="detail-value">${details.git_diffstat}</span>
+            </div>
+          ` : ''}
+        </div>
+      `;
+      break;
+      
+    case 'component_exists': {
+      const existComponents = details.components || [];
+      const foundCount = existComponents.filter(comp => comp.found).length;
+      const notFoundCount = existComponents.filter(comp => !comp.found).length;
+      
+      detailsContent = `
+        <div class="validator-detail-group">
+          <div class="detail-item">
+            <span class="detail-label">Components Checked:</span>
+            <span class="detail-value">${existComponents.length}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Components Found:</span>
+            <span class="detail-value success">${foundCount}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Components Not Found:</span>
+            <span class="detail-value ${notFoundCount > 0 ? 'warning' : ''}">
+              ${notFoundCount}
+            </span>
+          </div>
+          
+          ${existComponents.length > 0 ? `
+            <div class="component-exist-details">
+              <div class="detail-label">Component Details:</div>
+              <div class="component-exist-list">
+                ${existComponents.map(comp => `
+                  <div class="component-exist-item ${comp.found ? 'found' : 'not-found'}">
+                    <div class="component-exist-header">
+                      <span class="component-exist-name">${comp.name || comp.cleaned_name || 'Unknown Component'}</span>
+                      <span class="component-exist-status ${comp.found ? 'found' : 'not-found'}">
+                        ${comp.found ? '✅ Found' : '❌ Not Found'}
+                      </span>
+                    </div>
+                    ${comp.found ? `
+                      <div class="component-exist-details">
+                        <div class="component-detail-row">
+                          <span class="detail-label">Last Modified:</span>
+                          <span class="detail-value">${comp.last_modified ? new Date(comp.last_modified).toLocaleString() : 'N/A'}</span>
+                        </div>
+                        ${comp.matched_field ? `
+                          <div class="component-detail-row">
+                            <span class="detail-label">Matched Field:</span>
+                            <span class="detail-value code">${comp.matched_field}</span>
+                          </div>
+                        ` : ''}
+                        ${comp.cleaned_name ? `
+                          <div class="component-detail-row">
+                            <span class="detail-label">Cleaned Name:</span>
+                            <span class="detail-value code">${comp.cleaned_name}</span>
+                          </div>
+                        ` : ''}
+                        ${comp.type ? `
+                          <div class="component-detail-row">
+                            <span class="detail-label">Type:</span>
+                            <span class="detail-value">${comp.type}</span>
+                          </div>
+                        ` : ''}
+                      </div>
+                    ` : `
+                      <div class="component-exist-details">
+                        <div class="component-detail-row">
+                          <span class="detail-label">Status:</span>
+                          <span class="detail-value warning">Component not found in production</span>
+                        </div>
+                        ${comp.cleaned_name ? `
+                          <div class="component-detail-row">
+                            <span class="detail-label">Looking For:</span>
+                            <span class="detail-value code">${comp.cleaned_name}</span>
+                          </div>
+                        ` : ''}
+                      </div>
+                    `}
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+      break;
+    }
+      
+    case 'component_timestamp': {
+      const timestampComponents = details.components || [];
+      detailsContent = `
+        <div class="validator-detail-group">
+          <div class="detail-item">
+            <span class="detail-label">Commit SHA:</span>
+            <span class="detail-value code">${details.commit_sha || 'N/A'}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Commit Date:</span>
+            <span class="detail-value">${details.commit_date ? new Date(details.commit_date).toLocaleString() : 'N/A'}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Total Components:</span>
+            <span class="detail-value">${details.total || timestampComponents.length}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Matches:</span>
+            <span class="detail-value success">${details.matches || timestampComponents.filter(c => c.status === 'match').length}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Mismatches:</span>
+            <span class="detail-value warning">${details.mismatches || timestampComponents.filter(c => c.status === 'mismatch').length}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">Not Found:</span>
+            <span class="detail-value failed">${details.not_found || timestampComponents.filter(c => c.status === 'not_found').length}</span>
+          </div>
+          
+          ${timestampComponents.length > 0 ? `
+            <div class="component-timestamp-details">
+              <div class="detail-label">Component Timestamps:</div>
+              <div class="timestamp-components">
+                ${timestampComponents.map(comp => `
+                  <div class="timestamp-component ${comp.status}">
+                    <div class="component-name">${comp.component}</div>
+                    <div class="timestamp-status status-${comp.status}">${comp.status.toUpperCase()}</div>
+                    ${comp.commit_date ? `
+                      <div class="timestamp-date">
+                        <span>Commit: ${new Date(comp.commit_date).toLocaleString()}</span>
+                      </div>
+                    ` : ''}
+                    ${comp.salesforce_date ? `
+                      <div class="timestamp-date">
+                        <span>Salesforce: ${new Date(comp.salesforce_date).toLocaleString()}</span>
+                      </div>
+                    ` : ''}
+                    ${comp.compare_field ? `
+                      <div class="compare-field">Compared: ${comp.compare_field}</div>
+                    ` : ''}
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+      break;
+    }
+      
+    case 'commit_contents':
+      detailsContent = `
+        <div class="validator-detail-group">
+          <div class="detail-item">
+            <span class="detail-label">Validation Level:</span>
+            <span class="detail-value">${details.validation_level || 'N/A'}</span>
+          </div>
+          ${details.files_verified ? `
+            <div class="detail-item">
+              <span class="detail-label">Files Verified:</span>
+              <span class="detail-value">${details.files_verified}</span>
+            </div>
+          ` : ''}
+          ${details.checks_passed ? `
+            <div class="detail-item">
+              <span class="detail-label">Checks Passed:</span>
+              <span class="detail-value success">${details.checks_passed}</span>
+            </div>
+          ` : ''}
+          ${details.checks_failed ? `
+            <div class="detail-item">
+              <span class="detail-label">Checks Failed:</span>
+              <span class="detail-value failed">${details.checks_failed}</span>
+            </div>
+          ` : ''}
+          ${details.notes && details.notes.length > 0 ? `
+            <div class="detail-item">
+              <span class="detail-label">Notes:</span>
+              <div class="notes-list">
+                ${details.notes.slice(0, 5).map(note => `<div class="note">• ${note}</div>`).join('')}
+                ${details.notes.length > 5 ? `<div class="note-more">+ ${details.notes.length - 5} more notes</div>` : ''}
+              </div>
+            </div>
+          ` : ''}
+        </div>
+      `;
+      break;
+      
+    default:
+      // Generic details display for unknown validators
+      if (Object.keys(details).length > 0) {
+        detailsContent = `
+          <div class="validator-detail-group">
+            ${Object.entries(details).map(([key, value]) => `
+              <div class="detail-item">
+                <span class="detail-label">${formatKey(key)}:</span>
+                <span class="detail-value">${formatValue(value)}</span>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } else {
+        detailsContent = '<div class="no-details">No detailed information available</div>';
+      }
+  }
+  
+  return `
+    <div class="validator-header">
+      <div class="validator-title">
+        <span class="validator-icon">${getStatusIcon(validator.status)}</span>
+        <span class="validator-name">${validator.validator || `Validator ${index + 1}`}</span>
+      </div>
+      <div class="validator-meta">
+        <span class="validator-status status-${validator.status}">${validator.status.toUpperCase()}</span>
+        <span class="validator-time">${validator.execution_time_ms}ms</span>
+      </div>
+    </div>
+    
+    ${checks.length > 0 ? `
+      <div class="validator-checks">
+        <strong>Checks Performed:</strong> 
+        <div class="checks-list">
+          ${checks.map(check => `<span class="check-tag">${check}</span>`).join('')}
+        </div>
+      </div>
+    ` : ''}
+    
+    ${detailsContent}
+    
+    ${validator.error ? `
+      <div class="validator-error">
+        <strong>Error:</strong> ${validator.error}
+      </div>
+    ` : ''}
+  `;
+}
+
+// Helper functions for formatting
+function formatKey(key) {
+  return key.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+}
+
+function formatValue(value) {
+  if (value === null || value === undefined) return 'N/A';
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (Array.isArray(value)) return value.join(', ');
+  if (typeof value === 'object') return JSON.stringify(value);
+  return value.toString();
+}
+
 const injectCss = (() => {
   let done = false;
   return () => {
@@ -1132,7 +1761,7 @@ const injectCss = (() => {
     done = true;
 
     const css = `
-      /* Production Validator Styles - Matching Precheck Design */
+      /* Production Validator Styles - Synced with Stories Enhanced Design */
       
       .validator-input-section {
         display: grid;
@@ -1145,8 +1774,8 @@ const injectCss = (() => {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         padding: 24px;
-        border-radius: 12px;
-        box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2);
+        border-radius: 18px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
       }
 
       .validator-info-card h3 {
@@ -1173,8 +1802,8 @@ const injectCss = (() => {
         background: white;
         border: 1px solid #e5e5e7;
         padding: 24px;
-        border-radius: 12px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        border-radius: 18px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
       }
 
       .input-label {
@@ -1195,7 +1824,7 @@ const injectCss = (() => {
         width: 100%;
         padding: 12px;
         border: 1px solid #d2d2d7;
-        border-radius: 8px;
+        border-radius: 12px;
         font-size: 14px;
         font-family: 'SF Mono', monospace;
         resize: vertical;
@@ -1217,7 +1846,7 @@ const injectCss = (() => {
       .validator-btn {
         flex: 1;
         padding: 12px 24px;
-        border-radius: 8px;
+        border-radius: 12px;
         font-size: 14px;
         font-weight: 600;
         cursor: pointer;
@@ -1250,7 +1879,8 @@ const injectCss = (() => {
         text-align: center;
         padding: 60px 20px;
         background: #f9f9f9;
-        border-radius: 12px;
+        border-radius: 18px;
+        border: 2px dashed #e5e5e7;
       }
 
       .spinner {
@@ -1286,7 +1916,7 @@ const injectCss = (() => {
         padding: 40px 20px;
         background: #ffebee;
         border: 1px solid #ffcccb;
-        border-radius: 12px;
+        border-radius: 18px;
       }
 
       .error-icon {
@@ -1318,6 +1948,7 @@ const injectCss = (() => {
         to { opacity: 1; }
       }
 
+      /* Release Header Card */
       .release-header-card {
         display: flex;
         align-items: center;
@@ -1325,9 +1956,9 @@ const injectCss = (() => {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         padding: 24px;
-        border-radius: 12px;
+        border-radius: 18px;
         margin-bottom: 24px;
-        box-shadow: 0 4px 16px rgba(102, 126, 234, 0.2);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
       }
 
       .release-icon {
@@ -1350,62 +1981,14 @@ const injectCss = (() => {
         color: rgba(255, 255, 255, 0.9);
       }
 
-      .result-summary-card {
-        display: flex;
-        align-items: center;
-        gap: 24px;
-        background: white;
-        border: 1px solid #e5e5e7;
-        padding: 24px;
-        border-radius: 12px;
-        margin-bottom: 24px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-      }
-
-      .status-badge-large {
-        padding: 12px 24px;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-      }
-
-      .status-proven {
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-        color: white;
-      }
-
-      .status-unproven {
-        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-        color: white;
-      }
-
-      .status-failed {
-        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-        color: white;
-      }
-
-      .story-info h3 {
-        margin: 0 0 8px 0;
-        font-size: 20px;
-        font-weight: 600;
-        color: #1d1d1f;
-      }
-
-      .story-meta {
-        display: flex;
-        gap: 16px;
-        flex-wrap: wrap;
-        margin: 0;
-        font-size: 13px;
-        color: #86868b;
-      }
-
       .meta-item {
-        display: flex;
+        display: inline-flex;
         align-items: center;
         gap: 4px;
+        background: rgba(255, 255, 255, 0.2);
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 12px;
       }
 
       /* Stats Grid */
@@ -1420,15 +2003,15 @@ const injectCss = (() => {
         background: white;
         border: 1px solid #e5e5e7;
         padding: 20px;
-        border-radius: 12px;
+        border-radius: 18px;
         text-align: center;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
         transition: transform 0.2s ease;
       }
 
       .stat-card:hover {
         transform: translateY(-4px);
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
       }
 
       .stat-label {
@@ -1451,9 +2034,9 @@ const injectCss = (() => {
         background: white;
         border: 1px solid #e5e5e7;
         padding: 20px;
-        border-radius: 12px;
+        border-radius: 18px;
         margin-bottom: 24px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
       }
 
       .success-rate-section h4 {
@@ -1484,227 +2067,480 @@ const injectCss = (() => {
         margin: 0;
       }
 
-      /* Validators Section */
-      .validators-section {
-        margin-bottom: 32px;
-      }
-
-      .validators-section h4 {
-        font-size: 18px;
-        font-weight: 600;
-        color: #1d1d1f;
-        margin: 0 0 16px 0;
-      }
-
-      .validators-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 16px;
-      }
-
-      .validator-card {
-        background: white;
-        border: 1px solid #e5e5e7;
-        padding: 16px;
-        border-radius: 8px;
-        transition: transform 0.2s ease;
-      }
-
-      .validator-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      }
-
-      .validator-header {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        margin-bottom: 12px;
-      }
-
-      .validator-icon {
-        font-size: 24px;
-        font-weight: bold;
-      }
-
-      .validator-info {
-        flex: 1;
-      }
-
-      .validator-info h5 {
-        margin: 0 0 4px 0;
-        font-size: 14px;
-        font-weight: 600;
-        color: #1d1d1f;
-      }
-
-      .validator-status {
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-        padding: 2px 8px;
-        border-radius: 4px;
-      }
-
-      .validator-status.status-success {
-        background: #e8f5e9;
-        color: #1b5e20;
-      }
-
-      .validator-status.status-warning {
-        background: #fff3e0;
-        color: #e65100;
-      }
-
-      .validator-status.status-failed {
-        background: #ffebee;
-        color: #b71c1c;
-      }
-
-      .validator-status.status-skipped {
-        background: #f5f5f7;
-        color: #86868b;
-      }
-
-      .validator-notes {
-        margin-top: 12px;
-        padding-top: 12px;
-        border-top: 1px solid #f5f5f7;
-      }
-
-      .validator-notes .note {
-        font-size: 12px;
-        color: #555;
-        margin: 4px 0;
-        line-height: 1.5;
-      }
-
-      /* Components Section */
-      .components-section h4 {
-        font-size: 18px;
-        font-weight: 600;
-        color: #1d1d1f;
-        margin: 0 0 16px 0;
-      }
-
-      .components-list {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-      }
-
-      .component-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        background: white;
-        border: 1px solid #e5e5e7;
-        padding: 8px 12px;
-        border-radius: 6px;
-        font-size: 13px;
-      }
-
-      .component-type {
-        font-weight: 600;
-        color: #667eea;
-      }
-
-      .component-name {
-        color: #1d1d1f;
-        font-family: 'SF Mono', monospace;
-      }
-
-      /* Bulk Results */
-      .results-list-section h4 {
-        font-size: 18px;
-        font-weight: 600;
-        color: #1d1d1f;
-        margin: 32px 0 16px 0;
-      }
-
+      /* Story Cards */
       .bulk-result-card {
         background: white;
         border: 1px solid #e5e5e7;
-        padding: 16px;
+        padding: 0;
+        border-radius: 18px;
+        margin-bottom: 16px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+      }
+
+      .bulk-result-card:hover {
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+        border-color: #d2d2d7;
+        transform: translateY(-2px);
+      }
+
+      .bulk-result-card.enhanced {
+        padding: 0;
+      }
+
+      .bulk-result-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        border-bottom: 1px solid #e5e5e7;
+      }
+
+      .story-title-section {
+        flex: 1;
+      }
+
+      .story-title-section h5 {
+        margin: 0 0 12px 0;
+        font-size: 18px;
+        font-weight: 700;
+        color: #1d1d1f;
+        line-height: 1.4;
+      }
+
+      .story-confidence {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .confidence-badge {
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .confidence-high { background: #e8f5e9; color: #1b5e20; }
+      .confidence-medium { background: #fff3e0; color: #e65100; }
+      .confidence-low { background: #ffebee; color: #b71c1c; }
+      .confidence-unknown { background: #f5f5f5; color: #666666; }
+
+      .proof-score {
+        background: #667eea;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .status-badge {
+        padding: 8px 12px;
         border-radius: 8px;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: white;
+      }
+
+      .story-details-enhanced {
+        padding: 24px;
+        border-bottom: 1px solid #f5f5f7;
+      }
+
+      .detail-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        font-size: 13px;
+      }
+
+      .detail-label {
+        color: #86868b;
+        font-weight: 500;
+      }
+
+      .detail-value {
+        color: #1d1d1f;
+        font-weight: 600;
+      }
+
+      .story-components-preview {
+        padding: 16px 24px;
+        background: #f8f9fa;
+        border-bottom: 1px solid #e5e5e7;
+      }
+
+      .components-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+      }
+
+      .component-tag {
+        background: #e5e7eb;
+        color: #374151;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .component-more {
+        background: #dbeafe;
+        color: #1e40af;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .story-actions {
+        padding: 16px 24px;
+        text-align: right;
+      }
+
+      .view-details-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .view-details-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      }
+
+      /* Modal Styles */
+      #story-details-modal .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+
+      #story-details-modal .detailed-section {
+        background: white;
+        border: 1px solid #e5e5e7;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 16px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      }
+
+      #story-details-modal .validator-detail-card {
+        border: 1px solid #e5e5e7;
+        padding: 16px;
+        border-radius: 12px;
         margin-bottom: 12px;
         transition: all 0.2s ease;
       }
 
-      .bulk-result-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      #story-details-modal .validator-detail-card:hover {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transform: translateY(-1px);
       }
 
-      .bulk-result-header {
+      #story-details-modal .component-detail-card {
+        border: 1px solid #e5e5e7;
+        padding: 16px;
+        border-radius: 12px;
+        margin-bottom: 12px;
+        transition: all 0.2s ease;
+      }
+
+      #story-details-modal .component-detail-card:hover {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        transform: translateY(-1px);
+      }
+
+      #story-details-modal .components-detailed-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 12px;
+      }
+
+      /* Story Header for Single Story */
+      .story-header-card {
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        margin-bottom: 12px;
-      }
-
-      .bulk-result-header h5 {
-        margin: 0;
-        font-size: 16px;
-        font-weight: 600;
-        color: #1d1d1f;
-      }
-
-      .bulk-result-header .status-badge {
-        padding: 4px 12px;
-        border-radius: 4px;
-        font-size: 12px;
-        font-weight: 600;
+        gap: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
+        padding: 24px;
+        border-radius: 18px;
+        margin-bottom: 24px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
       }
 
-      .story-details {
-        margin-bottom: 12px;
-        padding-bottom: 12px;
-        border-bottom: 1px solid #f5f5f7;
+      .story-icon {
+        font-size: 48px;
+      }
+
+      .story-info h3 {
+        margin: 0 0 8px 0;
+        font-size: 22px;
+        font-weight: 700;
+        color: white;
       }
 
       .story-meta {
         display: flex;
-        gap: 12px;
+        gap: 16px;
         flex-wrap: wrap;
-        margin: 0 0 8px 0;
-        font-size: 12px;
-        color: #86868b;
-      }
-
-      .story-metrics {
         margin: 0;
         font-size: 13px;
-        color: #1d1d1f;
+        color: rgba(255, 255, 255, 0.9);
       }
 
-      .validator-summary {
+      .verdict-section {
+        margin-left: auto;
+        text-align: center;
+      }
+
+      .verdict-badge {
+        padding: 12px 24px;
+        border-radius: 12px;
+        font-size: 16px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+      }
+
+      .verdict-proven {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      }
+
+      .verdict-unproven {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      }
+
+      .confidence-score {
+        color: rgba(255, 255, 255, 0.9);
+      }
+
+      .confidence-score .score {
+        font-size: 20px;
+        font-weight: 700;
+        display: block;
+      }
+
+      /* Detailed Sections */
+      .detailed-section {
+        background: white;
+        border: 1px solid #e5e5e7;
+        padding: 24px;
+        border-radius: 18px;
+        margin-bottom: 24px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+      }
+
+      .detailed-section h4 {
+        margin: 0 0 20px 0;
+        font-size: 18px;
+        font-weight: 600;
+        color: #1d1d1f;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      /* Validator Detail Cards */
+      .validator-detail-card {
+        border: 1px solid #e5e5e7;
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 16px;
+        transition: all 0.2s ease;
+      }
+
+      .validator-detail-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+      }
+
+      .validator-detail-card.status-success {
+        border-left: 4px solid #10b981;
+        background: #f0fdf4;
+      }
+
+      .validator-detail-card.status-warning {
+        border-left: 4px solid #f59e0b;
+        background: #fffbeb;
+      }
+
+      .validator-detail-card.status-failed {
+        border-left: 4px solid #ef4444;
+        background: #fef2f2;
+      }
+
+      .validator-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+
+      .validator-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .validator-icon {
+        font-size: 20px;
+      }
+
+      .validator-name {
+        font-weight: 600;
+        color: #1d1d1f;
+        font-size: 16px;
+      }
+
+      .validator-meta {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .validator-status {
+        background: white;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .validator-time {
+        background: white;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #666;
+      }
+
+      /* Component Detail Cards */
+      .components-detailed-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 16px;
+      }
+
+      .component-detail-card {
+        border: 1px solid #e5e5e7;
+        padding: 20px;
+        border-radius: 12px;
+        transition: all 0.2s ease;
+      }
+
+      .component-detail-card:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+      }
+
+      .component-detail-card.proven {
+        border-left: 4px solid #10b981;
+        background: #f0fdf4;
+      }
+
+      .component-detail-card.not-proven {
+        border-left: 4px solid #ef4444;
+        background: #fef2f2;
+      }
+
+      .component-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+
+      .component-type-badge {
+        background: #667eea;
+        color: white;
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .component-status {
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: capitalize;
+      }
+
+      .component-status.high { color: #10b981; }
+      .component-status.medium { color: #f59e0b; }
+      .component-status.low { color: #ef4444; }
+
+      .component-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: #1d1d1f;
+        margin-bottom: 12px;
+        font-family: 'SF Mono', monospace;
+        word-break: break-all;
+      }
+
+      .component-methods {
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
+        margin-bottom: 12px;
       }
 
-      .validator-mini {
-        font-size: 11px;
+      .method-tag {
+        background: #e5e7eb;
+        color: #374151;
         padding: 4px 8px;
-        border-radius: 4px;
-        font-weight: 500;
+        border-radius: 6px;
+        font-size: 11px;
+        font-weight: 600;
       }
 
-      .validator-mini.status-success {
-        background: #e8f5e9;
-        color: #1b5e20;
+      /* No Data Section */
+      .no-data-section {
+        text-align: center;
+        padding: 60px 40px;
+        background: white;
+        border-radius: 18px;
+        border: 2px dashed #e5e5e7;
+        color: #86868b;
       }
 
-      .validator-mini.status-warning {
-        background: #fff3e0;
-        color: #e65100;
+      .no-data-icon {
+        font-size: 64px;
+        margin-bottom: 16px;
+        opacity: 0.5;
       }
 
-      .validator-mini.status-failed {
-        background: #ffebee;
-        color: #b71c1c;
+      .no-data-section h4 {
+        margin: 16px 0 8px;
+        font-size: 20px;
+        font-weight: 600;
+        color: #1d1d1f;
+      }
+
+      .no-data-section p {
+        margin: 0;
+        font-size: 14px;
+        color: #666666;
       }
 
       /* Responsive */
@@ -1713,12 +2549,29 @@ const injectCss = (() => {
           grid-template-columns: 1fr;
         }
 
-        .validators-grid {
+        .stats-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .components-detailed-grid {
           grid-template-columns: 1fr;
         }
 
-        .stats-grid {
-          grid-template-columns: repeat(2, 1fr);
+        .story-header-card,
+        .release-header-card {
+          flex-direction: column;
+          align-items: flex-start;
+          text-align: left;
+        }
+
+        .verdict-section {
+          margin-left: 0;
+          margin-top: 16px;
+        }
+
+        .bulk-result-header {
+          flex-direction: column;
+          align-items: flex-start;
         }
       }
     `;

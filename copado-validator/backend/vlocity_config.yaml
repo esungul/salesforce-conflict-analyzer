@@ -1,6 +1,11 @@
 # Vlocity/OmniStudio Configuration
 # Updated with actual Salesforce queries from your org
 
+
+name_cleaning:
+  default:
+    strip_type_prefix: true
+    fix_doubled_prefix: true
 # Namespace prefix
 namespace: "vlocity_cmt"
 
@@ -17,23 +22,26 @@ components:
       - "CreatedById"
       - "LastModifiedDate"
       - "LastModifiedById"
-      - "LastActivityDate"
       - "vlocity_cmt__Language__c"
       - "vlocity_cmt__Type__c"
       - "vlocity_cmt__SubType__c"
       - "vlocity_cmt__Version__c"
-      - "vlocity_cmt__IsTest__c"
       - "vlocity_cmt__OmniProcessType__c"
-      - "vlocity_cmt__ProcedureKey__c"
     
     # Filter conditions
     filter_field: "vlocity_cmt__OmniProcessType__c"
     filter_value: "OmniScript"
     
-    # Search field (use Name, but strip language suffix)
+    # 🎯 IMPORTANT: Add compare_field to use Name for comparison
     search_field: "Name"
+    compare_field: "Name"  # 🎯 ADD THIS LINE
     
-    # Language suffix patterns to remove (e.g., _English, _Spanish)
+    # Name cleaning rules
+    strip_type_prefix: true
+    url_decode: false
+    extract_pattern: "(.*)_English$"  # 🎯 FIXED: Remove _English suffix
+    
+    # Language suffix patterns to remove
     strip_suffixes:
       - "_English"
       - "_Spanish"
@@ -45,39 +53,10 @@ components:
     # Query settings
     order_by: "CreatedDate DESC"
     limit: 100
-  
-  IntegrationProcedure:
-    # IntegrationProcedures are stored in OmniScript object!
-    object: "vlocity_cmt__OmniScript__c"
-    
-    # Fields to retrieve
-    fields:
-      - "Name"
-      - "CreatedDate"
-      - "CreatedById"
-      - "LastModifiedDate"
-      - "LastModifiedById"
-      - "LastActivityDate"
-      - "vlocity_cmt__Language__c"
-      - "vlocity_cmt__Type__c"
-      - "vlocity_cmt__SubType__c"
-      - "vlocity_cmt__Version__c"
-      - "vlocity_cmt__IsTest__c"
-      - "vlocity_cmt__OmniProcessType__c"
-      - "vlocity_cmt__ProcedureKey__c"
-      - "vlocity_cmt__IsProcedure__c"
-    
-    # Filter conditions
-    filter_field: "vlocity_cmt__IsProcedure__c"
-    filter_value: "true"
-    
-    # Search field (use ProcedureKey__c, not Name!)
-    search_field: "vlocity_cmt__ProcedureKey__c"
-    
-    # Query settings
-    order_by: "CreatedDate DESC"
-    limit: 100
-  
+
+
+
+
   DataRaptor:
     # Query from DRBundle object
     object: "vlocity_cmt__DRBundle__c"
@@ -102,6 +81,135 @@ components:
     # Query settings
     order_by: "CreatedDate DESC"
     limit: 100
+  
+# vlocity_config.yaml - ADD COMPARISON FIELD
+
+  Product2:
+    object: "Product2"
+    fields:
+      - "Id"
+      - "Name"
+      - "ProductCode"
+      - "Description"
+      - "IsActive"
+      - "CreatedDate"
+      - "LastModifiedDate"
+      - "vlocity_cmt__GlobalKey__c"
+    search_field: "ProductCode"      # Field for SOQL query
+    compare_field: "ProductCode"     # ✅ NEW: Field for code comparison
+    order_by: "LastModifiedDate DESC"
+    limit: 100
+    strip_type_prefix: true
+    url_decode: true
+    extract_pattern: ".*\\(([^/]+)"  # Extract ProductCode from name
+
+  CalculationMatrixVersion:
+    object: "vlocity_cmt__CalculationMatrixVersion__c"
+    fields:
+      - "Id"
+      - "IsDeleted"
+      - "Name"
+      - "CurrencyIsoCode"
+      - "CreatedDate"
+      - "CreatedById"
+      - "LastModifiedDate"
+      - "LastModifiedById"
+      - "SystemModstamp"
+      - "ConnectionReceivedId"
+      - "ConnectionSentId"
+      - "vlocity_cmt__CalculationMatrixId__c"
+      - "vlocity_cmt__CurrentStatus__c"
+      - "vlocity_cmt__EndDateTime__c"
+      - "vlocity_cmt__GlobalKey__c"
+      - "vlocity_cmt__GroupKeyValue__c"
+      - "vlocity_cmt__GroupKey__c"
+      - "vlocity_cmt__IsEnabled__c"
+      - "vlocity_cmt__MatrixRecordType__c"
+      - "vlocity_cmt__MatrixUseLongOutput__c"
+      - "vlocity_cmt__Priority__c"
+      - "vlocity_cmt__StartDateTime__c"
+      - "vlocity_cmt__SubGroupKeyValue__c"
+      - "vlocity_cmt__SubGroupKey__c"
+      - "vlocity_cmt__UseLongOutput__c"
+      - "vlocity_cmt__VersionNumber__c"
+      - "vlocity_cmt__WildcardColumn__c"
+      - "vlocity_cmt__WildcardValue__c"
+    search_field: "Name"
+    order_by: "LastModifiedDate DESC"
+    limit: 100
+    # Name cleaning rules
+    strip_type_prefix: true
+    url_decode: false  # Usually doesn't need URL decoding
+    extract_pattern: null  # Use full name
+    remove_patterns: []    # No special patterns to remove
+
+  VlocityPicklist:
+    object: "vlocity_cmt__Picklist__c"
+    fields:
+      - "Id"
+      - "OwnerId"
+      - "IsDeleted"
+      - "Name"
+      - "CurrencyIsoCode"
+      - "CreatedDate"
+      - "CreatedById"
+      - "LastModifiedDate"
+      - "LastModifiedById"
+      - "SystemModstamp"
+      - "LastViewedDate"
+      - "LastReferencedDate"
+      - "ConnectionReceivedId"
+      - "ConnectionSentId"
+      - "vlocity_cmt__Code__c"
+      - "vlocity_cmt__DataType__c"
+      - "vlocity_cmt__Description__c"
+      - "vlocity_cmt__EffectiveFromDate__c"
+      - "vlocity_cmt__EffectiveUntilDate__c"
+      - "vlocity_cmt__GlobalGroupKey__c"
+      - "vlocity_cmt__GlobalId__c"
+      - "vlocity_cmt__GlobalKey__c"
+      - "vlocity_cmt__IsActive__c"
+      - "vlocity_cmt__IsPublic__c"
+      - "vlocity_cmt__IsShared__c"
+      - "vlocity_cmt__LifecycleStatus__c"
+      - "vlocity_cmt__Type__c"
+      - "vlocity_cmt__UnitOfMeasureName__c"
+      - "vlocity_cmt__VersionLabel__c"
+    search_field: "Name"
+    order_by: "LastModifiedDate DESC"
+    limit: 100
+    # Name cleaning rules - this one has URL encoding and UUID
+    strip_type_prefix: true
+    url_decode: true                    # Handle %28, %29 encoding
+    extract_pattern: "^([^(]+)"         # Extract before parentheses
+    remove_patterns:
+      - "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"  # Remove UUID
+      - "\\s*\\([^)]*\\)\\s*$"         # Remove trailing parentheses content
+
+
+  IntegrationProcedure:
+    object: "vlocity_cmt__OmniScript__c"
+    fields:
+      - "Name"
+      - "CreatedDate"
+      - "LastModifiedDate"
+      - "vlocity_cmt__Type__c"
+      - "vlocity_cmt__SubType__c"
+      - "vlocity_cmt__ProcedureKey__c"  # 🎯 Make sure this is included
+      - "vlocity_cmt__IsProcedure__c"
+    filter_field: "vlocity_cmt__IsProcedure__c"
+    filter_value: "true"
+    search_field: "vlocity_cmt__ProcedureKey__c"      # 🎯 Search by ProcedureKey
+    compare_field: "vlocity_cmt__ProcedureKey__c"     # 🎯 Compare by ProcedureKey
+    order_by: "CreatedDate DESC"
+    limit: 100
+
+# Add Product2 to name cleaning rules
+name_cleaning:
+  default:
+    strip_type_prefix: true
+    fix_doubled_prefix: true
+
 
 # Global settings
 settings:
