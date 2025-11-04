@@ -5,7 +5,6 @@ import { renderMyWorkTab } from './ui/tabs/my-work.js';
 import { renderProductionGuardTab } from './ui/tabs/production-guard.js';
 import { renderConflictRadarTab } from './ui/tabs/conflict-radar.js';
 
-
 // Import enhanced tab renderers
 import { renderOverviewTab } from './ui/tabs/overview.js';
 import { renderStoriesTab } from './ui/tabs/stories-enhanced.js';
@@ -14,9 +13,7 @@ import { renderEnforcementTab } from './ui/tabs/enforcement-enhanced.js';
 import { createAnalyzeModal } from './ui/components/analyzeModal.js';
 import { renderDeploymentPlanTab } from './ui/tabs/deployment-plan.js';
 import { renderReportsTab } from './ui/tabs/reports-enhanced.js';
-import { renderProductionValidatorTab } from './ui/tabs/production-validator.js'; 
-import { renderRollbackImpactTab } from './ui/tabs/rollback-impact.js';
-
+import { renderProductionValidatorTab } from './ui/tabs/production-validator.js'; // ADD THIS LINE
 
 
 import * as precheckModule from './ui/tabs/development-tools/precheck/precheck.js';
@@ -83,9 +80,6 @@ function renderTabContent(tabId, container) {
     case 'production-validator':
       renderProductionValidatorTab();
       break;
-   case 'rollback-impact':
-    renderRollbackImpactTab(ANALYSIS);
-  break;
     case 'overview':
       // OVERVIEW TAB: Always show landing page when no analysis
       if (!ANALYSIS) {
