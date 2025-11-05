@@ -1,0 +1,851 @@
+# Complete Product Configuration - Using Product Code as Key
+# Fallback logic when product code doesn't match
+# All mandatory set to false
+
+validation_rules:
+  
+  # =========================================================================
+  # Account Level MPI - Technical Product (23 Attributes)
+  # =========================================================================
+  PR_B2C_Mobile_Account_Level_MPI_CFS:
+    product_name: "Account Level MPI"
+    product_type: "technical"
+    description: "Account Level MPI Technical Product - All attributes optional"
+    
+    attributes:
+      - code: "ATT_B2B_Port_In_Promotion"
+        name: "Port In Promotion"
+        type: "text"
+        mandatory: false
+        description: "Port In Promotion Status"
+
+      - code: "PR_B2C_ISApplicableForAria"
+        name: "ISApplicableForAria"
+        type: "text"
+        mandatory: false
+        description: "Is Applicable For Aria"
+
+      - code: "PR_B2C_ATT_ProratedPlans"
+        name: "Prorated Plans"
+        type: "text"
+        mandatory: false
+        description: "Prorated Plans Configuration"
+
+      - code: "PR_B2C_MB_ATT_IS_Promotion_Applied"
+        name: "IS Promotion Applied"
+        type: "text"
+        mandatory: false
+        description: "Is Promotion Applied Status"
+
+      - code: "PR_B2C_IsNSOApplicable"
+        name: "IsNSOApplicable"
+        type: "text"
+        mandatory: false
+        description: "Is NSO Applicable"
+
+      - code: "PR_ARIAPlanState"
+        name: "ARIAPlanState"
+        type: "text"
+        mandatory: false
+        description: "ARIA Plan State Information"
+
+      - code: "PR_B2C_ATT_Plan_Type"
+        name: "Plan type"
+        type: "picklist"
+        mandatory: false
+        description: "Type of plan"
+        allowed_values:
+          - "Basic"
+          - "Premium"
+          - "Enterprise"
+
+      - code: "PR_B2C_ATT_Device_Type"
+        name: "Device Type"
+        type: "text"
+        mandatory: false
+        description: "Type of device"
+
+      - code: "PR_B2C_IsPromotionAvailable"
+        name: "IsPromotionAvailable"
+        type: "text"
+        mandatory: false
+        description: "Is Promotion Available"
+
+      - code: "PR_B2C_ATT_Status"
+        name: "Status"
+        type: "text"
+        mandatory: false
+        description: "Current Status of the product"
+
+      - code: "PR_B2C_ATT_Billing_Account_Id"
+        name: "Billing Account Id"
+        type: "text"
+        mandatory: false
+        description: "Associated Billing Account ID"
+
+      - code: "ATT_DESCRIPTION"
+        name: "Description"
+        type: "text"
+        mandatory: false
+        description: "Product Description"
+
+      - code: "TATTR_PRODUCT_CODE"
+        name: "PRODUCT_CODE"
+        type: "text"
+        mandatory: false
+        description: "Product Code"
+
+      - code: "ATT_QUANTITY"
+        name: "Quantity"
+        type: "number"
+        mandatory: false
+        description: "Quantity"
+
+      - code: "PR_B2C_ATT_Is_Bundle"
+        name: "Is Bundle"
+        type: "text"
+        mandatory: false
+        description: "Is this a bundle product"
+
+      - code: "PRB2C_One_Time_Charge"
+        name: "One Time Charge"
+        type: "text"
+        mandatory: false
+        description: "One Time Charge Amount"
+
+      - code: "PR_B2C_ATT_Mob_OrderItemID"
+        name: "OrderItemId"
+        type: "text"
+        mandatory: false
+        description: "Order Item ID"
+
+      - code: "PRB2C_Recurring_Charge"
+        name: "Recurring Charge"
+        type: "text"
+        mandatory: false
+        description: "Recurring Charge Amount"
+
+      - code: "PR_Line_Action"
+        name: "Action"
+        type: "text"
+        mandatory: false
+        description: "Line Item Action"
+
+      - code: "PR_B2C_Mb_ATT_Assignment_Directive"
+        name: "Assignment Directive"
+        type: "text"
+        mandatory: false
+        description: "Assignment Directive for Mobile"
+
+      - code: "PR_B2B_SPType"
+        name: "SpecialPriceType"
+        type: "text"
+        mandatory: false
+        description: "Special Price Type for B2B"
+
+      - code: "PRB2C_ATT_QUARANTINE_TYPE"
+        name: "QUARANTINE TYPE"
+        type: "text"
+        mandatory: false
+        description: "Quarantine Type Information"
+
+      - code: "PRB2C_ATT_Is_waive_off"
+        name: "Is waive off"
+        type: "text"
+        mandatory: false
+        description: "Is Waive Off Applicable"
+
+  # =========================================================================
+  # Mobile Line Provisioning CFS - Technical Product (49 Attributes)
+  # =========================================================================
+  PR_B2C_Mobile_Line_Provisioning_CFS:
+    product_name: "Mobile Line Provisioning CFS"
+    product_type: "technical"
+    description: "Mobile Line Provisioning Technical Product - All attributes optional"
+    
+    attributes:
+      - code: "PR_B2C_Mb_ATT_Call_Protect"
+        name: "Call Protect / Mobile Security"
+        type: "text"
+        mandatory: false
+        description: "Call Protect and Mobile Security settings"
+
+      - code: "PR_B2C_Mb_ATT_Content_Suscriptions_Included"
+        name: "Content (Subscriptions Included)"
+        type: "text"
+        mandatory: false
+        description: "Content subscriptions included in the plan"
+
+      - code: "PR_B2C_Mb_ATT_Data_Allotment"
+        name: "Data Allotment"
+        type: "text"
+        mandatory: false
+        description: "Data allotment for the line"
+
+      - code: "PR_B2C_Mb_ATT_International"
+        name: "International (Roaming)"
+        type: "text"
+        mandatory: false
+        description: "International roaming settings"
+
+      - code: "PR_B2C_Mb_ATT_LTE_Provisioning"
+        name: "LTE Provisioning"
+        type: "text"
+        mandatory: false
+        description: "LTE provisioning configuration"
+
+      - code: "PR_B2C_Mb_ATT_MMS"
+        name: "MMS"
+        type: "text"
+        mandatory: false
+        description: "MMS service status"
+
+      - code: "PR_B2C_Mb_ATT_Mobile_Offer_Type"
+        name: "Mobile Offer Type"
+        type: "picklist"
+        mandatory: false
+        description: "Type of mobile offer"
+        allowed_values:
+          - "Individual"
+          - "Family"
+          - "Business"
+          - "Prepaid"
+          - "Postpaid"
+
+      - code: "PR_B2C_Mb_ATT_QCL_Policies"
+        name: "QCL Policies"
+        type: "text"
+        mandatory: false
+        description: "QCL Policies configuration"
+
+      - code: "PR_B2C_Mb_ATT_ESIM_Enabled"
+        name: "ESIM Enabled"
+        type: "text"
+        mandatory: false
+        description: "ESIM enabled status"
+
+      - code: "PR_B2C_Mb_ATT_ICCID"
+        name: "ICCID"
+        type: "text"
+        mandatory: false
+        description: "Integrated Circuit Card Identifier"
+
+      - code: "ATT_IMSI"
+        name: "IMSI"
+        type: "text"
+        mandatory: false
+        description: "International Mobile Subscriber Identity"
+
+      - code: "ATT_MSISDN"
+        name: "MSISDN"
+        type: "text"
+        mandatory: false
+        description: "Mobile Station Integrated Services Digital Number"
+
+      - code: "PRB2C_ATT_Line_Number"
+        name: "Line Number"
+        type: "text"
+        mandatory: false
+        description: "Phone line number"
+
+      - code: "PR_B2C_ATT_OLSP"
+        name: "OLSP"
+        type: "text"
+        mandatory: false
+        description: "Old Line Service Provider"
+
+      - code: "PR_B2C_Mb_ATT_IsCallbackRecieved"
+        name: "IsCallbackReceived"
+        type: "text"
+        mandatory: false
+        description: "Callback received status"
+
+      - code: "PR_B2C_Mb_ATT_Is_Shared_MSISDN"
+        name: "Is Shared MSISDN"
+        type: "text"
+        mandatory: false
+        description: "Is MSISDN shared with other lines"
+
+      - code: "PR_B2C_Mb_ATT_Asset_Reference_Id"
+        name: "Asset Reference Id"
+        type: "text"
+        mandatory: false
+        description: "Reference ID for asset"
+
+      - code: "PR_B2C_Mb_ATT_Associated_Asset_Ref_Id"
+        name: "Associated Asset Ref Id"
+        type: "text"
+        mandatory: false
+        description: "Associated asset reference ID"
+
+      - code: "PR_B2C_MB_ATT_IS_Transfer"
+        name: "Is Transfer"
+        type: "text"
+        mandatory: false
+        description: "Is this a transfer line"
+
+      - code: "PR_B2C_Mb_ATT_OLD ICCID"
+        name: "OLD ICCID"
+        type: "text"
+        mandatory: false
+        description: "Old Integrated Circuit Card Identifier"
+
+      - code: "PR_B2C_ATT_Pool_ID"
+        name: "POOL ID"
+        type: "text"
+        mandatory: false
+        description: "Pool ID for shared data plans"
+
+      - code: "PR_Line_Action"
+        name: "Action"
+        type: "text"
+        mandatory: false
+        description: "Line action (Add, Modify, Remove)"
+
+      - code: "ATT_Channels"
+        name: "Channels"
+        type: "text"
+        mandatory: false
+        description: "Sales channels"
+
+      - code: "PR_B2C_ATT_MSISDN_RESERVATIONREFID"
+        name: "MSISDN RESERVATION REF ID"
+        type: "text"
+        mandatory: false
+        description: "MSISDN reservation reference ID"
+
+      - code: "ATT_Old_MSISDN"
+        name: "Old MSISDN"
+        type: "text"
+        mandatory: false
+        description: "Previous MSISDN"
+
+      - code: "PRB2C_ATT_Mobile_SIM_Type"
+        name: "SIM Type"
+        type: "text"
+        mandatory: false
+        description: "Type of SIM card"
+
+      - code: "ATT_Paired_MSISDN"
+        name: "Paired MSISDN"
+        type: "text"
+        mandatory: false
+        description: "MSISDN paired with this line"
+
+      - code: "PR_B2C_Mb_ATT_Channel"
+        name: "Channel"
+        type: "text"
+        mandatory: false
+        description: "Channel through which line is provisioned"
+
+      - code: "PRB2C_ATT_Is_Ported"
+        name: "Is Ported"
+        type: "text"
+        mandatory: false
+        description: "Is number ported"
+
+      - code: "PRB2C_ATT_Order_Customer_ID"
+        name: "Order Customer ID"
+        type: "text"
+        mandatory: false
+        description: "Customer ID associated with order"
+
+      - code: "PRB2C_ATT_Order_Number"
+        name: "Order Number"
+        type: "text"
+        mandatory: false
+        description: "Order number for the line"
+
+      - code: "PR_B2C_ATT_Plan_Type"
+        name: "Plan type"
+        type: "text"
+        mandatory: false
+        description: "Type of plan"
+
+      - code: "PRB2C_ATT_Product_Name"
+        name: "Product Name"
+        type: "text"
+        mandatory: false
+        description: "Product name"
+
+      - code: "PRB2C_ATT_Product_Type"
+        name: "Product Type"
+        type: "text"
+        mandatory: false
+        description: "Product type"
+
+      - code: "PRB2C_ATT_QUARANTINE_TYPE"
+        name: "QUARANTINE TYPE"
+        type: "text"
+        mandatory: false
+        description: "Quarantine type"
+
+      - code: "PR_B2C_ATT_Mob_SIM_Order_Item_Id"
+        name: "SIM order Item Id"
+        type: "text"
+        mandatory: false
+        description: "SIM order item ID"
+
+      - code: "PR_B2C_Mb_ATT_SOURCE"
+        name: "SOURCE"
+        type: "text"
+        mandatory: false
+        description: "Source of the provisioning"
+
+      - code: "PR_B2C_MB_ATT_IS_REUSED_MSISDN"
+        name: "IS REUSED MSISDN"
+        type: "text"
+        mandatory: false
+        description: "Is MSISDN reused"
+
+      - code: "PR_B2C_ATT_Old_Plan_Type"
+        name: "Old Plan Type"
+        type: "text"
+        mandatory: false
+        description: "Previous plan type"
+
+      - code: "PR_B2C_ATT_PR_Skip_Callout"
+        name: "PR Skip Callout"
+        type: "text"
+        mandatory: false
+        description: "Skip callout flag"
+
+      - code: "PR_B2C_Is_UnPaired_MSISDN"
+        name: "Is UnPaired MSISDN"
+        type: "text"
+        mandatory: false
+        description: "Is MSISDN unpaired"
+
+      - code: "PR_B2C_Mb_ATT_IsUSNumberPortIn"
+        name: "IsUSNumberPortIn"
+        type: "text"
+        mandatory: false
+        description: "Is US number port in"
+
+      - code: "PR_B2B_ATT_Plan_Order_Item_Id"
+        name: "Plan Order Item Id"
+        type: "text"
+        mandatory: false
+        description: "Plan order item ID"
+
+      - code: "PRB2C_TATTR_NetworkProcessOneCompleted"
+        name: "NetworkProcessOneCompleted"
+        type: "text"
+        mandatory: false
+        description: "Network process one completion status"
+
+  # =========================================================================
+  # Liberty U-Pick Mobile Tablet - Line Product (48 Attributes)
+  # =========================================================================
+  PR_B2C_Standalone_UNL_Tablet_Line:
+    product_name: "Liberty U-Pick Mobile Tablet"
+    product_type: "line"
+    description: "Liberty U-Pick Mobile Tablet Line Product - All attributes optional"
+    
+    attributes:
+      - code: "PR_B2C_Mb_ATT_Liberty_NumberSync"
+        name: "Liberty NumberSync"
+        type: "text"
+        mandatory: false
+        description: "Liberty NumberSync configuration"
+
+      - code: "ATT_MSISDN"
+        name: "MSISDN"
+        type: "text"
+        mandatory: false
+        description: "Mobile Station Integrated Services Digital Number"
+
+      - code: "ATT_Old_MSISDN"
+        name: "Old MSISDN"
+        type: "text"
+        mandatory: false
+        description: "Previous MSISDN"
+
+      - code: "ATT_Paired_MSISDN"
+        name: "Paired MSISDN"
+        type: "text"
+        mandatory: false
+        description: "MSISDN paired with this device"
+
+      - code: "PRB2C_ATT_Mobile_Autopay_Amount"
+        name: "Autopay Amount"
+        type: "text"
+        mandatory: false
+        description: "Amount for autopay"
+
+      - code: "PRB2C_ATT_Mobile_Autopay_catalog_Name"
+        name: "Autopay Catalog Name"
+        type: "text"
+        mandatory: false
+        description: "Autopay catalog name"
+
+      - code: "PRB2C_ATT_Mobile_SIM_Card_Type"
+        name: "SIM Card Type"
+        type: "picklist"
+        mandatory: false
+        description: "Type of SIM card"
+        allowed_values:
+          - "Physical"
+          - "eSIM"
+          - "Hybrid"
+
+      - code: "PR_B2C_ATT_After_Mobile_Hotspot_Allotment"
+        name: "After Mobile Hotspot Allotment"
+        type: "picklist"
+        mandatory: false
+        description: "What happens after hotspot allotment is consumed"
+        allowed_values:
+          - "Throttled"
+          - "Blocked"
+          - "Overage Charges"
+
+      - code: "PR_B2C_ATT_Data_Prioritization"
+        name: "Data Prioritization"
+        type: "picklist"
+        mandatory: false
+        description: "Data prioritization setting"
+        allowed_values:
+          - "Standard"
+          - "High"
+          - "Low"
+
+      - code: "PR_B2C_ATT_MSISDN_RESERVATIONREFID"
+        name: "MSISDN RESERVATION REF ID"
+        type: "text"
+        mandatory: false
+        description: "MSISDN reservation reference ID"
+
+      - code: "PR_B2C_ATT_Mob_SIM_Order_Item_Id"
+        name: "SIM order Item Id"
+        type: "text"
+        mandatory: false
+        description: "SIM order item ID"
+
+      - code: "PR_B2C_ATT_OLSP"
+        name: "OLSP"
+        type: "text"
+        mandatory: false
+        description: "Old Line Service Provider"
+
+      - code: "PR_B2C_ATT_Old_Plan_Type"
+        name: "Old Plan Type"
+        type: "text"
+        mandatory: false
+        description: "Previous plan type"
+
+      - code: "PR_B2C_ATT_Pool_ID"
+        name: "POOL ID"
+        type: "text"
+        mandatory: false
+        description: "Pool ID for shared data plans"
+
+      - code: "PR_B2C_ATT_Remember_card"
+        name: "Remember Card"
+        type: "text"
+        mandatory: false
+        description: "Remember card for future payments"
+
+      - code: "PR_B2C_First_Name"
+        name: "First Name"
+        type: "text"
+        mandatory: false
+        description: "Customer first name"
+
+      - code: "PR_B2C_Mb_ATT_5G_Access"
+        name: "5G Access"
+        type: "text"
+        mandatory: false
+        description: "5G network access capability"
+
+      - code: "PR_B2C_Mb_ATT_After_Quota"
+        name: "After Quota"
+        type: "picklist"
+        mandatory: false
+        description: "What happens after quota is exceeded"
+        allowed_values:
+          - "Throttled"
+          - "Blocked"
+          - "Charged"
+
+      - code: "PR_B2C_Mb_ATT_Customer_Type"
+        name: "Customer Type"
+        type: "picklist"
+        mandatory: false
+        description: "Type of customer"
+        allowed_values:
+          - "Individual"
+          - "Business"
+          - "Enterprise"
+          - "Government"
+
+      - code: "PR_B2C_Mb_ATT_Data_Allowance"
+        name: "Data Allowance"
+        type: "picklist"
+        mandatory: false
+        description: "Data allowance level"
+        allowed_values:
+          - "1GB"
+          - "5GB"
+          - "10GB"
+          - "20GB"
+          - "50GB"
+          - "Unlimited"
+
+      - code: "PR_B2C_Mb_ATT_Data_Overage"
+        name: "Data Overage"
+        type: "text"
+        mandatory: false
+        description: "Data overage settings"
+
+      - code: "PR_B2C_Mb_ATT_Data_Roaming_Included"
+        name: "Data Roaming Included"
+        type: "picklist"
+        mandatory: false
+        description: "Is data roaming included"
+        allowed_values:
+          - "Yes"
+          - "No"
+          - "Limited"
+
+      - code: "PR_B2C_Mb_ATT_Data_Roaming_Included_Canada"
+        name: "Data Roaming Included(Canada)"
+        type: "picklist"
+        mandatory: false
+        description: "Is roaming included in Canada"
+        allowed_values:
+          - "Yes"
+          - "No"
+
+      - code: "PR_B2C_Mb_ATT_Data_Roaming_Included_Mexico"
+        name: "Data Roaming Included(Mexico)"
+        type: "picklist"
+        mandatory: false
+        description: "Is roaming included in Mexico"
+        allowed_values:
+          - "Yes"
+          - "No"
+
+      - code: "PR_B2C_Mb_ATT_Data_Speed"
+        name: "Data Speed"
+        type: "picklist"
+        mandatory: false
+        description: "Data speed tier"
+        allowed_values:
+          - "4G LTE"
+          - "5G"
+          - "5G+"
+          - "Mixed"
+
+      - code: "PR_B2C_Mb_ATT_Device_State"
+        name: "Device State"
+        type: "picklist"
+        mandatory: false
+        description: "State of the device"
+        allowed_values:
+          - "New"
+          - "Certified Used"
+          - "Refurbished"
+          - "Damaged"
+
+      - code: "PR_B2C_Mb_ATT_Device_Type"
+        name: "Device Type"
+        type: "picklist"
+        mandatory: false
+        description: "Type of device"
+        allowed_values:
+          - "Tablet"
+          - "Smartphone"
+          - "Hotspot"
+          - "Watch"
+
+      - code: "PR_B2C_Mb_ATT_ICCID"
+        name: "ICCID"
+        type: "text"
+        mandatory: false
+        description: "Integrated Circuit Card Identifier"
+
+      - code: "PR_B2C_Mb_ATT_Is_Shared_MSISDN"
+        name: "Is Shared MSISDN"
+        type: "text"
+        mandatory: false
+        description: "Is MSISDN shared with other lines"
+
+      - code: "PR_B2C_Mb_ATT_Mobile_Group_Offer_Type"
+        name: "Mobile Group Offer Type"
+        type: "picklist"
+        mandatory: false
+        description: "Type of mobile group offer"
+        allowed_values:
+          - "Family"
+          - "Team"
+          - "Enterprise"
+          - "None"
+
+      - code: "PR_B2C_Mb_ATT_Mobile_Hotspot_Data"
+        name: "Mobile Hotspot Data"
+        type: "picklist"
+        mandatory: false
+        description: "Mobile hotspot data allocation"
+        allowed_values:
+          - "Included"
+          - "Not Included"
+          - "Limited"
+
+      - code: "PR_B2C_Mb_ATT_Mobile_Offer_Type"
+        name: "Mobile Offer Type"
+        type: "picklist"
+        mandatory: false
+        description: "Type of mobile offer"
+        allowed_values:
+          - "Individual"
+          - "Family"
+          - "Business"
+
+      - code: "PR_B2C_Mb_ATT_Mobile_Security"
+        name: "Mobile Security"
+        type: "picklist"
+        mandatory: false
+        description: "Mobile security service level"
+        allowed_values:
+          - "Basic"
+          - "Standard"
+          - "Premium"
+          - "None"
+
+      - code: "PR_B2C_Mb_ATT_PrePaid_Or_PostPaid"
+        name: "PostPaid or PrePaid"
+        type: "picklist"
+        mandatory: false
+        description: "Payment type"
+        allowed_values:
+          - "PrePaid"
+          - "PostPaid"
+
+      - code: "PR_B2C_Mb_ATT_Rating_Resource_ID"
+        name: "Rating Resource Id"
+        type: "text"
+        mandatory: false
+        description: "Rating resource identifier"
+
+      - code: "PR_B2C_Mb_ATT_Rollover_Data"
+        name: "Rollover Data"
+        type: "text"
+        mandatory: false
+        description: "Rollover data settings"
+
+      - code: "PR_B2C_Mb_ATT_Stream_Saver"
+        name: "Stream Saver (HD On/Off)"
+        type: "picklist"
+        mandatory: false
+        description: "Stream saver setting"
+        allowed_values:
+          - "On"
+          - "Off"
+          - "Auto"
+
+      - code: "PR_B2C_Mb_ATT_Video_Quality"
+        name: "Video Quality"
+        type: "text"
+        mandatory: false
+        description: "Video quality setting"
+
+      - code: "PRB2C_ATT_Is_Ported"
+        name: "Is Ported"
+        type: "text"
+        mandatory: false
+        description: "Is number ported"
+
+      - code: "PRB2C_ATT_Mobile_Port_In_OK"
+        name: "Port In OK"
+        type: "text"
+        mandatory: false
+        description: "Port in approval status"
+
+      - code: "PR_B2C_Mb_ATT_Hot_Spot_Consumed_Behavior"
+        name: "Hot Spot Consumed Behavior"
+        type: "picklist"
+        mandatory: false
+        description: "Behavior when hotspot is consumed"
+        allowed_values:
+          - "Throttled"
+          - "Blocked"
+          - "Pay Per Use"
+
+      - code: "PR_B2C_MB_ATT_IS_Transfer"
+        name: "Is Transfer"
+        type: "text"
+        mandatory: false
+        description: "Is this a transfer line"
+
+      - code: "PR_B2C_Mb_ATT_Asset_Reference_Id"
+        name: "Asset Reference Id"
+        type: "text"
+        mandatory: false
+        description: "Reference ID for asset"
+
+      - code: "PR_B2C_Mb_ATT_Associated_Asset_Ref_Id"
+        name: "Associated Asset Ref Id"
+        type: "text"
+        mandatory: false
+        description: "Associated asset reference ID"
+
+      - code: "PR_B2C_Mb_ATT_Liberty_Call_Defense"
+        name: "Liberty Call Defense"
+        type: "picklist"
+        mandatory: false
+        description: "Liberty call defense service"
+        allowed_values:
+          - "Yes"
+          - "No"
+
+      - code: "PR_B2C_Mb_ATT_Liberty_Mobile_Defense"
+        name: "Liberty Mobile Defense"
+        type: "picklist"
+        mandatory: false
+        description: "Liberty mobile defense service"
+        allowed_values:
+          - "Yes"
+          - "No"
+
+      - code: "PR_B2C_Mb_ATT_OLD ICCID"
+        name: "OLD ICCID"
+        type: "text"
+        mandatory: false
+        description: "Old Integrated Circuit Card Identifier"
+
+      - code: "PR_B2C_Mb_ATT_PPU_CreditLimit"
+        name: "PPU CreditLimit"
+        type: "text"
+        mandatory: false
+        description: "Pay Per Use credit limit"
+
+      - code: "PR_B2C_Mb_ATT_PPU_CreditLimit_Updated"
+        name: "PPU CreditLimit Updated"
+        type: "text"
+        mandatory: false
+        description: "Last updated PPU credit limit"
+
+  # =========================================================================
+  # Fallback Configurations
+  # =========================================================================
+  FALLBACK_TECHNICAL:
+    product_name: "Generic Technical Product"
+    product_type: "technical"
+    description: "Generic Technical Product Fallback for unknown technical products"
+    attributes:
+      - code: "ATT_GENERIC"
+        name: "Generic Attribute"
+        type: "text"
+        mandatory: false
+        description: "Generic attribute for fallback"
+
+  FALLBACK_LINE:
+    product_name: "Generic Line Product"
+    product_type: "line"
+    description: "Generic Line Product Fallback for unknown line products"
+    attributes:
+      - code: "ATT_GENERIC_LINE"
+        name: "Generic Line Attribute"
+        type: "text"
+        mandatory: false
+        description: "Generic attribute for line product fallback"

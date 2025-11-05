@@ -379,7 +379,63 @@ class StoryAnalyzerTransformer:
         
         logger.info(f"[STEP2] Complete: {len(self.components)} components extracted")
         logger.info(f"[STEP2] Unique api_names: {len(self.component_to_stories)}")
-
+    
+    def _classify_stories(self) -> Tuple[List[str], List[str], List[str]]:
+        """Step 4: Classify stories into blocked/conflicts/safe with tags"""
+        logger.info("[STEP4] Classifying stories...")
+        
+        blocked = []
+        conflicts = []
+        safe = []
+        
+        for story_id in self.stories.keys():
+            logger.debug(f"[STEP4] Classifying story {story_id}...")
+            
+            # Get all components for this story
+            story_components = [c for c in self.components.values() if c["story_id"] == story_id]
+            
+            # Check if any component has old commit (story < production)
+            has_old_component = any(c["has_old_commit"] for c in story_components)
+            
+            # Check if any component is in conflict (same api_name in multiple stories)
+            has_conflict_component = any(
+                c["api_name"] in self.conflicts_map 
+                for c in story_components
+            )
+            
+            logger.debug(f"[STEP4] {story_id}: has_old={has_old_component}, has_conflict={has_conflict_component}")
+            
+            # Classification logic with tags
+            if has_old_component and has_conflict_component:
+                blocked.append(story_id)
+                self.stories[story_id]["classification_tag"] = "Blocked"  # 🆕 ADD TAG
+                logger.info(f"[STEP4] {story_id} → BLOCKED (old components + conflicts)")
+            
+            # CONFLICTING: has conflicts but components are all current/ahead
+            elif has_conflict_component and not has_old_component:
+                conflicts.append(story_id)
+                self.stories[story_id]["classification_tag"] = "Conflict"  # 🆕 ADD TAG
+                logger.info(f"[STEP4] {story_id} → CONFLICTS (conflicts but all components current)")
+            
+            # BLOCKED (no conflicts but has old components): Story behind production
+            elif has_old_component and not has_conflict_component:
+                blocked.append(story_id)
+                self.stories[story_id]["classification_tag"] = "Blocked"  # 🆕 ADD TAG
+                logger.info(f"[STEP4] {story_id} → BLOCKED (components behind production)")
+            
+            # SAFE: No conflicts AND all components are current or ahead
+            else:
+                safe.append(story_id)
+                # 🆕 ADD TAG - differentiate between safe with commits vs deployment tasks
+                if story_components:  # Has components (commits)
+                    self.stories[story_id]["classification_tag"] = "Safe with commit"
+                else:
+                    self.stories[story_id]["classification_tag"] = "Safe"  # Deployment tasks
+                logger.info(f"[STEP4] {story_id} → SAFE (no conflicts, all components current/ahead)")
+        
+        logger.info(f"[STEP4] Complete: blocked={len(blocked)}, conflicts={len(conflicts)}, safe={len(safe)}")
+        
+        return blocked, conflicts, safe
     
     def _detect_conflicts(self):
         """Step 3: Detect conflicts (same api_name in multiple stories)"""
@@ -394,7 +450,70 @@ class StoryAnalyzerTransformer:
         
         logger.info(f"[STEP3] Complete: {len(self.conflicts_map)} components have conflicts")
     
-    def _classify_stories(self) -> Tuple[List[str], List[str], List[str]]:
+    def _enrich_with_conflicts(self, story_ids: List[str], sf_records: List[Dict]) -> List[Dict]:
+        """Step 5: Build full story objects with component and conflict details"""
+        logger.info(f"[STEP5] Enriching {len(story_ids)} stories with conflict details...")
+        
+        enriched_stories = []
+        
+        for story_id in story_ids:
+            logger.debug(f"[STEP5] Building story object for {story_id}...")
+            
+            # Get story data
+            story_info = self.stories[story_id]
+            
+            # Get components for this story
+            story_components_data = [c for c in self.components.values() if c["story_id"] == story_id]
+            
+            # Build component list with conflicts
+            components_list = []
+            for comp in story_components_data:
+                comp_copy = copy.deepcopy(comp)
+                
+                # Find conflicting stories for this component
+                if comp["api_name"] in self.conflicts_map:
+                    conflicting_story_ids = [
+                        sid for sid in self.conflicts_map[comp["api_name"]] 
+                        if sid != story_id
+                    ]
+                    
+                    # Get details of conflicting stories
+                    conflicting_details = []
+                    for conf_story_id in conflicting_story_ids:
+                        if conf_story_id in self.stories:
+                            conf_story = self.stories[conf_story_id]
+                            conflicting_details.append({
+                                "story_id": conf_story_id,
+                                "jira_key": conf_story.get("jira_key"),
+                                "developer": conf_story.get("developer"),
+                                "commit_date": conf_story.get("story_commit_date")
+                            })
+                            logger.debug(f"[STEP5] {story_id} component {comp['api_name']} conflicts with {conf_story_id}")
+                    
+                    comp_copy["conflicting_stories"] = conflicting_details
+                else:
+                    comp_copy["conflicting_stories"] = []
+                
+                components_list.append(comp_copy)
+            
+            story_obj = {
+                "story_id": story_id,
+                "jira_key": story_info.get("jira_key"),
+                "title": story_info.get("title"),
+                "developer": story_info.get("developer"),
+                "component_count": len(components_list),
+                "components": components_list,
+                "classification_tag": story_info.get("classification_tag", "Safe")  # 🆕 INCLUDE TAG IN RESPONSE
+            }
+            
+            enriched_stories.append(story_obj)
+            logger.debug(f"[STEP5] Completed story {story_id} with {len(components_list)} components")
+        
+        logger.info(f"[STEP5] Complete: {len(enriched_stories)} stories enriched")
+        
+        return enriched_stories
+    
+    def _classify_storiesbackup(self) -> Tuple[List[str], List[str], List[str]]:
         """Step 4: Classify stories into blocked/conflicts/safe"""
         logger.info("[STEP4] Classifying stories...")
         
@@ -444,7 +563,7 @@ class StoryAnalyzerTransformer:
         
         return blocked, conflicts, safe
     
-    def _enrich_with_conflicts(self, story_ids: List[str], sf_records: List[Dict]) -> List[Dict]:
+    def _enrich_with_conflictsbackup(self, story_ids: List[str], sf_records: List[Dict]) -> List[Dict]:
         """Step 5: Build full story objects with component and conflict details"""
         logger.info(f"[STEP5] Enriching {len(story_ids)} stories with conflict details...")
         

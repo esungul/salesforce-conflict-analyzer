@@ -4,6 +4,8 @@ import { openAnalyzeOnlineFlow } from './controllers/analyzeOnline.js';
 import { renderMyWorkTab } from './ui/tabs/my-work.js';
 import { renderProductionGuardTab } from './ui/tabs/production-guard.js';
 import { renderConflictRadarTab } from './ui/tabs/conflict-radar.js';
+import { renderPostDevActivityTab } from './ui/tabs/postdev-activity.js';
+
 
 
 // Import enhanced tab renderers
@@ -85,6 +87,9 @@ function renderTabContent(tabId, container) {
       break;
    case 'rollback-impact':
     renderRollbackImpactTab(ANALYSIS);
+    case 'postdev-activity':
+      renderPostDevActivityTab(ANALYSIS);
+      break;
   break;
     case 'overview':
       // OVERVIEW TAB: Always show landing page when no analysis

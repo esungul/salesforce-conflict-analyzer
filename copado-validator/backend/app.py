@@ -5,6 +5,7 @@ Endpoints:
   POST /api/analyze - Upload CSV and get conflict analysis
   GET  /api/health  - Health check
 """
+from config_loader import ConfigLoader
 from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -82,6 +83,177 @@ setup_logging()
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app)  # Allow frontend to call this API
+
+
+
+
+
+
+
+
+############# post valdiation 
+# ============================================================================
+# REGISTER SMART AUTO-DETECTING VALIDATOR
+# ============================================================================
+# This endpoint automatically:
+# 1. Queries Salesforce for product
+# 2. Gets ParentClass and IsOrderable
+# 3. Determines validation method
+# 4. Routes to external script OR YAML config
+# 5. Returns results
+from smart_validator_auto_detect import register_smart_auto_validator
+from salesforce_client import sf_login_from_config
+
+try:
+    logger.info("Connecting to Salesforce...")
+    sf_client = sf_login_from_config()
+    logger.info("✓ Salesforce connected")
+except Exception as e:
+    logger.error(f"✗ Salesforce connection failed: {e}")
+    sf_client = None
+
+try:
+    register_smart_auto_validator(app, sf_client)
+    logger.info("[STARTUP] ✓ Smart validator registered at /api/validate-product")
+except Exception as e:
+    logger.error(f"[STARTUP] ✗ Failed to register smart validator: {e}")
+
+# ============================================================================
+# HEALTH CHECK ENDPOINT
+# ============================================================================
+
+
+# ============================================================================
+# STATUS ENDPOINT
+# ============================================================================
+
+@app.route('/status', methods=['GET'])
+def status():
+    """
+    Service status endpoint
+    GET /status
+    
+    Returns:
+        Service status and available endpoints
+    """
+    sf_status = "connected" if sf_client else "disconnected"
+    
+    return jsonify({
+        "status": "running",
+        "timestamp": datetime.utcnow().isoformat(),
+        "service": "Smart Auto-Detecting Validator",
+        "salesforce": sf_status,
+        "endpoints": {
+            "validate": "/api/validate-product",
+            "health": "/health",
+            "status": "/status"
+        }
+    }), 200
+
+
+# ============================================================================
+# INFO ENDPOINT
+# ============================================================================
+
+@app.route('/info', methods=['GET'])
+def info():
+    """
+    Service information endpoint
+    GET /info
+    
+    Returns:
+        API documentation and usage
+    """
+    return jsonify({
+        "service": "Smart Auto-Detecting Validator",
+        "version": "1.0",
+        "description": "Automatically validates Salesforce products based on ParentClass and IsOrderable",
+        "endpoints": {
+            "POST /api/validate-product": {
+                "description": "Validate product with auto-detection",
+                "request": {
+                    "product_name": "string (required)"
+                },
+                "example": {
+                    "product_name": "iPhone 15 Pro"
+                },
+                "response": {
+                    "status": "SUCCESS",
+                    "auto_detected": True,
+                    "validation": {
+                        "status": "OK|PARTIAL|ERROR|INVALID",
+                        "product_name": "string",
+                        "parent_class": "string",
+                        "is_orderable": True,
+                        "validation_method": "external_script|yaml_config",
+                        "device_type": "string"
+                    }
+                }
+            },
+            "GET /health": {
+                "description": "Health check"
+            },
+            "GET /status": {
+                "description": "Service status"
+            },
+            "GET /info": {
+                "description": "API information"
+            }
+        },
+        "auto_detection_rules": {
+            "rule_1": "Mobile Device Class + Orderable=TRUE → External Script",
+            "rule_2": "Mobile Line Class + Orderable=TRUE → YAML Config",
+            "rule_3": "Mobile Device Class + Orderable=FALSE → YAML Config",
+            "rule_4": "Technical Class (any) → YAML Config",
+            "rule_5": "Other classes → YAML Config (default)"
+        }
+    }), 200
+
+
+# ============================================================================
+# ERROR HANDLERS
+# ============================================================================
+
+@app.errorhandler(404)
+def not_found(error):
+    """Handle 404 errors"""
+    return jsonify({
+        "error": "Not found",
+        "message": "The requested endpoint does not exist",
+        "available_endpoints": {
+            "validate": "/api/validate-product",
+            "health": "/health",
+            "status": "/status",
+            "info": "/info"
+        }
+    }), 404
+
+
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle 500 errors"""
+    logger.error(f"Internal server error: {error}")
+    return jsonify({
+        "error": "Internal server error",
+        "message": "An unexpected error occurred",
+        "timestamp": datetime.utcnow().isoformat()
+    }), 500
+
+
+@app.errorhandler(400)
+def bad_request(error):
+    """Handle 400 errors"""
+    return jsonify({
+        "error": "Bad request",
+        "message": str(error)
+    }), 400
+
+
+
+
+
+
+
 
 
 # ADD THIS INITIALIZATION CODE:
@@ -3661,6 +3833,7 @@ def format_conflict(conflict):
 if __name__ == '__main__':
     print("=" * 60)
     print("🚀 Copado Deployment Validator API")
+    loader = ConfigLoader('validation_config_conditional.yaml')
     print("=" * 60)
     print("Starting server on http://localhost:5000")
     print()
