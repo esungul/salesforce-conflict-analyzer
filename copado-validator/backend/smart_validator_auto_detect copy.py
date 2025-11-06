@@ -114,9 +114,16 @@ def get_salesforce_connection(config_file: str = SALESFORCE_CONFIG_FILE) -> Opti
 # CORE VALIDATION FUNCTIONS
 # ============================================================================
 
+
 def auto_detect_validation_method(product: Dict[str, Any]) -> Tuple[str, str]:
     """
-    Auto-detect validation method with device routing
+    Auto-detect validation method based on product properties
+    With fallback detection for products without ParentClass
+    
+    Returns:
+        Tuple of (validation_method, device_type)
+        - validation_method: "external_script" or "yaml_config"
+        - device_type: "Mobile Device", "Mobile Line", "Technical", etc.
     """
     try:
         parent_class = product.get('ParentClass', '').lower() if product.get('ParentClass') else ''
@@ -124,26 +131,34 @@ def auto_detect_validation_method(product: Dict[str, Any]) -> Tuple[str, str]:
         product_name = product.get('Name', '').lower() if product.get('Name') else ''
         
         logger.info(f"[AUTO-DETECT] Parent Class: {parent_class}, Orderable: {is_orderable}")
+        logger.info(f"[AUTO-DETECT] Product Name: {product_name}")
         
-        # RULE 1: Mobile Device Class + Orderable = Route to Device Validator
-        if ('mobile device' in parent_class or 'device' in parent_class) and is_orderable:
-            logger.info("[AUTO-DETECT] ✓ Mobile Device + Orderable → Route to Device Validator")
-            return "device_validator", "MobileDevice"
+        # RULE 1: Mobile Device Class + Orderable = External Script
+        if 'mobile device' in parent_class or 'device' in parent_class:
+            if is_orderable:
+                logger.info("[AUTO-DETECT] ✓ Mobile Device + Orderable → External Script")
+                return "external_script", "MobileDevice"
+            else:
+                logger.info("[AUTO-DETECT] ✓ Mobile Device + Not Orderable → YAML Config")
+                return "yaml_config", "MobileDevice"
         
         # RULE 2: Mobile Line Class = YAML Config
         if 'mobile line' in parent_class or 'line' in parent_class:
-            logger.info("[AUTO-DETECT] ✓ Mobile Line Class → YAML Config")
+            logger.info("[AUTO-DETECT] ✓ Mobile Line Class → YAML Config (LineProduct)")
             return "yaml_config", "LineProduct"
         
         # RULE 3: Technical Class = YAML Config
         if 'technical' in parent_class or 'service' in parent_class:
-            logger.info("[AUTO-DETECT] ✓ Technical Class → YAML Config")
+            logger.info("[AUTO-DETECT] ✓ Technical Class → YAML Config (Technical)")
             return "yaml_config", "Technical"
         
-        # FALLBACK DETECTION
+        # ===================================================================
+        # FALLBACK DETECTION (for products without ParentClass)
+        # ===================================================================
         if not parent_class:
             logger.info("[AUTO-DETECT] ⚠ ParentClass is None, using fallback detection...")
             
+            # Check product name for keywords
             if 'technical' in product_name or 'service' in product_name or 'mpi' in product_name:
                 logger.info("[AUTO-DETECT] ✓ Detected as Technical (from product name)")
                 return "yaml_config", "Technical"
@@ -154,9 +169,13 @@ def auto_detect_validation_method(product: Dict[str, Any]) -> Tuple[str, str]:
             
             elif 'device' in product_name or 'phone' in product_name or 'tablet' in product_name:
                 logger.info("[AUTO-DETECT] ✓ Detected as Mobile Device (from product name)")
-                return "device_validator", "MobileDevice"
+                return "yaml_config", "MobileDevice"
+            
+            else:
+                logger.info("[AUTO-DETECT] ⚠ Could not determine type from product name, defaulting to Technical")
+                return "yaml_config", "Technical"
         
-        # Default to YAML config
+        # RULE 4: Other classes = YAML Config by default
         logger.info("[AUTO-DETECT] ✓ Other class → YAML Config")
         return "yaml_config", "Technical"
     
@@ -164,56 +183,6 @@ def auto_detect_validation_method(product: Dict[str, Any]) -> Tuple[str, str]:
         logger.error(f"[AUTO-DETECT] Error: {str(e)}")
         return "yaml_config", "Technical"
 
-def route_to_device_validator(product_name: str, sf: Optional[Salesforce] = None) -> Dict[str, Any]:
-    """
-    Route device product validation to the device-specific endpoint
-    """
-    try:
-        logger.info(f"[ROUTER] Routing device product to device validator: {product_name}")
-        
-        # Import the device validation function
-        from validate_product_api import validate_product_by_name
-        
-        # Get the global matrix DataFrame from app
-        try:
-            from app import get_matrix_df
-            matrix_df = get_matrix_df()
-        except ImportError:
-            logger.error("[ROUTER] Cannot import get_matrix_df from app")
-            return {
-                "status": "ERROR",
-                "message": "Device validation configuration not available",
-                "product_name": product_name
-            }
-        
-        if matrix_df is None or matrix_df.empty:
-            logger.error("[ROUTER] Matrix DataFrame is not available or empty")
-            return {
-                "status": "ERROR", 
-                "message": "Device matrix data not available",
-                "product_name": product_name
-            }
-        
-        # Call device validation
-        result = validate_product_by_name(
-            sf=sf,
-            product_name=product_name,
-            matrix_df=matrix_df,
-            config_used="device_matrix"
-        )
-        
-        logger.info(f"[ROUTER] Device validation completed: {result.get('status')}")
-        return result
-        
-    except Exception as e:
-        logger.error(f"[ROUTER] Error routing to device validator: {str(e)}")
-        import traceback
-        logger.error(traceback.format_exc())
-        return {
-            "status": "ERROR",
-            "message": f"Device validation failed: {str(e)}",
-            "product_name": product_name
-        }
 
 def find_product_config(product_name: str, product_code: Optional[str], device_type: str, validation_rules: Dict) -> Optional[str]:
     """
@@ -491,6 +460,7 @@ def validate_attributes(
         'invalid_attributes': invalid_attributes if invalid_attributes else None
     }
 
+
 def validate_product_auto(
     product_name: str,
     sf: Optional[Salesforce] = None,
@@ -499,7 +469,23 @@ def validate_product_auto(
 ) -> Dict[str, Any]:
     """
     Automatically detect validation method and validate product
+    
+    Auto-detection logic:
+    1. Detects device type from ParentClass or product name
+    2. Finds product-specific config by code or name
+    3. Falls back to generic device config
+    4. Validates against appropriate config
+    
+    Args:
+        product_name: Name of product to validate
+        sf: Salesforce connection (optional)
+        config: YAML configuration (optional, will load if not provided)
+        check_salesforce: Whether to check Salesforce
+    
+    Returns:
+        Validation result dictionary
     """
+    
     try:
         logger.info(f"[ENDPOINT] Validating product: {product_name}")
         logger.info(f"[AUTO-VALIDATE] Starting validation for: {product_name}")
@@ -550,28 +536,7 @@ def validate_product_auto(
         logger.info(f"[AUTO-DETECT] Method: {validation_method}, Device: {device_type}")
         
         # =====================================================================
-        # STEP 3: ROUTE TO DEVICE VALIDATOR IF NEEDED
-        # =====================================================================
-        
-        if validation_method == "device_validator":
-            logger.info(f"[ROUTING] Routing to device validator: {product_name}")
-            device_result = route_to_device_validator(product_name, sf)
-            
-            # Add auto-detection info to device result
-            if device_result.get('status') in ['SUCCESS', 'PARTIAL']:
-                device_result['validation'].update({
-                    "parent_class": parent_class,
-                    "is_orderable": is_orderable,
-                    "validation_method": "device_validator",
-                    "device_type": device_type,
-                    "auto_detected": True
-                })
-            
-            logger.info(f"[ROUTING] Device validation result: {device_result}")
-            return device_result
-        
-        # =====================================================================
-        # STEP 4: LOAD CONFIGURATION (if not provided)
+        # STEP 3: LOAD CONFIGURATION (if not provided)
         # =====================================================================
         
         if not config:
@@ -586,7 +551,7 @@ def validate_product_auto(
             }
         
         # =====================================================================
-        # STEP 5: FIND PRODUCT-SPECIFIC CONFIG
+        # STEP 4: FIND PRODUCT-SPECIFIC CONFIG (NEW!)
         # =====================================================================
         
         validation_rules = config.get('validation_rules', {})
@@ -606,7 +571,7 @@ def validate_product_auto(
             }
         
         # =====================================================================
-        # STEP 6: LOAD CONFIGURATION
+        # STEP 5: LOAD CONFIGURATION
         # =====================================================================
         
         configured_attrs = validation_rules[config_key].get('attributes', [])
@@ -614,7 +579,7 @@ def validate_product_auto(
         logger.info(f"[AUTO-VALIDATE] Found {len(configured_attrs)} attributes in config")
         
         # =====================================================================
-        # STEP 7: GET PRODUCT ATTRIBUTES FROM SALESFORCE
+        # STEP 6: GET PRODUCT ATTRIBUTES FROM SALESFORCE
         # =====================================================================
         
         product_attrs_json = {}
@@ -624,17 +589,15 @@ def validate_product_auto(
             if isinstance(product_attrs_str, str):
                 try:
                     product_attrs_json = json.loads(product_attrs_str)
-                    logger.info(f"[SF QUERY] Successfully parsed product attributes JSON")
-                except Exception as e:
-                    logger.error(f"[SF QUERY] Error parsing JSON attributes: {e}")
+                except:
                     product_attrs_json = {}
             else:
                 product_attrs_json = product_attrs_str
             
-            logger.info(f"[SF QUERY] Retrieved product attributes from Salesforce: {len(product_attrs_json)} categories")
+            logger.info(f"[SF QUERY] Retrieved product attributes from Salesforce")
         
         # =====================================================================
-        # STEP 8: VALIDATE ATTRIBUTES
+        # STEP 7: VALIDATE ATTRIBUTES
         # =====================================================================
         
         if not product:
@@ -646,10 +609,8 @@ def validate_product_auto(
             product
         )
         
-        logger.info(f"[AUTO-VALIDATE] Validation result status: {validation_result['status']}")
-        
         # =====================================================================
-        # STEP 9: BUILD RESPONSE
+        # STEP 8: BUILD RESPONSE
         # =====================================================================
         
         response = {
@@ -661,7 +622,7 @@ def validate_product_auto(
                 "is_orderable": is_orderable,
                 "validation_method": validation_method,
                 "device_type": device_type,
-                "config_used": config_key,
+                "config_used": config_key,  # NEW: Shows which config was used
                 "details": validation_result['details'],
                 "timestamp": datetime.now().isoformat()
             }
@@ -670,17 +631,13 @@ def validate_product_auto(
         # Add attributes to response
         if validation_result.get('present_attributes'):
             response['validation']['present_attributes'] = validation_result['present_attributes']
-            logger.info(f"[AUTO-VALIDATE] Added {len(validation_result['present_attributes'])} present attributes")
         
         if validation_result.get('missing_attributes'):
             response['validation']['missing_attributes'] = validation_result['missing_attributes']
-            logger.info(f"[AUTO-VALIDATE] Added {len(validation_result['missing_attributes'])} missing attributes")
         
         if validation_result.get('invalid_attributes'):
             response['validation']['invalid_attributes'] = validation_result['invalid_attributes']
-            logger.info(f"[AUTO-VALIDATE] Added {len(validation_result['invalid_attributes'])} invalid attributes")
         
-        logger.info(f"[AUTO-VALIDATE] Final response: {response}")
         logger.info(f"[AUTO-VALIDATE] Validation complete: {validation_result['status']}")
         
         return response
@@ -694,6 +651,7 @@ def validate_product_auto(
             "message": str(e),
             "product_name": product_name
         }
+
 
 # ============================================================================
 # FLASK ROUTES & BLUEPRINT REGISTRATION

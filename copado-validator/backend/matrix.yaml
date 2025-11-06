@@ -1,0 +1,1342 @@
+products:
+  LLA_APPLE_IPAD_PRO_11_GEN_4_NEW:
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 11-inch
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 256GB
+    - 512GB
+  - attribute: Color
+    values:
+    - Gray
+  LLA_APPLE_IPAD_PRO_12_GEN_6_NEW:
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 12.9-inch
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 256GB
+    - 512GB
+  - attribute: Color
+    values:
+    - Gray
+  LLA_Apple_iPad_10th_Gen_2022:
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 11 inch
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 256GB
+    - 64GB
+  - attribute: Color
+    values:
+    - AT Blue
+    - AT Pink
+    - Blue
+    - Pink
+    - Silver
+    - Yellow
+  LLA_Apple_iPad_9th_Gen_2021_64GB:
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 10.2 inch
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 256GB
+    - 64GB
+  - attribute: Color
+    values:
+    - AT Space Gray
+    - Silver
+    - Space Gray
+  LLA_Apple_iPad_A16:
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 11 inch
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+  - attribute: Color
+    values:
+    - Blue
+  LLA_Apple_iPad_Air_11_M3:
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 11 inch
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+  - attribute: Color
+    values:
+    - Gray
+  LLA_Apple_iPad_Air_11_inch_M2:
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 11-inch
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+  - attribute: Color
+    values:
+    - Space Gray
+  LLA_Apple_iPad_Air_13_M3:
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 13 inch
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 256GB
+  - attribute: Color
+    values:
+    - Starlight
+  LLA_Apple_iPad_Air_13_inch_M2:
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 13-inch
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 256GB
+  - attribute: Color
+    values:
+    - Space Gray
+  LLA_Apple_iPad_Air_4_Gen:
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 10.9 inch
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 64GB
+  - attribute: Color
+    values:
+    - AT Blue
+    - AT Rose Gold
+    - AT Silver
+  LLA_Apple_iPad_Air_5th_Gen_2022:
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 10.9 inch
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 256GB
+    - 64GB
+  - attribute: Color
+    values:
+    - AT Space Gray
+    - Blue
+    - Pink
+    - Purple
+    - Space Gray
+    - Starlight
+  LLA_Apple_iPad_Mini_6th_Gen_2022:
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 8.3 inch
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 256GB
+    - 64GB
+  - attribute: Color
+    values:
+    - AT Space Gray
+    - Pink
+    - Purple
+    - Space Gray
+    - Starlight
+  LLA_Apple_iPad_Mini_A17:
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 8.3 inch
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+  - attribute: Color
+    values:
+    - Gray
+  LLA_Apple_iPad_Pro_11_inch_2022:
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 10.9 inch
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 1TB
+    - 256GB
+    - 2TB
+    - 512GB
+  - attribute: Color
+    values:
+    - AT Space Gray
+    - Silver
+    - Space Gray
+  LLA_Apple_iPad_Pro_11_inch_M4:
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 11-inch
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 256GB
+  - attribute: Color
+    values:
+    - Silver
+  LLA_Apple_iPad_Pro_12_9_inch_2022:
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 12.9 inch
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 1TB
+    - 256GB
+    - 2TB
+    - 512GB
+  - attribute: Color
+    values:
+    - AT Space Gray
+    - Silver
+    - Space Gray
+  LLA_Apple_iPad_Pro_13_inch_M4:
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 13-inch
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 256GB
+  - attribute: Color
+    values:
+    - Space Black
+  'LLA_Apple_iPad_Pro_5th_Gen ':
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 12.9 inch
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 512GB
+  - attribute: Color
+    values:
+    - AT Silver
+    - AT Space Gray
+  LLA_Galaxy_Tab_A9Plus:
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 11-inch
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+  - attribute: Color
+    values:
+    - Graphite
+  LLA_Galaxy_Tab_S9FE:
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 10.9-inch
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+  - attribute: Color
+    values:
+    - Graphite
+  LLA_Samsung_Galaxy_Tab_S10_FE:
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 10.9-inch
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+  - attribute: Color
+    values:
+    - Gray
+    - Silver
+  LLA_TCL_Tab_10:
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 10.3-inch
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 64GB
+  - attribute: Color
+    values:
+    - Gray
+  LLA_TCL_Tab_Tan_2nd_Gen:
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 10.3-inch
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 64GB
+  - attribute: Color
+    values:
+    - Dark Gray
+  LLA_Alcatel_USB_Dongle:
+  - attribute: Color
+    values:
+    - Black
+  PR_B2C_SIM_Card:
+  - attribute: Color
+    values:
+    - Black
+  LLA_Apple_Watch_SE:
+  - attribute: PR_B2C_Mb_ATT_Case
+    values:
+    - Aluminium
+    - Midnight Aluminum
+    - Starlight Aluminum
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 40mm
+    - 44mm
+  - attribute: PR_B2C_ATT_Band_Type
+    values:
+    - AT Midnight Sport Band ML
+    - AT Midnight Sport Band SM
+    - AT Starlight Sport Band ML
+    - AT Starlight Sport Band SM
+    - AT White Sport Band ML
+    - AT White Sport Band SM
+    - Midnight Sport Band ML
+    - Midnight Sport Band SM
+    - Starlight Sport Band ML
+    - Starlight Sport Band SM
+    - White Sport Band ML
+    - White Sport Band SM
+  LLA_Apple_Watch_SE_2024:
+  - attribute: PR_B2C_Mb_ATT_Case
+    values:
+    - Midnight Aluminium
+    - Midnight Aluminum
+    - Silver Aluminum
+    - Starlight Aluminum
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 40mm
+    - 44mm
+  - attribute: PR_B2C_ATT_Band_Type
+    values:
+    - Denim Sport ML
+    - Denim Sport SM
+    - Midnight Sport ML
+    - Midnight Sport SM
+    - Starlight Sport ML
+    - Starlight Sport SM
+  LLA_Apple_Watch_SE_NEW:
+  - attribute: PR_B2C_Mb_ATT_Case
+    values:
+    - Midnight Aluminum
+    - Silver Aluminium
+    - Starlight Aluminum
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 40mm
+    - 44mm
+  - attribute: PR_B2C_ATT_Band_Type
+    values:
+    - AT Midnight Sport Band
+    - AT Midnight Sport Band ML
+    - AT Starlight Sport Band
+    - AT Starlight Sport Band ML
+    - Blue Sport Band ML
+    - Blue Sport Band SM
+    - Midnight Sport Band ML
+    - Midnight Sport Band SM
+    - Starlight Sport Band ML
+    - Starlight Sport Band SM
+  LLA_Apple_Watch_Series_10:
+  - attribute: PR_B2C_Mb_ATT_Case
+    values:
+    - Jet Black Aluminium
+    - Natural Titanium
+    - Silver Aluminium
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 42mm
+    - 46mm
+  - attribute: PR_B2C_ATT_Band_Type
+    values:
+    - Blue Cloud Sport Loop
+    - Ink Sport Loop
+    - Natural Milanese Loop
+    - Natural Milanese Loop ML
+  LLA_Apple_Watch_Series_8_Aluminum_Case:
+  - attribute: PR_B2C_Mb_ATT_Case
+    values:
+    - Aluminum Case
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 41mm
+    - 45mm
+  - attribute: PR_B2C_ATT_Band_Type
+    values:
+    - White Sport Band ML
+    - White Sport Band SM
+  LLA_Apple_Watch_Series_8_Gold_Stainless_Steel_Case:
+  - attribute: PR_B2C_Mb_ATT_Case
+    values:
+    - Gold Stainless Steel Case
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 41mm
+    - 45mm
+  - attribute: PR_B2C_ATT_Band_Type
+    values:
+    - Gold Milanese Loop
+    - Starlight Sport Band ML
+    - Starlight Sport Band SM
+  LLA_Apple_Watch_Series_8_Graphite_Stainless_Steel_Case:
+  - attribute: PR_B2C_Mb_ATT_Case
+    values:
+    - Graphite Stainless Steel Case
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 41mm
+    - 45mm
+  - attribute: PR_B2C_ATT_Band_Type
+    values:
+    - Graphite Milanese Loop
+    - Midnight Sport Band ML
+    - Midnight Sport Band SM
+  LLA_Apple_Watch_Series_8_Midnight_Aluminum_Case:
+  - attribute: PR_B2C_Mb_ATT_Case
+    values:
+    - Midnight Aluminum Case
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 41mm
+    - 45mm
+  - attribute: PR_B2C_ATT_Band_Type
+    values:
+    - Midnight Sport Band ML
+    - Midnight Sport Band SM
+  LLA_Apple_Watch_Series_8_Red_Aluminum_Case:
+  - attribute: PR_B2C_Mb_ATT_Case
+    values:
+    - Red Aluminum Case
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 41mm
+    - 45mm
+  - attribute: PR_B2C_ATT_Band_Type
+    values:
+    - Red Sport Band ML
+    - Red Sport Band SM
+  LLA_Apple_Watch_Series_8_Silver_Stainless_Steel_Case:
+  - attribute: PR_B2C_Mb_ATT_Case
+    values:
+    - Silver Stainless Steel Case
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 41mm
+    - 45mm
+  - attribute: PR_B2C_ATT_Band_Type
+    values:
+    - Silver Milanese Loop
+    - White Sport Band ML
+    - White Sport Band SM
+  LLA_Apple_Watch_Series_8_Starlight_Aluminum_Case:
+  - attribute: PR_B2C_Mb_ATT_Case
+    values:
+    - Starlight Aluminum Case
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 41mm
+    - 45mm
+  - attribute: PR_B2C_ATT_Band_Type
+    values:
+    - Starlight Sport Band ML
+    - Starlight Sport Band SM
+  LLA_Apple_Watch_Series_9:
+  - attribute: PR_B2C_Mb_ATT_Case
+    values:
+    - AT Midnight Case
+    - AT Pink Case
+    - AT Silver Case
+    - AT Starlight Case
+    - Pink Aluminum Case
+    - Silver Aluminum Case
+    - Starlight Aluminum Case
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 41mm
+    - 45mm
+  - attribute: PR_B2C_ATT_Band_Type
+    values:
+    - AT Light Pink Band
+    - AT Light Pink Band ML
+    - AT Light Pink Band SM
+    - AT Midnight Band
+    - AT Midnight Band ML
+    - AT Midnight Band SM
+    - AT Starlight Band
+    - AT Starlight Band SM
+    - AT Storm Blue Band SM
+    - Blue
+    - Blue ML
+    - Blue SM
+    - Pink
+    - Pink ML
+    - Pink SM
+    - Starlight
+    - Starlight ML
+    - Starlight SM
+  LLA_Apple_Watch_Series_9_NEW:
+  - attribute: PR_B2C_Mb_ATT_Case
+    values:
+    - Pink Aluminum Case
+    - Silver Aluminum Case
+    - Starlight Aluminum Case
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 41mm
+    - 45mm
+  - attribute: PR_B2C_ATT_Band_Type
+    values:
+    - Blue ML
+    - Blue SM
+    - Pink
+    - Pink ML
+    - Starlight
+    - Starlight ML
+  LLA_Apple_Watch_Ultra:
+  - attribute: PR_B2C_Mb_ATT_Case
+    values:
+    - Titanium Case
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 49mm
+  - attribute: PR_B2C_ATT_Band_Type
+    values:
+    - AT Green Alpine Loop
+    - AT Midnight Ocean Sport Band
+    - BLACK GRAY TRAIL LOOP ML
+    - BLACK GRAY TRAIL LOOP SM
+    - BLUE GRAY TRAIL LOOP SM
+    - Blue Gray Trail Loop ML
+    - GREEN ALPINE LOOP LARGE
+    - GREEN ALPINE LOOP MEDIUM
+    - GREEN ALPINE LOOP SMALL
+    - Midnight Ocean Band
+    - ORANGE ALPINE LOOP LARGE
+    - ORANGE ALPINE LOOP MEDIUM
+    - ORANGE ALPINE LOOP SMALL
+    - STARLIGHT ALPINE LOOP LARGE
+    - STARLIGHT ALPINE LOOP MEDIUM
+    - STARLIGHT ALPINE LOOP SMALL
+    - White Ocean
+    - YELLOW BEIGE TRAIL LOOP ML
+    - YELLOW BEIGE TRAIL LOOP SM
+    - YELLOW OCEAN BAND
+  LLA_Apple_Watch_Ultra_2:
+  - attribute: PR_B2C_Mb_ATT_Case
+    values:
+    - Black Titanium
+    - Natural Titanium
+    - Titanium Case
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 49mm
+  - attribute: PR_B2C_ATT_Band_Type
+    values:
+    - AT Blue Band
+    - AT Ocean Band
+    - Black Trail Loop ML
+    - Blue Alpine Loop M
+    - Blue Black Trail Loop ML
+    - Blue Ocean Band
+    - Blue Trail Loop ML
+    - Green Gray Trail Loop ML
+    - Green Gray Trail Loop SM
+    - Olive Alpine Loop L
+    - Olive Alpine Loop M
+    - Orange Beige Trail Loop ML
+    - Orange Beige Trail Loop SM
+    - Orange Ocean Band
+    - White Ocean Band
+  LLA_Apple_Watch_Ultra_2_NEW:
+  - attribute: PR_B2C_Mb_ATT_Case
+    values:
+    - Titanium Case
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 49mm
+  - attribute: PR_B2C_ATT_Band_Type
+    values:
+    - Blue Black Trail Loop ML
+    - Blue Ocean Band
+    - Olive Alpine Loop L
+    - Olive Alpine Loop M
+    - Orange Beige Trail Loop ML
+    - Orange Beige Trail Loop SM
+    - Orange Ocean Band
+    - White Ocean Band
+  LLA_Apple_iWatch_S11:
+  - attribute: PR_B2C_Mb_ATT_Case
+    values:
+    - Jet Black Aluminium
+    - Space Gray Aluminium
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 42mm
+    - 46mm
+  - attribute: PR_B2C_ATT_Band_Type
+    values:
+    - Black Sport Band
+  LLA_Apple_iWatch_SE:
+  - attribute: PR_B2C_Mb_ATT_Case
+    values:
+    - Midnight Aluminium
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 40mm
+  - attribute: PR_B2C_ATT_Band_Type
+    values:
+    - Midnight Sport Band
+  LLA_Apple_iWatch_Ultra_3:
+  - attribute: PR_B2C_Mb_ATT_Case
+    values:
+    - Black Titanium
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 49mm
+  - attribute: PR_B2C_ATT_Band_Type
+    values:
+    - Black Alpine Loop
+  LLA_Galaxy_Watch6:
+  - attribute: PR_B2C_Mb_ATT_Case
+    values:
+    - Black
+    - Silver
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 43mm
+    - 47mm
+  - attribute: PR_B2C_ATT_Band_Type
+    values:
+    - Black Case Fits All Band
+    - Silver Case Fits All Band
+  LLA_Samsung_Galaxy_Watch_Ultra:
+  - attribute: PR_B2C_Mb_ATT_Case
+    values:
+    - Titanium Case
+  - attribute: PR_B2C_ATT_Size
+    values:
+    - 47mm
+  - attribute: PR_B2C_ATT_Band_Type
+    values:
+    - Gray Band
+    - White Band
+  LLA_Galaxy_A03s:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 32GB
+  - attribute: Color
+    values:
+    - Black
+    - Blue
+  LLA_Galaxy_A14:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 64GB
+  - attribute: Color
+    values:
+    - Black
+  LLA_Galaxy_A15:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+  - attribute: Color
+    values:
+    - Black
+  LLA_Galaxy_A16:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+  - attribute: Color
+    values:
+    - Black
+  LLA_Galaxy_S23_FE:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+  - attribute: Color
+    values:
+    - Cream
+    - Graphite
+  LLA_Galaxy_S24_FE:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+  - attribute: Color
+    values:
+    - Blue
+    - Graphite
+  LLA_Galaxy_S25_FE:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+  - attribute: Color
+    values:
+    - Navy
+  LLA_HMD_Vibe:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+  - attribute: Color
+    values:
+    - Charcoal
+  LLA_Inseego_USBt:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - N/A
+  - attribute: Color
+    values:
+    - Black
+  LLA_Motorola_G_2025:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+  - attribute: Color
+    values:
+    - Gray
+  LLA_Moxee_Mobile_Hotspot:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - N/A
+  - attribute: Color
+    values:
+    - Black
+  LLA_Orbic_Journey_Pro:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 8GB
+  - attribute: Color
+    values:
+    - Black
+  LLA_Orbic_Journey_R:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 1GB
+  - attribute: Color
+    values:
+    - Black
+  LLA_Orbic_Maui:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 16GB
+  - attribute: Color
+    values:
+    - Black
+  LLA_Orbic_Myra:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 64GB
+  - attribute: Color
+    values:
+    - Black
+  LLA_Orbic_Speed_5G_HOTSPOT:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 256MB
+  - attribute: Color
+    values:
+    - Black
+  LLA_Orbic_Speed_X_Hotspot:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 1GB
+  - attribute: Color
+    values:
+    - Black
+  LLA_Samsung_Galaxy_A26:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+  - attribute: Color
+    values:
+    - Black
+  LLA_Samsung_Galaxy_A36:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+  - attribute: Color
+    values:
+    - Black
+  LLA_Samsung_Galaxy_A54:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+  - attribute: Color
+    values:
+    - Black
+    - Violet
+  LLA_Samsung_Galaxy_B5_Flip:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 256GB
+  - attribute: Color
+    values:
+    - Cream
+    - Graphite
+    - Lavender
+    - Mint
+  LLA_Samsung_Galaxy_B6_Flip:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 256GB
+  - attribute: Color
+    values:
+    - Blue
+    - Mint
+    - Silver Shadow
+    - Yellow
+  LLA_Samsung_Galaxy_B7_Flip:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 256GB
+  - attribute: Color
+    values:
+    - Blue Shadow
+  LLA_Samsung_Galaxy_Q5_Fold:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 512GB
+  - attribute: Color
+    values:
+    - Black
+    - Blue
+    - Cream
+  LLA_Samsung_Galaxy_Q6_Fold:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 256GB
+  - attribute: Color
+    values:
+    - Navy
+    - Pink
+    - Silver Shadow
+  LLA_Samsung_Galaxy_Q7_Fold:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 256GB
+  - attribute: Color
+    values:
+    - Blue Shadow
+  LLA_Samsung_Galaxy_S23:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+  - attribute: Color
+    values:
+    - Black
+    - Green
+    - Pink
+  LLA_Samsung_Galaxy_S23_Plus:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 256GB
+  - attribute: Color
+    values:
+    - Beige
+    - Black
+    - Green
+  LLA_Samsung_Galaxy_S23_Ultra:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 256GB
+  - attribute: Color
+    values:
+    - Black
+    - Green
+    - Pink
+  LLA_Samsung_Galaxy_S24:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+  - attribute: Color
+    values:
+    - Black
+    - Gray
+    - Violet
+    - Yellow
+  LLA_Samsung_Galaxy_S24_Plus:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 256GB
+  - attribute: Color
+    values:
+    - Black
+    - Gray
+    - Violet
+    - Yellow
+  LLA_Samsung_Galaxy_S24_Ultra:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 256GB
+    - 512GB
+  - attribute: Color
+    values:
+    - Black
+    - Gray
+    - Violet
+    - Yellow
+  LLA_Samsung_Galaxy_S25:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+  - attribute: Color
+    values:
+    - Blue
+    - Navy
+    - Silver Shadow
+  LLA_Samsung_Galaxy_S25_Plus:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 256GB
+  - attribute: Color
+    values:
+    - Blue
+    - Navy
+    - Silver Shadow
+  LLA_Samsung_Galaxy_S25_Ultra:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 256GB
+  - attribute: Color
+    values:
+    - Titanium Black
+    - Titanium Blue
+    - Titanium Gray
+  LLA_TCL_40SE:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+  - attribute: Color
+    values:
+    - Grey
+    - Purple
+  LLA_iPhone_11:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 256GB
+    - 64GB
+  - attribute: Color
+    values:
+    - AT Black
+    - AT Black X
+    - AT Green
+    - AT Purple
+    - AT Purple X
+    - AT Red
+    - AT Red X
+    - AT White
+    - Black
+    - White
+  LLA_iPhone_11_Pro:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 256GB
+    - 64GB
+  - attribute: Color
+    values:
+    - AT Gold
+    - AT Green
+    - AT Silver
+    - AT Space Gray
+  LLA_iPhone_11_Pro_Max:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 256GB
+    - 512GB
+    - 64GB
+  - attribute: Color
+    values:
+    - AT Gold
+    - AT Green
+    - AT Silver
+    - AT Space Gray
+  LLA_iPhone_12:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 256GB
+    - 64GB
+  - attribute: Color
+    values:
+    - AT Black
+    - AT Blue
+    - AT Green
+    - AT Purple
+    - AT Red
+    - AT White
+  LLA_iPhone_12_Pro:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 256GB
+  - attribute: Color
+    values:
+    - AT Blue
+    - AT Gold
+    - AT Graphite
+    - AT Silver
+  LLA_iPhone_12_Pro_Max:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 256GB
+    - 512GB
+  - attribute: Color
+    values:
+    - AT Blue
+    - AT Gold
+    - AT Graphite
+    - AT Silver
+  LLA_iPhone_12_mini:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 256GB
+    - 64GB
+  - attribute: Color
+    values:
+    - AT Black
+    - AT Blue
+    - AT Green
+    - AT Purple
+    - AT Red
+    - AT White
+  LLA_iphone_13:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 256GB
+    - 512GB
+  - attribute: Color
+    values:
+    - AT Blue
+    - AT Green
+    - AT Midnight
+    - AT Midnight U
+    - AT Pink
+    - AT Pink U
+    - AT Red
+    - AT Starlight
+    - Blue
+    - Green
+    - Midnight
+    - Pink
+    - Red
+    - Starlight
+  LLA_iPhone_13_Pro:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 1TB
+    - 256GB
+    - 512GB
+  - attribute: Color
+    values:
+    - AT Blue
+    - AT Gold
+    - AT Graphite
+    - AT Green
+    - AT Silver
+  LLA_iPhone_13_Pro_Max:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 256GB
+    - 512GB
+  - attribute: Color
+    values:
+    - AT Blue
+    - AT Gold
+    - AT Graphite
+    - AT Green
+    - AT Silver
+  LLA_iPhone_13_mini:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 256GB
+  - attribute: Color
+    values:
+    - AT Blue
+    - AT Green
+    - AT Midnight
+    - AT Pink
+    - AT Red
+    - AT Starlight
+  LLA_iPhone_14:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 256GB
+    - 512GB
+  - attribute: Color
+    values:
+    - AT Blue
+    - AT Midnight
+    - AT Purple
+    - AT Red
+    - AT Starlight
+    - AT Yellow
+    - Blue
+    - Midnight
+    - Purple
+    - Red
+    - Starlight
+  LLA_iPhone_14_Plus:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 256GB
+    - 512GB
+  - attribute: Color
+    values:
+    - AT Blue
+    - AT Midnight
+    - AT Purple
+    - AT Red
+    - AT Starlight
+    - AT Yellow
+    - Blue
+    - Midnight
+    - Purple
+    - Red
+    - Starlight
+  LLA_iPhone_14_Pro:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 1TB
+    - 256GB
+    - 512GB
+  - attribute: Color
+    values:
+    - AT Black
+    - AT Gold
+    - AT Purple
+    - AT Silver
+    - Deep Purple
+    - Gold
+    - Silver
+    - Space Black
+  LLA_iPhone_14_Pro_Max:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 1TB
+    - 256GB
+    - 512GB
+  - attribute: Color
+    values:
+    - AT Black
+    - AT Gold
+    - AT Purple
+    - AT Silver
+    - Deep Purple
+    - Gold
+    - Silver
+    - Space Black
+  LLA_iPhone_15:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 256GB
+    - 512GB
+  - attribute: Color
+    values:
+    - AT Black
+    - AT Blue
+    - AT Green
+    - AT Pink
+    - Black
+    - Blue
+    - Green
+    - Pink
+  LLA_iPhone_15_Plus:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 256GB
+    - 512GB
+  - attribute: Color
+    values:
+    - AT Black
+    - AT Blue
+    - AT Pink
+    - Black
+    - Blue
+    - Green
+    - Pink
+  LLA_iPhone_15_Pro:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 256GB
+    - 512GB
+  - attribute: Color
+    values:
+    - AT Black
+    - AT Blue
+    - AT Natural
+    - AT White
+    - Black
+    - Blue
+    - Natural
+    - White
+  LLA_iPhone_15_Pro_Max:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 1TB
+    - 256GB
+    - 512GB
+  - attribute: Color
+    values:
+    - AT Black
+    - AT Blue
+    - AT Natural
+    - AT White
+    - Black
+    - Blue
+    - Natural
+    - White
+  LLA_iPhone_16:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 256GB
+    - 512GB
+  - attribute: Color
+    values:
+    - Black
+    - Pink
+    - Teal
+    - Ultramarine
+    - White
+  LLA_iPhone_16_Plus:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 256GB
+    - 512GB
+  - attribute: Color
+    values:
+    - Black
+    - Pink
+    - Teal
+    - Ultramarine
+    - White
+  LLA_iPhone_16_Pro:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 1TB
+    - 256GB
+  - attribute: Color
+    values:
+    - Black
+    - Desert
+    - Natural
+  LLA_iPhone_16_Pro_Max:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 1TB
+    - 256GB
+    - 512GB
+  - attribute: Color
+    values:
+    - Black
+    - Desert
+    - Natural
+  LLA_iPhone_16e:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 256GB
+  - attribute: Color
+    values:
+    - Black
+    - White
+  LLA_iPhone_17:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 256GB
+  - attribute: Color
+    values:
+    - Black
+    - Blue
+    - Lavender
+    - Sage
+    - White
+  LLA_iPhone_17_Pro:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 256GB
+    - 512GB
+  - attribute: Color
+    values:
+    - Blue
+    - Orange
+    - Silver
+  LLA_iPhone_17_Pro_Max:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 1TB
+    - 256GB
+    - 512GB
+  - attribute: Color
+    values:
+    - Blue
+    - Orange
+    - Silver
+  LLA_iPhone_Air:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 256GB
+    - 512GB
+  - attribute: Color
+    values:
+    - Black
+    - Blue
+    - Gold
+    - White
+  LLA_iPhone_SE:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 256GB
+    - 64GB
+  - attribute: Color
+    values:
+    - AT Midnight
+    - AT Midnight X
+    - AT Red
+    - AT Starlight
+  LLA_iPhone_SE_2nd_GEN:
+  - attribute: PR_B2C_Mb_ATT_Capacity
+    values:
+    - 128GB
+    - 256GB
+    - 64GB
+  - attribute: Color
+    values:
+    - AT Black
+    - AT Black 1
+    - AT Black 2
+    - AT Black X
+    - AT Red
+    - AT Testing Color
+    - AT White
+    - Black
+    - Black 1
+    - Black 2
+    - Black X
+    - Red
+    - White
+metadata:
+  total_products: 112
+  total_attributes: 266

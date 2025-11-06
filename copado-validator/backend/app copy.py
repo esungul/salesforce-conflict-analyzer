@@ -5,6 +5,7 @@ Endpoints:
   POST /api/analyze - Upload CSV and get conflict analysis
   GET  /api/health  - Health check
 """
+from config_loader import ConfigLoader
 from datetime import datetime
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -82,6 +83,396 @@ setup_logging()
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app)  # Allow frontend to call this API
+
+
+
+
+
+
+
+
+############# post valdiation 
+# ============================================================================
+# REGISTER SMART AUTO-DETECTING VALIDATOR
+# ============================================================================
+# This endpoint automatically:
+# 1. Queries Salesforce for product
+# 2. Gets ParentClass and IsOrderable
+# 3. Determines validation method
+# 4. Routes to external script OR YAML config
+# 5. Returns results
+from smart_validator_auto_detect import register_smart_auto_validator
+from salesforce_client import sf_login_from_config
+
+try:
+    logger.info("Connecting to Salesforce...")
+    sf_client = sf_login_from_config()
+    logger.info("✓ Salesforce connected")
+except Exception as e:
+    logger.error(f"✗ Salesforce connection failed: {e}")
+    sf_client = None
+
+try:
+    register_smart_auto_validator(app, sf_client)
+    logger.info("[STARTUP] ✓ Smart validator registered at /api/validate-product")
+except Exception as e:
+    logger.error(f"[STARTUP] ✗ Failed to register smart validator: {e}")
+
+# ============================================================================
+# HEALTH CHECK ENDPOINT
+# ============================================================================
+
+
+# ============================================================================
+# STATUS ENDPOINT
+# ============================================================================
+
+
+
+############################# Testing Start
+
+
+import os
+import json
+import logging
+import yaml
+import pandas as pd
+
+from flask import Flask, request, jsonify
+from salesforce_client import sf_login_from_config
+from validate_product_api import (
+    validate_product_by_name,
+    sf_fetch_product_by_name
+)
+
+# =========================
+# Configuration
+# =========================
+
+# Path to pre-parsed YAML matrix (much simpler than CSV!)
+MATRIX_YAML_PATH = os.getenv("MATRIX_YAML_PATH", "./matrix.yaml")
+
+# Supported catalogs
+AVAILABLE_CATALOGS = [
+    "AppleWatch",
+    "PRB2C_Mobile_Phones_catalog",
+    "Tablet"
+]
+
+
+# Global state
+_sf_client = None
+_matrix_yaml = None
+
+def init_globals():
+    """Initialize Salesforce client and matrix YAML at startup"""
+    global _sf_client, _matrix_yaml
+    
+    logger.info("[INIT] Loading configuration...")
+    
+    # Initialize Salesforce
+    try:
+        logger.info("[INIT] Connecting to Salesforce...")
+        _sf_client = sf_login_from_config()
+        logger.info("[INIT] ✅ Salesforce connected")
+        logger.info(f"[INIT] SF Instance: {_sf_client.base_url if hasattr(_sf_client, 'base_url') else 'unknown'}")
+    except Exception as e:
+        logger.error(f"[INIT] ✗ Salesforce connection failed: {e}")
+        logger.error(f"[INIT] Exception type: {type(e).__name__}")
+        logger.error(f"[INIT] Exception details:", exc_info=True)
+        raise
+    
+    # Load matrix YAML (much simpler than CSV!)
+    try:
+        if not os.path.exists(MATRIX_YAML_PATH):
+            logger.error(f"[INIT] ❌ Matrix YAML not found at {MATRIX_YAML_PATH}")
+            logger.error(f"[INIT] Run this first:")
+            logger.error(f"[INIT]   python parse_matrix_csv_to_yaml.py --input YOUR_CSV.csv --output matrix.yaml")
+            raise FileNotFoundError(f"Matrix YAML not found: {MATRIX_YAML_PATH}")
+        
+        logger.info(f"[INIT] Loading matrix from: {MATRIX_YAML_PATH}")
+        
+        with open(MATRIX_YAML_PATH, 'r') as f:
+            _matrix_yaml = yaml.safe_load(f)
+        
+        if not _matrix_yaml:
+            logger.error(f"[INIT] ❌ Matrix YAML is empty!")
+            raise ValueError("Matrix YAML is empty")
+        
+        catalogs = _matrix_yaml.get("products", {})
+        metadata = _matrix_yaml.get("metadata", {})
+        
+        logger.info(f"[INIT] ✅ Matrix YAML loaded!")
+        logger.info(f"[INIT] Products loaded: {len(catalogs)}")
+        
+        # Show sample products
+        sample_count = 0
+        for product_code, attributes in list(catalogs.items())[:3]:
+            attr_count = len(attributes) if isinstance(attributes, list) else 0
+            logger.info(f"[INIT]   {product_code}: {attr_count} attributes")
+            sample_count += 1
+        
+        if len(catalogs) > 3:
+            logger.info(f"[INIT]   ... and {len(catalogs) - 3} more products")
+        
+        if metadata:
+            logger.info(f"[INIT] Total products: {metadata.get('total_products', 0)}")
+            
+    except Exception as e:
+        logger.error(f"[INIT] ❌ Matrix YAML load failed: {e}", exc_info=True)
+        raise
+    
+# =========================
+# Initialize globals at module load time
+# =========================
+init_globals()
+
+# =========================
+# API Endpoints
+# =========================
+
+
+@app.route('/api/validate-device-product', methods=['POST'])
+def validate_device_product_endpoint():
+    """
+    Validate a device product by name
+    
+    Request:
+      {
+        "product_name": "iPhone 17 Pro"
+      }
+    
+    Response:
+      {
+        "status": "SUCCESS|PARTIAL|FAILED",
+        "validation": { ... }
+      }
+    """
+    try:
+        # Debug request
+        logger.info("[API] ========== Request Received ==========")
+        logger.info(f"[API] SF Client initialized: {_sf_client is not None}")
+        logger.info(f"[API] Matrix YAML loaded: {_matrix_yaml is not None}")
+        logger.info("[API] ==========================================")
+        
+        data = request.get_json()
+        if not data:
+            logger.error("[API] ❌ No JSON body in request")
+            return jsonify({"status": "FAILED", "error": "Request body must be JSON"}), 400
+        
+        product_name = data.get("product_name", "").strip()
+        logger.info(f"[API] Product name: '{product_name}'")
+        
+        if not product_name:
+            logger.error("[API] ❌ Missing product_name field")
+            return jsonify({"status": "FAILED", "error": "Missing required field: product_name"}), 400
+        
+        # Check SF client
+        if _sf_client is None:
+            logger.error("[API] ❌ CRITICAL: SF Client is None!")
+            return jsonify({
+                "status": "FAILED",
+                "error": "Salesforce client not initialized"
+            }), 500
+        
+        # Convert YAML to DataFrame for validation
+        logger.info("[API] Converting YAML matrix to DataFrame...")
+        matrix_df = convert_yaml_to_dataframe(_matrix_yaml)
+        
+        if matrix_df is None or matrix_df.empty:
+            logger.error("[API] ❌ Matrix DataFrame is empty!")
+            return jsonify({
+                "status": "FAILED",
+                "error": "Matrix data is empty"
+            }), 500
+        
+        logger.info(f"[API] Matrix DataFrame shape: {matrix_df.shape}")
+        
+        # Validate
+        logger.info("[API] Calling validate_product_by_name()...")
+        result = validate_product_by_name(
+            sf=_sf_client,
+            product_name=product_name,
+            matrix_df=matrix_df
+        )
+        
+        if result['status'] == "FAILED":
+            logger.info(f"[API] ❌ Product not found: {product_name}")
+            return jsonify(result), 404
+        else:
+            catalog_code = result['validation'].get('catalog_code', 'unknown')
+            logger.info(f"[API] ✅ Found in {catalog_code}: {result['status']}")
+            return jsonify(result), 200
+    
+    except Exception as e:
+        logger.error(f"[API] ❌ EXCEPTION: {e}", exc_info=True)
+        return jsonify({"status": "FAILED", "error": str(e)}), 500
+
+@app.route('/api/catalogs', methods=['GET'])
+def list_catalogs():
+    """List available catalogs"""
+    catalogs_info = {}
+    if _matrix_yaml:
+        for cat, products in _matrix_yaml.get("catalogs", {}).items():
+            catalogs_info[cat] = len(products)
+    
+    return jsonify({
+        "available_catalogs": AVAILABLE_CATALOGS,
+        "catalogs_in_matrix": catalogs_info
+    }), 200
+
+# =========================
+# Helper Functions
+# =========================
+
+def convert_yaml_to_dataframe(yaml_data):
+    """Convert YAML matrix to DataFrame for validation
+    
+    Handles flat YAML structure (products directly, not nested by catalogs)
+    """
+    if not yaml_data:
+        return None
+    
+    rows = []
+    products = yaml_data.get("products", {})
+    
+    # New flat structure: products[product_code][attributes]
+    for product_code, attributes in products.items():
+        for attr in attributes:
+            rows.append({
+                "ProductCode": product_code,
+                "CatalogType": "auto-detect",  # Will be determined from Salesforce
+                "AttributeCode": attr.get("attribute"),
+                "MatrixValues": attr.get("values", [])
+            })
+    
+    if not rows:
+        logger.warning("[CONVERT] No rows to convert from YAML!")
+        logger.warning(f"[CONVERT] YAML keys: {list(yaml_data.keys())}")
+        logger.warning(f"[CONVERT] Products key exists: {'products' in yaml_data}")
+        if "products" in yaml_data:
+            logger.warning(f"[CONVERT] Products count: {len(yaml_data['products'])}")
+        return None
+    
+    df = pd.DataFrame(rows)
+    logger.info(f"[CONVERT] Converted YAML to DataFrame: {df.shape}")
+    logger.info(f"[CONVERT] Unique products: {df['ProductCode'].nunique()}")
+    return df
+
+
+
+####################. Testing END
+
+
+
+
+
+
+
+
+# ============================================================================
+# INFO ENDPOINT
+# ============================================================================
+
+@app.route('/info', methods=['GET'])
+def info():
+    """
+    Service information endpoint
+    GET /info
+    
+    Returns:
+        API documentation and usage
+    """
+    return jsonify({
+        "service": "Smart Auto-Detecting Validator",
+        "version": "1.0",
+        "description": "Automatically validates Salesforce products based on ParentClass and IsOrderable",
+        "endpoints": {
+            "POST /api/validate-product": {
+                "description": "Validate product with auto-detection",
+                "request": {
+                    "product_name": "string (required)"
+                },
+                "example": {
+                    "product_name": "iPhone 15 Pro"
+                },
+                "response": {
+                    "status": "SUCCESS",
+                    "auto_detected": True,
+                    "validation": {
+                        "status": "OK|PARTIAL|ERROR|INVALID",
+                        "product_name": "string",
+                        "parent_class": "string",
+                        "is_orderable": True,
+                        "validation_method": "external_script|yaml_config",
+                        "device_type": "string"
+                    }
+                }
+            },
+            "GET /health": {
+                "description": "Health check"
+            },
+            "GET /status": {
+                "description": "Service status"
+            },
+            "GET /info": {
+                "description": "API information"
+            }
+        },
+        "auto_detection_rules": {
+            "rule_1": "Mobile Device Class + Orderable=TRUE → External Script",
+            "rule_2": "Mobile Line Class + Orderable=TRUE → YAML Config",
+            "rule_3": "Mobile Device Class + Orderable=FALSE → YAML Config",
+            "rule_4": "Technical Class (any) → YAML Config",
+            "rule_5": "Other classes → YAML Config (default)"
+        }
+    }), 200
+
+
+# ============================================================================
+# ERROR HANDLERS
+# ============================================================================
+
+@app.errorhandler(404)
+def not_found(error):
+    """Handle 404 errors"""
+    return jsonify({
+        "error": "Not found",
+        "message": "The requested endpoint does not exist",
+        "available_endpoints": {
+            "validate": "/api/validate-product",
+            "health": "/health",
+            "status": "/status",
+            "info": "/info"
+        }
+    }), 404
+
+
+@app.errorhandler(500)
+def internal_error(error):
+    """Handle 500 errors"""
+    logger.error(f"Internal server error: {error}")
+    return jsonify({
+        "error": "Internal server error",
+        "message": "An unexpected error occurred",
+        "timestamp": datetime.utcnow().isoformat()
+    }), 500
+
+
+@app.errorhandler(400)
+def bad_request(error):
+    """Handle 400 errors"""
+    return jsonify({
+        "error": "Bad request",
+        "message": str(error)
+    }), 400
+
+
+
+
+
+
+
 
 
 # ADD THIS INITIALIZATION CODE:
@@ -1222,15 +1613,6 @@ def analyze_stories():
 from flask import request, jsonify
 import component_registry as cr
 from git_client import BitBucketClient
-
-
-
-
-
-
-
-
-
 
 
 
@@ -3661,6 +4043,8 @@ def format_conflict(conflict):
 if __name__ == '__main__':
     print("=" * 60)
     print("🚀 Copado Deployment Validator API")
+    loader = ConfigLoader('validation_config_conditional.yaml')
+    init_globals()
     print("=" * 60)
     print("Starting server on http://localhost:5000")
     print()

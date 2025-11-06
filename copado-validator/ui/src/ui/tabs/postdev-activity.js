@@ -15,6 +15,10 @@ let POSTDEV_STATE = {
 
 
 
+
+
+
+
 export function renderPostDevActivityTab(analysis = {}) {
     const panel = $('#tab-postdev-activity');
     if (!panel) return;
@@ -42,7 +46,6 @@ export function renderPostDevActivityTab(analysis = {}) {
     injectPostDevStyles();
 }
 
-
 function createExtractionPanel(analysis) {
     const panel = createElement('div', { className: 'extraction-panel' });
     
@@ -69,7 +72,7 @@ function createExtractionPanel(analysis) {
         return panel;
     }
 
-    // Stats summary
+    // Stats summary - simplified without mobile device count
     const stats = createElement('div', { className: 'extraction-stats' });
     const omniscripCount = components.filter(c => c.type === 'OmniScript').length;
     const productCount = components.filter(c => c.type === 'Product2').length;
@@ -90,7 +93,7 @@ function createExtractionPanel(analysis) {
     `;
     panel.append(stats);
 
-    // Filter bar for extracted components
+    // Filter bar for all components
     const filterBar = createFilterBar({
         query: POSTDEV_STATE.query,
         onQueryChange: (q) => {
@@ -112,7 +115,7 @@ function createExtractionPanel(analysis) {
     });
     panel.append(filterBar);
 
-    // Components list
+    // Components list - include ALL components
     const componentsList = createElement('div', { className: 'components-list' });
     
     let filteredComponents = components.filter(comp => 
@@ -148,8 +151,9 @@ function createExtractionPanel(analysis) {
     // Initialize selection UI after components are rendered
     setTimeout(updateSelectionUI, 0);
 
-    // Bulk actions
+    // Bulk actions for all selected components - simplified without external script button
     const selectedCount = POSTDEV_STATE.selectedComponents.length;
+
     const bulkActions = createElement('div', { className: 'bulk-actions' }, [
         createElement('button', { 
             className: 'btn btn-primary',
@@ -164,19 +168,6 @@ function createExtractionPanel(analysis) {
                 runPostDevAnalysis(selected);
             }
         }, `🔍 Validate Selected (${selectedCount})`),
-        createElement('button', { 
-            className: 'btn btn-export',
-            onclick: () => {
-                const selected = filteredComponents.filter(comp => 
-                    POSTDEV_STATE.selectedComponents.includes(comp.fullName)
-                );
-                if (selected.length === 0) {
-                    alert('Please select at least one component');
-                    return;
-                }
-                exportSelectedComponentsToCSV(selected);
-            }
-        }, `📊 Export Selected (${selectedCount})`),
         createElement('button', { 
             className: 'btn btn-secondary',
             onclick: () => {
@@ -215,6 +206,7 @@ function createExtractionPanel(analysis) {
     return panel;
 }
 
+
 function updateSelectionUI() {
     // Update the bulk actions button text
     const selectedCount = POSTDEV_STATE.selectedComponents.length;
@@ -223,12 +215,14 @@ function updateSelectionUI() {
         validateButton.textContent = `🔍 Validate Selected (${selectedCount})`;
     }
     
-    // Update the select all button text
-    const selectAllButton = document.querySelector('.bulk-actions .btn-secondary:nth-child(2)');
+    // Update the select all button text - FIXED LOGIC
+    const selectAllButton = document.querySelector('.bulk-actions .btn-secondary');
     if (selectAllButton) {
         const componentsList = document.querySelector('.components-list');
         const totalComponents = componentsList ? componentsList.children.length : 0;
-        const allSelected = selectedCount === totalComponents && totalComponents > 0;
+        
+        // Check if ALL components in the current filtered view are selected
+        const allSelected = totalComponents > 0 && selectedCount === totalComponents;
         selectAllButton.textContent = allSelected ? 'Deselect All' : 'Select All';
     }
     
@@ -469,7 +463,8 @@ function createComponentCard(component, analysis) {
             <small>Found in: ${component.storyIds.slice(0, 2).map(id => `<span class="story-id">${id}</span>`).join(', ')}${component.storyIds.length > 2 ? ` and ${component.storyIds.length - 2} more` : ''}</small>
         </div>
         <div class="component-actions">
-            <button class="btn btn-sm btn-primary" onclick="validateSingleComponent('${component.fullName}', '${component.type}', '${component.name}')">
+            <button class="btn btn-sm btn-primary" 
+                onclick="validateSingleComponent('${component.fullName}', '${component.type}', '${component.name}')">
                 Validate
             </button>
             <button class="btn btn-sm btn-secondary" onclick="addToManualComponents('${component.type}', '${component.name}', '${component.fullName}')">
@@ -691,6 +686,84 @@ async function validateOmniScript(omniScriptName) {
 }
 
 
+
+// Update showLoadingSpinner to accept details
+function showLoadingSpinner(show, message = 'Loading...', details = '') {
+    let spinner = document.getElementById('postdev-loading-spinner');
+    
+    if (show) {
+        if (spinner) {
+            spinner.remove();
+        }
+        
+        spinner = document.createElement('div');
+        spinner.id = 'postdev-loading-spinner';
+        spinner.innerHTML = `
+            <div class="loading-overlay">
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                    <div class="loading-message">${message}</div>
+                    ${details ? `<div class="loading-details">${details}</div>` : ''}
+                </div>
+            </div>
+        `;
+        document.body.appendChild(spinner);
+    } else {
+        if (spinner) {
+            spinner.remove();
+        }
+    }
+}
+
+
+// Helper functions for download actions
+window.reDownloadReport = function(downloadUrl) {
+    if (downloadUrl && downloadUrl.startsWith('blob:')) {
+        // For blob URLs, create a new download
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = `catalog-matrix-report-${new Date().toISOString().split('T')[0]}.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } else {
+        alert('Download URL is not available. Please run the catalog check again.');
+    }
+};
+
+window.openReportLocation = function() {
+    alert('The Excel file has been downloaded to your default downloads folder. Check your browser downloads.');
+};
+
+// Export mobile device list
+window.exportMobileDeviceList = function(components) {
+    const csvData = components.map(comp => ({
+        'Mobile Device Name': comp.name,
+        'Full Component Name': comp.fullName,
+        'Occurrence Count': comp.count,
+        'Story IDs': comp.storyIds ? comp.storyIds.join('; ') : 'N/A',
+        'Type': 'Mobile Device',
+        'Requires External Script': 'Yes'
+    }));
+    
+    const csvContent = convertToCSV(csvData);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `mobile-devices-list-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    if (window.toast) {
+        window.toast(`Exported ${components.length} mobile devices to CSV`);
+    }
+};
+
 window.toggleComponentSelection = function(fullName, isSelected) {
     if (isSelected) {
         if (!POSTDEV_STATE.selectedComponents.includes(fullName)) {
@@ -731,7 +804,7 @@ window.validateSingleComponent = async function(fullName, type, name) {
             success: isSuccess,
             components: [{
                 type: type,
-                name: name, // Use cleaned name
+                name: name,
                 fullName: fullName,
                 ...result,
                 validation: result.validation || result
@@ -786,6 +859,7 @@ window.validateSingleComponent = async function(fullName, type, name) {
         showLoadingSpinner(false);
     }
 };
+
 
 window.addToManualComponents = function(type, name, fullName) {
     const existing = POSTDEV_STATE.manualComponents.find(comp => 
@@ -861,7 +935,6 @@ async function runManualAnalysis() {
     await runPostDevAnalysis(POSTDEV_STATE.manualComponents);
 }
 
-
 async function runPostDevAnalysis(components) {
     try {
         showLoadingSpinner(true, `Validating ${components.length} components...`);
@@ -872,7 +945,7 @@ async function runPostDevAnalysis(components) {
         let successCount = 0;
         let errorCount = 0;
 
-        // Validate each component sequentially to avoid overwhelming the API
+        // Validate all components (no separation between mobile and regular)
         for (const component of components) {
             try {
                 console.log(`Validating ${component.type}: ${component.name}`);
@@ -991,6 +1064,7 @@ async function runPostDevAnalysis(components) {
 }
 
 
+
 function showAnalysisResults(result, components) {
     const modal = createElement('div', { className: 'analysis-results-modal' });
     
@@ -1047,7 +1121,6 @@ function showAnalysisResults(result, components) {
     document.body.appendChild(modal);
 }
 
-
 function renderComponentResults(components) {
     if (!components || components.length === 0) {
         return '<div class="no-results">No validation results available</div>';
@@ -1056,6 +1129,10 @@ function renderComponentResults(components) {
     return `
         <div class="components-results">
             ${components.map(comp => {
+                // Handle external script results
+                if (comp.external_script) {
+                    return renderExternalScriptResult(comp);
+                }
                 // Handle Product2 validation results specifically
                 if (comp.type === 'Product2' && comp.validation) {
                     return renderProduct2ValidationResult(comp);
@@ -1067,6 +1144,53 @@ function renderComponentResults(components) {
     `;
 }
 
+function renderExternalScriptResult(comp) {
+    const statusClass = comp.success ? 'clean' : 'error';
+    
+    return `
+        <div class="component-result ${statusClass} external-script-result">
+            <div class="component-header">
+                <div class="component-name">
+                    ${comp.name}
+                    <span class="external-script-badge">🐍 External Script</span>
+                </div>
+                <div class="component-status ${statusClass}">
+                    ${comp.success ? '✅' : '❌'} ${comp.success ? 'Catalog Check Complete' : 'Catalog Check Failed'}
+                </div>
+            </div>
+            
+            <div class="external-script-result-details">
+                <div class="script-info">
+                    <strong>Catalog Matrix Validation</strong>
+                    <p>This mobile device was validated using the external Python script for catalog compatibility.</p>
+                </div>
+                
+                ${comp.download_url ? `
+                <div class="download-info">
+                    <p>The full catalog matrix report has been downloaded to your computer.</p>
+                    <button class="btn btn-sm btn-primary" onclick="reDownloadReport('${comp.download_url}')">
+                        📥 Download Report Again
+                    </button>
+                </div>
+                ` : ''}
+                
+                ${comp.error ? `
+                <div class="component-error">
+                    <strong>Error:</strong>
+                    <div class="error-message">${escapeHtml(comp.error)}</div>
+                </div>
+                ` : ''}
+                
+                ${comp.message ? `
+                <div class="script-message">
+                    <strong>Message:</strong>
+                    <div>${escapeHtml(comp.message)}</div>
+                </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
 
 function renderProduct2ValidationResult(comp) {
     const validation = comp.validation;
@@ -1208,6 +1332,8 @@ function renderGenericValidationResult(comp) {
     `;
 }
 
+
+// FIXED: Enhanced status detection for Product2 components
 function getStatusText(component) {
     if (component.error || component.success === false) return 'Validation Failed';
     
@@ -1224,13 +1350,14 @@ function getStatusText(component) {
         }
     }
     
+    // Handle OmniScript validation
     if (component.validated === false) return 'Invalid';
     if (component.issues && component.issues.length > 0) return 'Has Issues';
     if (component.validated === true || component.success === true) return 'Valid';
     return 'Unknown';
 }
 
-function showLoadingSpinner(show, message = 'Loading...') {
+function showLoadingSpinnertest(show, message = 'Loading...') {
     console.log('🔄 Loading Spinner:', show, message); // Debug log
     
     let spinner = document.getElementById('postdev-loading-spinner');
@@ -1260,7 +1387,7 @@ function showLoadingSpinner(show, message = 'Loading...') {
     }
 }
 
-
+// FIXED: Enhanced status class detection
 function getStatusClass(component) {
     // Handle API errors first
     if (component.error || component.success === false) return 'error';
@@ -1287,19 +1414,24 @@ function getStatusClass(component) {
 }
 
 
-
-
+// FIXED: Enhanced status icon detection
 function getStatusIcon(component) {
     if (component.error || component.success === false) return '❌';
     
     // Handle Product2 validation status
-    if (component.type === 'Product2' && component.validation) {
-        const status = component.validation.status;
+    if (component.type === 'Product2') {
+        const status = component.status || (component.validation && component.validation.status);
+        if (status === 'ERROR') return '❌';
         if (status === 'PARTIAL') return '⚠️';
-        if (status === 'INVALID') return '❌';
-        if (status === 'VALID') return '✅';
+        if (status === 'SUCCESS') {
+            if (component.validation && component.validation.invalid_attributes && component.validation.invalid_attributes.length > 0) {
+                return '⚠️';
+            }
+            return '✅';
+        }
     }
     
+    // Generic status detection
     if (component.validated === false) return '⚠️';
     if (component.issues && component.issues.length > 0) return '⚠️';
     if (component.validated === true || component.success === true) return '✅';
@@ -1335,6 +1467,8 @@ window.exportSelectedComponents = function(components) {
     }
 };
 
+
+// FIXED: Enhanced CSV export function with proper escaping
 window.exportInvalidAttributesToCSV = function(result) {
     // Collect all products with invalid attributes
     const productsWithInvalidAttributes = [];
@@ -1351,14 +1485,23 @@ window.exportInvalidAttributesToCSV = function(result) {
                 const productStatus = component.validation.status || 'Unknown';
                 
                 component.validation.invalid_attributes.forEach(attr => {
+                    // FIXED: Properly escape values and handle arrays
+                    const currentValue = Array.isArray(attr.current_value) 
+                        ? attr.current_value.join('; ') 
+                        : (attr.current_value || 'Empty');
+                    
+                    const allowedValues = Array.isArray(attr.allowed_values) 
+                        ? attr.allowed_values.join('; ') 
+                        : (attr.allowed_values || 'N/A');
+                    
                     productsWithInvalidAttributes.push({
                         'Product Name': productName,
                         'Product Status': productStatus,
                         'Attribute Name': attr.name || 'Unknown',
                         'Attribute Code': attr.code || 'N/A',
-                        'Current Value': attr.current_value || 'Empty',
+                        'Current Value': currentValue,
                         'Error Message': attr.error || 'Unknown error',
-                        'Allowed Values': attr.allowed_values ? attr.allowed_values.join('; ') : 'N/A',
+                        'Allowed Values': allowedValues,
                         'Mandatory': attr.mandatory ? 'Yes' : 'No',
                         'Attribute Type': attr.type || 'Unknown',
                         'Validation Timestamp': result.meta?.timestamp || new Date().toISOString()
@@ -1373,7 +1516,7 @@ window.exportInvalidAttributesToCSV = function(result) {
         return;
     }
     
-    // Convert to CSV
+    // Convert to CSV with proper escaping
     const csvContent = convertToCSV(productsWithInvalidAttributes);
     
     // Create and download the file
@@ -1388,9 +1531,12 @@ window.exportInvalidAttributesToCSV = function(result) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    if (window.toast) {
+        window.toast(`Exported ${productsWithInvalidAttributes.length} invalid attributes to CSV`);
+    }
 };
-
-// Helper function to convert array of objects to CSV
+// FIXED: Enhanced convertToCSV function with better escaping
 function convertToCSV(data) {
     if (!data || data.length === 0) return '';
     
@@ -1405,12 +1551,15 @@ function convertToCSV(data) {
         const values = headers.map(header => {
             let value = row[header] || '';
             
+            // Convert to string if not already
+            if (typeof value !== 'string') {
+                value = String(value);
+            }
+            
             // Escape quotes and wrap in quotes if contains comma, quote, or newline
-            if (typeof value === 'string') {
-                value = value.replace(/"/g, '""');
-                if (value.includes(',') || value.includes('"') || value.includes('\n')) {
-                    value = `"${value}"`;
-                }
+            value = value.replace(/"/g, '""');
+            if (value.includes(',') || value.includes('"') || value.includes('\n') || value.includes('\r')) {
+                value = `"${value}"`;
             }
             
             return value;
@@ -1482,10 +1631,512 @@ const injectPostDevStyles = (() => {
         justify-content: center;
         z-index: 10001;
     }
+        /* Mobile Device Banner */
+.mobile-device-banner {
+    margin: 16px 0;
+    padding: 16px;
+    border: 2px solid #ff6b35;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #fff8f6, #fff0eb);
+}
+/* External Script Result Styles */
+.external-script-result {
+    border-left: 4px solid #ff6b35 !important;
+    background: #fffaf8;
+}
+
+.external-script-badge {
+    background: #ff6b35;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+.external-script-result-details {
+    margin-top: 12px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e5e5e7;
+}
+
+.script-info {
+    margin-bottom: 12px;
+}
+
+.script-info strong {
+    color: #d35400;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.script-info p {
+    margin: 0;
+    color: #666;
+    font-size: 13px;
+}
+
+.download-info {
+    padding: 8px;
+    background: #e8f5e9;
+    border-radius: 4px;
+    border: 1px solid #c8e6c9;
+}
+
+.download-info p {
+    margin: 0 0 8px 0;
+    color: #2e7d32;
+    font-size: 13px;
+}
+
+.script-message {
+    padding: 8px;
+    background: #e3f2fd;
+    border-radius: 4px;
+    border: 1px solid #bbdefb;
+}
+
+.script-message strong {
+    color: #1976d2;
+}
+
+.script-message div {
+    color: #1d1d1f;
+    margin-top: 4px;
+}
+.banner-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.banner-icon {
+    font-size: 24px;
+    background: #ff6b35;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.banner-text {
+    flex: 1;
+}
+
+.banner-text strong {
+    color: #d35400;
+}
+
+.banner-text span {
+    color: #666;
+}
+
+.banner-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* Mobile Device Component Styles */
+.component-card.mobile-device {
+    border-left: 4px solid #ff6b35;
+    background: #fffaf8;
+}
+
+.mobile-indicator {
+    margin-left: 8px;
+    font-size: 14px;
+}
+
+.component-type-badge.mobile-badge {
+    background: #ff6b35 !important;
+    color: white !important;
+}
+
+/* Responsive banner */
+@media (max-width: 768px) {
+    .banner-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .banner-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .banner-actions .btn {
+        flex: 1;
+        text-align: center;
+    }
+}
+
+    .script-info {
+    margin: 20px 0;
+    padding: 16px;
+    border: 1px solid #e5e5e7;
+    border-radius: 8px;
+    background: #f8f9fa;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.info-item label {
+    font-weight: 600;
+    color: #666;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-item span {
+    color: #1d1d1f;
+    font-size: 14px;
+}
+
+.download-section.success {
+    background: #e8f5e9;
+    border: 1px solid #c8e6c9;
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0;
+    padding: 12px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #dcedc8;
+}
+
+.file-icon {
+    font-size: 24px;
+    background: #4caf50;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.file-details {
+    flex: 1;
+}
+
+.file-name {
+    font-weight: 600;
+    color: #1d1d1f;
+    margin-bottom: 4px;
+}
+
+.file-description {
+    font-size: 13px;
+    color: #666;
+}
+
+.script-message {
+    margin: 16px 0;
+    padding: 12px;
+    background: #e3f2fd;
+    border: 1px solid #bbdefb;
+    border-radius: 8px;
+}
+
+.script-message h4 {
+    margin: 0 0 8px 0;
+    color: #1976d2;
+}
+
+.script-message p {
+    margin: 0;
+    color: #1d1d1f;
+}
+
+/* Loading state for external script */
+.loading-overlay .loading-message {
+    font-size: 16px;
+    color: #1d1d1f;
+}
+
+.loading-overlay .loading-details {
+    margin-top: 8px;
+    font-size: 14px;
+    color: #666;
+}
         .btn-export {
     background: #34c759 !important;
     color: white !important;
     border-color: #34c759 !important;
+}
+    /* External Script Section Styles */
+.external-script-section {
+    margin: 20px 0;
+    padding: 20px;
+    border: 2px solid #ff6b35;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #fff8f6, #fff0eb);
+    box-shadow: 0 4px 12px rgba(255, 107, 53, 0.1);
+}
+
+.external-script-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.external-script-icon {
+    font-size: 32px;
+    background: #ff6b35;
+    color: white;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.external-script-info h4 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #d35400;
+}
+
+.external-script-info p {
+    margin: 0 0 12px 0;
+    color: #666;
+    line-height: 1.5;
+}
+
+.external-script-count {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+}
+
+.info-badge {
+    background: #ff6b35;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.external-script-products {
+    margin: 20px 0;
+}
+
+.products-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.external-product-item {
+    background: white;
+    border: 1px solid #ffd7c9;
+    border-radius: 8px;
+    padding: 12px;
+    transition: all 0.2s ease;
+}
+
+.external-product-item:hover {
+    border-color: #ff6b35;
+    box-shadow: 0 2px 8px rgba(255, 107, 53, 0.1);
+}
+
+.external-product-item .product-name {
+    font-weight: 600;
+    color: #d35400;
+    margin-bottom: 4px;
+}
+
+.external-product-item .product-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #666;
+}
+
+.external-badge {
+    background: #fff0eb;
+    color: #ff6b35;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.external-script-actions {
+    text-align: center;
+    padding-top: 20px;
+    border-top: 1px solid #ffd7c9;
+}
+
+.btn-external-large {
+    background: #ff6b35 !important;
+    color: white !important;
+    border-color: #ff6b35 !important;
+    padding: 12px 24px !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    margin-bottom: 12px !important;
+}
+
+.btn-external-large:hover {
+    background: #e55a2b !important;
+    border-color: #e55a2b !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+}
+
+.external-script-note {
+    color: #666;
+    font-size: 13px;
+}
+
+/* Stats counter for external products */
+.external-count {
+    color: #ff6b35 !important;
+}
+
+/* Large modal for external script results */
+.large-modal {
+    max-width: 900px !important;
+    width: 95% !important;
+}
+
+.processed-products {
+    margin: 20px 0;
+}
+
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 12px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.processed-product {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: white;
+    border: 1px solid #e5e5e7;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.processed-product:hover {
+    border-color: #0071e3;
+    box-shadow: 0 2px 8px rgba(0, 113, 227, 0.1);
+}
+
+.processed-product .product-icon {
+    font-size: 20px;
+    background: #f0f7ff;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.processed-product .product-details {
+    flex: 1;
+}
+
+.processed-product .product-name {
+    font-weight: 600;
+    color: #1d1d1f;
+    margin-bottom: 2px;
+}
+
+.processed-product .product-meta {
+    font-size: 12px;
+    color: #86868b;
+}
+
+.processed-product .product-status {
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.processed-product .product-status.success {
+    background: #e8f5e9;
+    color: #1b5e20;
+}
+
+.processed-product .product-status.error {
+    background: #ffebee;
+    color: #b71c1c;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .external-script-header {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .external-script-icon {
+        align-self: center;
+    }
+    
+    .products-list,
+    .products-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .external-script-count {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .large-modal {
+        width: 98% !important;
+        margin: 10px !important;
+    }
 }
 
 .btn-export:hover {

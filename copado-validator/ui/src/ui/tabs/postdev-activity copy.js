@@ -15,6 +15,49 @@ let POSTDEV_STATE = {
 
 
 
+// External Script Configuration
+const EXTERNAL_SCRIPT_CONFIG = {
+    // Products that require external script processing
+    products: [
+       "Test 1",
+      
+    ],
+    
+    // API endpoint for catalog matrix check
+    apiEndpoint: 'http://localhost:5000/api/run-catalog-matrix-check',
+    
+    // Script parameters
+    scriptParams: {
+        matrix_csv: "PRB2CSelectDeviceMatrixBuyFlow_v118.csv",
+        config_json: "./config.json",  // This will be generated dynamically
+        out_xlsx: "catalog_matrix_report.xlsx",
+        catalogs: "AppleWatch,PRB2C_Mobile_Phones_catalog,Tablet"
+    },
+    
+    // Messages for UI
+    messages: {
+        title: "📱 Mobile Device Catalog Validation",
+        description: "The following mobile devices require catalog matrix validation. This will run an external Python script to check device compatibility.",
+        actionButton: "🐍 Run Catalog Matrix Check",
+        successMessage: "Catalog matrix validation completed",
+        infoMessage: "This process runs a Python script to validate device catalogs and generate an Excel report"
+    }
+};
+
+
+
+
+// Function to check if a product requires external script
+function requiresExternalScript(productName) {
+    if (!productName) return false;
+    
+    const lowerName = productName.toLowerCase();
+    return EXTERNAL_SCRIPT_CONFIG.products.some(keyword => 
+        lowerName.includes(keyword.toLowerCase())
+    );
+}
+
+
 export function renderPostDevActivityTab(analysis = {}) {
     const panel = $('#tab-postdev-activity');
     if (!panel) return;
@@ -42,7 +85,6 @@ export function renderPostDevActivityTab(analysis = {}) {
     injectPostDevStyles();
 }
 
-
 function createExtractionPanel(analysis) {
     const panel = createElement('div', { className: 'extraction-panel' });
     
@@ -69,10 +111,16 @@ function createExtractionPanel(analysis) {
         return panel;
     }
 
-    // Stats summary
+    // Identify mobile devices but don't separate them
+    const mobileDeviceComponents = components.filter(comp => 
+        comp.type === 'Product2' && requiresExternalScript(comp.name)
+    );
+
+    // Stats summary - show mobile device count
     const stats = createElement('div', { className: 'extraction-stats' });
     const omniscripCount = components.filter(c => c.type === 'OmniScript').length;
     const productCount = components.filter(c => c.type === 'Product2').length;
+    const mobileDeviceCount = mobileDeviceComponents.length;
     
     stats.innerHTML = `
         <div class="stat-item">
@@ -87,10 +135,32 @@ function createExtractionPanel(analysis) {
             <span class="stat-value">${productCount}</span>
             <span class="stat-label">Products</span>
         </div>
+        <div class="stat-item">
+            <span class="stat-value external-count">${mobileDeviceCount}</span>
+            <span class="stat-label">Mobile Devices</span>
+        </div>
     `;
     panel.append(stats);
 
-    // Filter bar for extracted components
+    // Show mobile device info banner if there are mobile devices
+    if (mobileDeviceComponents.length > 0) {
+        const mobileDeviceBanner = createElement('div', { className: 'mobile-device-banner' }, [
+            createElement('div', { className: 'banner-content' }, [
+                createElement('div', { className: 'banner-icon' }, '📱'),
+                createElement('div', { className: 'banner-text' }, [
+                    createElement('strong', {}, `${mobileDeviceComponents.length} mobile devices detected`),
+                    createElement('span', {}, ' - These products require external catalog validation')
+                ]),
+                createElement('button', { 
+                    className: 'btn btn-external btn-sm',
+                    onclick: () => runExternalScriptForAll()
+                }, 'Run Catalog Check for All Mobile Devices')
+            ])
+        ]);
+        panel.append(mobileDeviceBanner);
+    }
+
+    // Filter bar for all components
     const filterBar = createFilterBar({
         query: POSTDEV_STATE.query,
         onQueryChange: (q) => {
@@ -112,7 +182,7 @@ function createExtractionPanel(analysis) {
     });
     panel.append(filterBar);
 
-    // Components list
+    // Components list - include ALL components
     const componentsList = createElement('div', { className: 'components-list' });
     
     let filteredComponents = components.filter(comp => 
@@ -148,8 +218,17 @@ function createExtractionPanel(analysis) {
     // Initialize selection UI after components are rendered
     setTimeout(updateSelectionUI, 0);
 
-    // Bulk actions
+    // Bulk actions for all selected components
     const selectedCount = POSTDEV_STATE.selectedComponents.length;
+    
+    // Count selected mobile devices
+    const selectedMobileDevices = filteredComponents.filter(comp => 
+        POSTDEV_STATE.selectedComponents.includes(comp.fullName) && 
+        comp.type === 'Product2' && 
+        requiresExternalScript(comp.name)
+    );
+    const selectedMobileCount = selectedMobileDevices.length;
+
     const bulkActions = createElement('div', { className: 'bulk-actions' }, [
         createElement('button', { 
             className: 'btn btn-primary',
@@ -164,6 +243,29 @@ function createExtractionPanel(analysis) {
                 runPostDevAnalysis(selected);
             }
         }, `🔍 Validate Selected (${selectedCount})`),
+        createElement('button', { 
+            className: 'btn btn-external',
+            onclick: () => {
+                if (selectedMobileCount === 0) {
+                    alert('Please select at least one mobile device to run catalog check');
+                    return;
+                }
+                runExternalScriptForSelected(selectedMobileDevices);
+            }
+        }, `🐍 Run Catalog Check (${selectedMobileCount})`),
+        createElement('button', { 
+            className: 'btn btn-export',
+            onclick: () => {
+                const selected = filteredComponents.filter(comp => 
+                    POSTDEV_STATE.selectedComponents.includes(comp.fullName)
+                );
+                if (selected.length === 0) {
+                    alert('Please select at least one component');
+                    return;
+                }
+                exportSelectedComponentsToCSV(selected);
+            }
+        }, `📊 Export Selected (${selectedCount})`),
         createElement('button', { 
             className: 'btn btn-secondary',
             onclick: () => {
@@ -185,7 +287,7 @@ function createExtractionPanel(analysis) {
                     });
                 }
                 localStorage.setItem('ui.postdev.selected', JSON.stringify(POSTDEV_STATE.selectedComponents));
-                updateSelectionUI(); // Use the new update function
+                updateSelectionUI();
             }
         }, selectedCount === filteredComponents.length ? 'Deselect All' : 'Select All'),
         createElement('button', { 
@@ -193,13 +295,103 @@ function createExtractionPanel(analysis) {
             onclick: () => {
                 POSTDEV_STATE.selectedComponents = [];
                 localStorage.setItem('ui.postdev.selected', JSON.stringify([]));
-                updateSelectionUI(); // Use the new update function
+                updateSelectionUI();
             }
         }, 'Clear Selection')
     ]);
     panel.append(bulkActions);
 
     return panel;
+}
+
+function createMobileDeviceBanner(mobileDeviceComponents) {
+    const banner = createElement('div', { className: 'mobile-device-banner' });
+    
+    banner.innerHTML = `
+        <div class="banner-content">
+            <div class="banner-icon">📱</div>
+            <div class="banner-text">
+                <strong>${mobileDeviceComponents.length} mobile devices detected</strong>
+                <span> - These products require external catalog validation using Python script</span>
+            </div>
+            <div class="banner-actions">
+                <button class="btn btn-external btn-sm" onclick="runExternalScriptForAll()">
+                    Run Catalog Check for All Mobile Devices
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="selectAllMobileDevices()">
+                    Select All Mobile Devices
+                </button>
+            </div>
+        </div>
+    `;
+    
+    return banner;
+}
+
+// Function to select all mobile devices
+window.selectAllMobileDevices = function() {
+    const analysis = window.ANALYSIS || POSTDEV_STATE.currentAnalysis || {};
+    const components = extractComponentsFromAnalysis(analysis);
+    const mobileDeviceComponents = components.filter(comp => 
+        comp.type === 'Product2' && requiresExternalScript(comp.name)
+    );
+    
+    // Add all mobile devices to selection
+    mobileDeviceComponents.forEach(comp => {
+        if (!POSTDEV_STATE.selectedComponents.includes(comp.fullName)) {
+            POSTDEV_STATE.selectedComponents.push(comp.fullName);
+        }
+    });
+    
+    localStorage.setItem('ui.postdev.selected', JSON.stringify(POSTDEV_STATE.selectedComponents));
+    updateSelectionUI();
+    
+    if (window.toast) {
+        window.toast(`Selected ${mobileDeviceComponents.length} mobile devices`);
+    }
+};
+
+function createExternalScriptSection(externalScriptComponents) {
+    const section = createElement('div', { className: 'external-script-section' });
+    
+    section.innerHTML = `
+        <div class="external-script-header">
+            <div class="external-script-icon">📱</div>
+            <div class="external-script-info">
+                <h4>${EXTERNAL_SCRIPT_CONFIG.messages.title}</h4>
+                <p>${EXTERNAL_SCRIPT_CONFIG.messages.description}</p>
+                <div class="external-script-count">
+                    <strong>${externalScriptComponents.length} mobile devices detected</strong>
+                    <span class="info-badge">Requires External Script</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="external-script-products">
+            <div class="products-list">
+                ${externalScriptComponents.map(comp => `
+                    <div class="external-product-item">
+                        <div class="product-name">${escapeHtml(comp.name)}</div>
+                        <div class="product-meta">
+                            <span class="story-count">Found in ${comp.count} ${comp.count === 1 ? 'story' : 'stories'}</span>
+                            <span class="external-badge">Mobile Device</span>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+        
+        <div class="external-script-actions">
+            <button class="btn btn-external-large" onclick="runExternalScriptForAll()">
+                ${EXTERNAL_SCRIPT_CONFIG.messages.actionButton}
+            </button>
+            <div class="external-script-note">
+                <small>💡 ${EXTERNAL_SCRIPT_CONFIG.messages.infoMessage}</small>
+            </div>
+        </div>
+    `;
+    
+    return section;
 }
 
 function updateSelectionUI() {
@@ -210,8 +402,26 @@ function updateSelectionUI() {
         validateButton.textContent = `🔍 Validate Selected (${selectedCount})`;
     }
     
+    // Update external script button with mobile device count
+    const externalScriptButton = document.querySelector('.bulk-actions .btn-external');
+    if (externalScriptButton) {
+        // Calculate how many selected products are mobile devices
+        const selectedMobileCount = Array.from(document.querySelectorAll('.component-card.selected'))
+            .filter(card => card.classList.contains('mobile-device'))
+            .length;
+        
+        externalScriptButton.textContent = `🐍 Run Catalog Check (${selectedMobileCount})`;
+        externalScriptButton.disabled = selectedMobileCount === 0;
+    }
+    
+    // Update export button
+    const exportButton = document.querySelector('.bulk-actions .btn-export');
+    if (exportButton) {
+        exportButton.textContent = `📊 Export Selected (${selectedCount})`;
+    }
+    
     // Update the select all button text
-    const selectAllButton = document.querySelector('.bulk-actions .btn-secondary:nth-child(2)');
+    const selectAllButton = document.querySelector('.bulk-actions .btn-secondary:nth-child(4)');
     if (selectAllButton) {
         const componentsList = document.querySelector('.components-list');
         const totalComponents = componentsList ? componentsList.children.length : 0;
@@ -426,13 +636,13 @@ function cleanProductName(productName) {
     
     return cleanedName;
 }
-
 function createComponentCard(component, analysis) {
     const card = createElement('div', { 
-        className: `component-card ${POSTDEV_STATE.selectedComponents.includes(component.fullName) ? 'selected' : ''}` 
+        className: `component-card ${POSTDEV_STATE.selectedComponents.includes(component.fullName) ? 'selected' : ''} ${requiresExternalScript(component.name) ? 'mobile-device' : ''}` 
     });
 
     const isSelected = POSTDEV_STATE.selectedComponents.includes(component.fullName);
+    const isMobileDevice = requiresExternalScript(component.name);
     
     card.innerHTML = `
         <div class="component-header">
@@ -443,21 +653,22 @@ function createComponentCard(component, analysis) {
                     onchange="toggleComponentSelection('${component.fullName}', this.checked)"
                 >
             </div>
-            <div class="component-type-badge ${component.type.toLowerCase()}">
-                ${component.type}
+            <div class="component-type-badge ${component.type.toLowerCase()} ${isMobileDevice ? 'mobile-badge' : ''}">
+                ${component.type}${isMobileDevice ? ' 📱' : ''}
             </div>
             <div class="component-count">
                 ${component.count} ${component.count === 1 ? 'story' : 'stories'}
             </div>
         </div>
-        <div class="component-name">${escapeHtml(component.name)}</div>
+        <div class="component-name">${escapeHtml(component.name)} ${isMobileDevice ? '<span class="mobile-indicator" title="Requires catalog validation">📱</span>' : ''}</div>
         <div class="component-fullname">${escapeHtml(component.fullName)}</div>
         <div class="component-stories">
             <small>Found in: ${component.storyIds.slice(0, 2).map(id => `<span class="story-id">${id}</span>`).join(', ')}${component.storyIds.length > 2 ? ` and ${component.storyIds.length - 2} more` : ''}</small>
         </div>
         <div class="component-actions">
-            <button class="btn btn-sm btn-primary" onclick="validateSingleComponent('${component.fullName}', '${component.type}', '${component.name}')">
-                Validate
+            <button class="btn btn-sm ${isMobileDevice ? 'btn-external' : 'btn-primary'}" 
+                onclick="${isMobileDevice ? `runExternalScriptForProduct('${component.fullName}', '${component.name}')` : `validateSingleComponent('${component.fullName}', '${component.type}', '${component.name}')`}">
+                ${isMobileDevice ? 'Run Catalog Check' : 'Validate'}
             </button>
             <button class="btn btn-sm btn-secondary" onclick="addToManualComponents('${component.type}', '${component.name}', '${component.fullName}')">
                 Add to Manual
@@ -467,7 +678,6 @@ function createComponentCard(component, analysis) {
 
     return card;
 }
-
 // Manual Component Selection Functions
 function toggleManualComponentSelection(fullName, isSelected) {
     if (!POSTDEV_STATE.selectedManualComponents) {
@@ -678,6 +888,307 @@ async function validateOmniScript(omniScriptName) {
 }
 
 
+async function runExternalScriptForProducts(productNames) {
+    const apiUrl = EXTERNAL_SCRIPT_CONFIG.apiEndpoint;
+    
+    console.log('🔍 Calling Catalog Matrix Check API:', {
+        url: apiUrl,
+        productNames: productNames,
+        productCount: productNames.length
+    });
+
+    try {
+        showLoadingSpinner(true, `Running catalog matrix check for ${productNames.length} mobile devices...`);
+        
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                product_names: productNames,
+                timestamp: new Date().toISOString(),
+                batch_size: productNames.length,
+                script_params: EXTERNAL_SCRIPT_CONFIG.scriptParams
+            })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        }
+
+        // Check if response is JSON (error) or file (success)
+        const contentType = response.headers.get('content-type');
+        
+        if (contentType && contentType.includes('application/json')) {
+            const result = await response.json();
+            console.log('✅ Catalog Matrix Check Result:', result);
+            return result;
+        } else {
+            // It's a file download
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            
+            // Create download link
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `catalog-matrix-report-${new Date().toISOString().split('T')[0]}.xlsx`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Clean up URL
+            setTimeout(() => URL.revokeObjectURL(url), 100);
+            
+            return {
+                success: true,
+                file_downloaded: true,
+                product_count: productNames.length,
+                download_url: url,
+                message: `Catalog matrix report generated for ${productNames.length} devices`
+            };
+        }
+
+    } catch (error) {
+        console.error('❌ Catalog Matrix Check Error:', error);
+        throw error;
+    } finally {
+        showLoadingSpinner(false);
+    }
+}
+
+
+// In your runExternalScriptForAll function, update the loading message:
+window.runExternalScriptForAll = async function() {
+    // Get all external script components from the current analysis
+    const analysis = window.ANALYSIS || POSTDEV_STATE.currentAnalysis || {};
+    const components = extractComponentsFromAnalysis(analysis);
+    const externalScriptComponents = components.filter(comp => 
+        comp.type === 'Product2' && requiresExternalScript(comp.name)
+    );
+    
+    if (externalScriptComponents.length === 0) {
+        alert('No mobile devices found that require external script processing.');
+        return;
+    }
+    
+    try {
+        showLoadingSpinner(true, 
+            `Running Catalog Matrix Check...`,
+            `Processing ${externalScriptComponents.length} mobile devices through Python script\nThis may take a few minutes...`
+        );
+        
+        const productNames = externalScriptComponents.map(comp => comp.name);
+        const result = await runExternalScriptForProducts(productNames);
+        
+        // Show results
+        showExternalScriptResults(result, productNames, externalScriptComponents);
+        
+    } catch (error) {
+        console.error('❌ External script error:', error);
+        showExternalScriptError(error, `${externalScriptComponents.length} mobile devices`);
+    } finally {
+        showLoadingSpinner(false);
+    }
+};
+
+// Update showLoadingSpinner to accept details
+function showLoadingSpinner(show, message = 'Loading...', details = '') {
+    let spinner = document.getElementById('postdev-loading-spinner');
+    
+    if (show) {
+        if (spinner) {
+            spinner.remove();
+        }
+        
+        spinner = document.createElement('div');
+        spinner.id = 'postdev-loading-spinner';
+        spinner.innerHTML = `
+            <div class="loading-overlay">
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                    <div class="loading-message">${message}</div>
+                    ${details ? `<div class="loading-details">${details}</div>` : ''}
+                </div>
+            </div>
+        `;
+        document.body.appendChild(spinner);
+    } else {
+        if (spinner) {
+            spinner.remove();
+        }
+    }
+}
+
+function showExternalScriptResults(result, productNames, components) {
+    const modal = createElement('div', { className: 'external-script-results-modal' });
+    
+    const hasFileDownload = result.file_downloaded || result.download_url;
+    
+    modal.innerHTML = `
+        <div class="modal-content large-modal">
+            <div class="modal-header">
+                <h3>📊 Catalog Matrix Check Results</h3>
+                <button class="close-btn" onclick="this.closest('.external-script-results-modal').remove()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="results-summary">
+                    <h4>Catalog Validation Summary</h4>
+                    <div class="summary-stats">
+                        <div class="stat">
+                            <span class="stat-value">${components.length}</span>
+                            <span class="stat-label">Mobile Devices</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value ${result.success ? 'success' : 'error'}">${result.success ? '✅' : '❌'}</span>
+                            <span class="stat-label">Status</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">${result.execution_time || 'N/A'}</span>
+                            <span class="stat-label">Execution Time</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="script-info">
+                    <h4>Script Execution Details</h4>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Python Script:</label>
+                            <span>run_catalog_matrix_check.py</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Matrix CSV:</label>
+                            <span>PRB2CSelectDeviceMatrixBuyFlow_v118.csv</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Catalogs:</label>
+                            <span>AppleWatch, PRB2C_Mobile_Phones_catalog, Tablet</span>
+                        </div>
+                        <div class="info-item">
+                            <label>Output Format:</label>
+                            <span>Excel (.xlsx)</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="processed-products">
+                    <h4>Validated Mobile Devices</h4>
+                    <div class="products-grid">
+                        ${components.map((comp, index) => `
+                            <div class="processed-product">
+                                <div class="product-icon">📱</div>
+                                <div class="product-details">
+                                    <div class="product-name">${escapeHtml(comp.name)}</div>
+                                    <div class="product-meta">${comp.count} ${comp.count === 1 ? 'story' : 'stories'}</div>
+                                </div>
+                                <div class="product-status ${result.success ? 'success' : 'error'}">
+                                    ${result.success ? '✅' : '❌'}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                ${hasFileDownload ? `
+                <div class="download-section success">
+                    <h4>✅ Report Generated Successfully</h4>
+                    <p>The catalog matrix check has completed and the Excel report has been downloaded automatically.</p>
+                    <div class="file-info">
+                        <div class="file-icon">📊</div>
+                        <div class="file-details">
+                            <div class="file-name">catalog-matrix-report-[timestamp].xlsx</div>
+                            <div class="file-description">Contains device compatibility matrix and validation results</div>
+                        </div>
+                    </div>
+                    <div class="download-actions">
+                        <button class="btn btn-primary" onclick="reDownloadReport('${result.download_url}')">
+                            📥 Download Again
+                        </button>
+                        <button class="btn btn-secondary" onclick="openReportLocation()">
+                            📁 Show File Location
+                        </button>
+                    </div>
+                </div>
+                ` : ''}
+                
+                ${result.script_output ? `
+                <div class="script-output">
+                    <h4>Script Output</h4>
+                    <pre class="output-content">${JSON.stringify(result.script_output, null, 2)}</pre>
+                </div>
+                ` : ''}
+                
+                ${result.message ? `
+                <div class="script-message">
+                    <h4>Execution Message</h4>
+                    <p>${result.message}</p>
+                </div>
+                ` : ''}
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="this.closest('.external-script-results-modal').remove()">Close</button>
+                ${!hasFileDownload ? `
+                <button class="btn btn-secondary" onclick="exportMobileDeviceList(${JSON.stringify(components).replace(/"/g, '&quot;')})">
+                    Export Device List (CSV)
+                </button>
+                ` : ''}
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+// Helper functions for download actions
+window.reDownloadReport = function(downloadUrl) {
+    if (downloadUrl && downloadUrl.startsWith('blob:')) {
+        // For blob URLs, create a new download
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = `catalog-matrix-report-${new Date().toISOString().split('T')[0]}.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } else {
+        alert('Download URL is not available. Please run the catalog check again.');
+    }
+};
+
+window.openReportLocation = function() {
+    alert('The Excel file has been downloaded to your default downloads folder. Check your browser downloads.');
+};
+
+// Export mobile device list
+window.exportMobileDeviceList = function(components) {
+    const csvData = components.map(comp => ({
+        'Mobile Device Name': comp.name,
+        'Full Component Name': comp.fullName,
+        'Occurrence Count': comp.count,
+        'Story IDs': comp.storyIds ? comp.storyIds.join('; ') : 'N/A',
+        'Type': 'Mobile Device',
+        'Requires External Script': 'Yes'
+    }));
+    
+    const csvContent = convertToCSV(csvData);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `mobile-devices-list-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    if (window.toast) {
+        window.toast(`Exported ${components.length} mobile devices to CSV`);
+    }
+};
+
 window.toggleComponentSelection = function(fullName, isSelected) {
     if (isSelected) {
         if (!POSTDEV_STATE.selectedComponents.includes(fullName)) {
@@ -697,47 +1208,60 @@ window.toggleComponentSelection = function(fullName, isSelected) {
 
 window.validateSingleComponent = async function(fullName, type, name) {
     try {
-        showLoadingSpinner(true, `Validating ${type}: ${name}...`);
+        // Check if this is a mobile device that requires external script
+        const isMobileDevice = type === 'Product2' && requiresExternalScript(name);
         
-        let result;
-        if (type === 'Product2') {
-            result = await validateProduct(name);
-        } else if (type === 'OmniScript') {
-            result = await validateOmniScript(name);
+        if (isMobileDevice) {
+            // Run external script for mobile devices
+            showLoadingSpinner(true, `Running catalog check for: ${name}...`);
+            const result = await runExternalScriptForProducts([name]);
+            
+            // Show external script results
+            showExternalScriptResults(result, [name], [{ fullName, type, name, count: 1 }]);
         } else {
-            throw new Error(`Unsupported component type: ${type}`);
-        }
-
-        // Determine if validation was successful
-        const isSuccess = result.status === 'SUCCESS' || result.success === true;
-        const hasIssues = (result.validation && result.validation.invalid_attributes && result.validation.invalid_attributes.length > 0) || 
-                         (result.issues && result.issues.length > 0);
-
-        // Ensure the result has the proper structure for display
-        const displayResult = {
-            success: isSuccess,
-            components: [{
-                type: type,
-                name: name, // Use cleaned name
-                fullName: fullName,
-                ...result,
-                validation: result.validation || result
-            }],
-            summary: {
-                total: 1,
-                analyzed: 1,
-                successful: isSuccess ? 1 : 0,
-                with_issues: hasIssues ? 1 : 0,
-                clean: (isSuccess && !hasIssues) ? 1 : 0,
-                failed: isSuccess ? 0 : 1
-            },
-            meta: {
-                timestamp: new Date().toISOString(),
-                analysis_type: 'single'
+            // Run regular validation for non-mobile products and OmniScripts
+            showLoadingSpinner(true, `Validating ${type}: ${name}...`);
+            
+            let result;
+            if (type === 'Product2') {
+                result = await validateProduct(name);
+            } else if (type === 'OmniScript') {
+                result = await validateOmniScript(name);
+            } else {
+                throw new Error(`Unsupported component type: ${type}`);
             }
-        };
-        
-        showAnalysisResults(displayResult, [{ fullName, type, name }]);
+
+            // Determine if validation was successful
+            const isSuccess = result.status === 'SUCCESS' || result.success === true;
+            const hasIssues = (result.validation && result.validation.invalid_attributes && result.validation.invalid_attributes.length > 0) || 
+                             (result.issues && result.issues.length > 0);
+
+            // Ensure the result has the proper structure for display
+            const displayResult = {
+                success: isSuccess,
+                components: [{
+                    type: type,
+                    name: name,
+                    fullName: fullName,
+                    ...result,
+                    validation: result.validation || result
+                }],
+                summary: {
+                    total: 1,
+                    analyzed: 1,
+                    successful: isSuccess ? 1 : 0,
+                    with_issues: hasIssues ? 1 : 0,
+                    clean: (isSuccess && !hasIssues) ? 1 : 0,
+                    failed: isSuccess ? 0 : 1
+                },
+                meta: {
+                    timestamp: new Date().toISOString(),
+                    analysis_type: 'single'
+                }
+            };
+            
+            showAnalysisResults(displayResult, [{ fullName, type, name }]);
+        }
         
     } catch (error) {
         console.error('❌ Single component validation error:', error);
@@ -848,19 +1372,26 @@ async function runManualAnalysis() {
     await runPostDevAnalysis(POSTDEV_STATE.manualComponents);
 }
 
-
 async function runPostDevAnalysis(components) {
     try {
         showLoadingSpinner(true, `Validating ${components.length} components...`);
         
         console.log('Starting PostDev validation for components:', components);
         
+        // Separate mobile devices from regular components
+        const mobileDevices = components.filter(comp => 
+            comp.type === 'Product2' && requiresExternalScript(comp.name)
+        );
+        const regularComponents = components.filter(comp => 
+            !(comp.type === 'Product2' && requiresExternalScript(comp.name))
+        );
+
         const results = [];
         let successCount = 0;
         let errorCount = 0;
 
-        // Validate each component sequentially to avoid overwhelming the API
-        for (const component of components) {
+        // Validate regular components first
+        for (const component of regularComponents) {
             try {
                 console.log(`Validating ${component.type}: ${component.name}`);
                 
@@ -898,6 +1429,47 @@ async function runPostDevAnalysis(components) {
                 errorCount++;
             }
         }
+
+        // Validate mobile devices with external script (in batch)
+        if (mobileDevices.length > 0) {
+            try {
+                console.log(`Running external script for ${mobileDevices.length} mobile devices`);
+                
+                const mobileDeviceNames = mobileDevices.map(comp => comp.name);
+                const externalResult = await runExternalScriptForProducts(mobileDeviceNames);
+                
+                // Add mobile device results
+                mobileDevices.forEach(comp => {
+                    results.push({
+                        ...comp,
+                        ...externalResult,
+                        validation: externalResult,
+                        external_script: true
+                    });
+                });
+                
+                if (externalResult.success) {
+                    successCount += mobileDevices.length;
+                } else {
+                    errorCount += mobileDevices.length;
+                }
+                
+            } catch (error) {
+                console.error(`❌ External script failed for mobile devices:`, error);
+                mobileDevices.forEach(comp => {
+                    results.push({
+                        ...comp,
+                        success: false,
+                        validated: false,
+                        error: error.message,
+                        issues: [error.message],
+                        recommendations: ['Check external script service', 'Verify mobile device names'],
+                        external_script: true
+                    });
+                });
+                errorCount += mobileDevices.length;
+            }
+        }
         
         console.log('✅ PostDev Validation Complete:', {
             total: components.length,
@@ -909,9 +1481,13 @@ async function runPostDevAnalysis(components) {
         // Count components with issues (for summary)
         const componentsWithIssues = results.filter(r => {
             // For Product2, check if status is not SUCCESS or has invalid attributes
-            if (r.type === 'Product2') {
+            if (r.type === 'Product2' && !r.external_script) {
                 return r.status !== 'SUCCESS' || 
                        (r.validation && r.validation.invalid_attributes && r.validation.invalid_attributes.length > 0);
+            }
+            // For external script results, check success status
+            if (r.external_script) {
+                return !r.success;
             }
             // For OmniScript, check if there are issues
             return r.issues && r.issues.length > 0;
@@ -929,11 +1505,14 @@ async function runPostDevAnalysis(components) {
                 successful: successCount, // Actually successful validations
                 with_issues: componentsWithIssues,
                 clean: cleanComponents,
-                failed: errorCount
+                failed: errorCount,
+                mobile_devices: mobileDevices.length,
+                regular_components: regularComponents.length
             },
             meta: {
                 timestamp: new Date().toISOString(),
-                analysis_type: 'batch'
+                analysis_type: 'batch',
+                has_external_script: mobileDevices.length > 0
             }
         }, components);
         
@@ -954,6 +1533,7 @@ async function runPostDevAnalysis(components) {
                         <p>Please check:</p>
                         <ul>
                             <li>Backend API is running at http://localhost:5000</li>
+                            <li>External script service is running at ${EXTERNAL_SCRIPT_CONFIG.apiEndpoint}</li>
                             <li>Network connectivity</li>
                             <li>Component names are valid</li>
                         </ul>
@@ -1025,13 +1605,15 @@ function showAnalysisResults(result, components) {
             </div>
             <div class="modal-footer">
                 <button class="btn btn-primary" onclick="this.closest('.analysis-results-modal').remove()">Close</button>
-                <button class="btn btn-secondary" onclick="exportPostDevResults(${JSON.stringify(result).replace(/"/g, '&quot;')})">Export Results</button>
+                <button class="btn btn-secondary" onclick="exportPostDevResults(${JSON.stringify(result).replace(/"/g, '&quot;')})">Export Results (JSON)</button>
+                <button class="btn btn-export" onclick="exportInvalidAttributesToCSV(${JSON.stringify(result).replace(/"/g, '&quot;')})">📊 Export Invalid Attributes (CSV)</button>
             </div>
         </div>
     `;
     
     document.body.appendChild(modal);
 }
+
 function renderComponentResults(components) {
     if (!components || components.length === 0) {
         return '<div class="no-results">No validation results available</div>';
@@ -1040,6 +1622,10 @@ function renderComponentResults(components) {
     return `
         <div class="components-results">
             ${components.map(comp => {
+                // Handle external script results
+                if (comp.external_script) {
+                    return renderExternalScriptResult(comp);
+                }
                 // Handle Product2 validation results specifically
                 if (comp.type === 'Product2' && comp.validation) {
                     return renderProduct2ValidationResult(comp);
@@ -1051,6 +1637,53 @@ function renderComponentResults(components) {
     `;
 }
 
+function renderExternalScriptResult(comp) {
+    const statusClass = comp.success ? 'clean' : 'error';
+    
+    return `
+        <div class="component-result ${statusClass} external-script-result">
+            <div class="component-header">
+                <div class="component-name">
+                    ${comp.name}
+                    <span class="external-script-badge">🐍 External Script</span>
+                </div>
+                <div class="component-status ${statusClass}">
+                    ${comp.success ? '✅' : '❌'} ${comp.success ? 'Catalog Check Complete' : 'Catalog Check Failed'}
+                </div>
+            </div>
+            
+            <div class="external-script-result-details">
+                <div class="script-info">
+                    <strong>Catalog Matrix Validation</strong>
+                    <p>This mobile device was validated using the external Python script for catalog compatibility.</p>
+                </div>
+                
+                ${comp.download_url ? `
+                <div class="download-info">
+                    <p>The full catalog matrix report has been downloaded to your computer.</p>
+                    <button class="btn btn-sm btn-primary" onclick="reDownloadReport('${comp.download_url}')">
+                        📥 Download Report Again
+                    </button>
+                </div>
+                ` : ''}
+                
+                ${comp.error ? `
+                <div class="component-error">
+                    <strong>Error:</strong>
+                    <div class="error-message">${escapeHtml(comp.error)}</div>
+                </div>
+                ` : ''}
+                
+                ${comp.message ? `
+                <div class="script-message">
+                    <strong>Message:</strong>
+                    <div>${escapeHtml(comp.message)}</div>
+                </div>
+                ` : ''}
+            </div>
+        </div>
+    `;
+}
 
 function renderProduct2ValidationResult(comp) {
     const validation = comp.validation;
@@ -1214,7 +1847,7 @@ function getStatusText(component) {
     return 'Unknown';
 }
 
-function showLoadingSpinner(show, message = 'Loading...') {
+function showLoadingSpinnertest(show, message = 'Loading...') {
     console.log('🔄 Loading Spinner:', show, message); // Debug log
     
     let spinner = document.getElementById('postdev-loading-spinner');
@@ -1290,6 +1923,122 @@ function getStatusIcon(component) {
     return '❓';
 }
 
+
+// Add this function for quick export
+window.exportSelectedComponents = function(components) {
+    const exportData = components.map(comp => ({
+        'Component Type': comp.type,
+        'Component Name': comp.name,
+        'Full Name': comp.fullName,
+        'Found in Stories': comp.storyIds ? comp.storyIds.join('; ') : 'N/A',
+        'Occurrence Count': comp.count || 1
+    }));
+    
+    const csvContent = convertToCSV(exportData);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `selected-components-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    if (window.toast) {
+        window.toast(`Exported ${components.length} components to CSV`);
+    }
+};
+
+window.exportInvalidAttributesToCSV = function(result) {
+    // Collect all products with invalid attributes
+    const productsWithInvalidAttributes = [];
+    
+    if (result.components && Array.isArray(result.components)) {
+        result.components.forEach(component => {
+            // Only process Product2 components with invalid attributes
+            if (component.type === 'Product2' && 
+                component.validation && 
+                component.validation.invalid_attributes && 
+                component.validation.invalid_attributes.length > 0) {
+                
+                const productName = component.name || 'Unknown Product';
+                const productStatus = component.validation.status || 'Unknown';
+                
+                component.validation.invalid_attributes.forEach(attr => {
+                    productsWithInvalidAttributes.push({
+                        'Product Name': productName,
+                        'Product Status': productStatus,
+                        'Attribute Name': attr.name || 'Unknown',
+                        'Attribute Code': attr.code || 'N/A',
+                        'Current Value': attr.current_value || 'Empty',
+                        'Error Message': attr.error || 'Unknown error',
+                        'Allowed Values': attr.allowed_values ? attr.allowed_values.join('; ') : 'N/A',
+                        'Mandatory': attr.mandatory ? 'Yes' : 'No',
+                        'Attribute Type': attr.type || 'Unknown',
+                        'Validation Timestamp': result.meta?.timestamp || new Date().toISOString()
+                    });
+                });
+            }
+        });
+    }
+    
+    if (productsWithInvalidAttributes.length === 0) {
+        alert('No invalid attributes found to export.');
+        return;
+    }
+    
+    // Convert to CSV
+    const csvContent = convertToCSV(productsWithInvalidAttributes);
+    
+    // Create and download the file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    
+    link.setAttribute('href', url);
+    link.setAttribute('download', `invalid-attributes-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
+// Helper function to convert array of objects to CSV
+function convertToCSV(data) {
+    if (!data || data.length === 0) return '';
+    
+    const headers = Object.keys(data[0]);
+    const csvRows = [];
+    
+    // Add header row
+    csvRows.push(headers.join(','));
+    
+    // Add data rows
+    data.forEach(row => {
+        const values = headers.map(header => {
+            let value = row[header] || '';
+            
+            // Escape quotes and wrap in quotes if contains comma, quote, or newline
+            if (typeof value === 'string') {
+                value = value.replace(/"/g, '""');
+                if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+                    value = `"${value}"`;
+                }
+            }
+            
+            return value;
+        });
+        
+        csvRows.push(values.join(','));
+    });
+    
+    return csvRows.join('\n');
+}
+
 window.exportPostDevResults = function(result) {
     const data = {
         analysis_type: 'postdev_validation',
@@ -1350,6 +2099,539 @@ const injectPostDevStyles = (() => {
         justify-content: center;
         z-index: 10001;
     }
+        /* Mobile Device Banner */
+.mobile-device-banner {
+    margin: 16px 0;
+    padding: 16px;
+    border: 2px solid #ff6b35;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #fff8f6, #fff0eb);
+}
+/* External Script Result Styles */
+.external-script-result {
+    border-left: 4px solid #ff6b35 !important;
+    background: #fffaf8;
+}
+
+.external-script-badge {
+    background: #ff6b35;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+.external-script-result-details {
+    margin-top: 12px;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #e5e5e7;
+}
+
+.script-info {
+    margin-bottom: 12px;
+}
+
+.script-info strong {
+    color: #d35400;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.script-info p {
+    margin: 0;
+    color: #666;
+    font-size: 13px;
+}
+
+.download-info {
+    padding: 8px;
+    background: #e8f5e9;
+    border-radius: 4px;
+    border: 1px solid #c8e6c9;
+}
+
+.download-info p {
+    margin: 0 0 8px 0;
+    color: #2e7d32;
+    font-size: 13px;
+}
+
+.script-message {
+    padding: 8px;
+    background: #e3f2fd;
+    border-radius: 4px;
+    border: 1px solid #bbdefb;
+}
+
+.script-message strong {
+    color: #1976d2;
+}
+
+.script-message div {
+    color: #1d1d1f;
+    margin-top: 4px;
+}
+.banner-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.banner-icon {
+    font-size: 24px;
+    background: #ff6b35;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.banner-text {
+    flex: 1;
+}
+
+.banner-text strong {
+    color: #d35400;
+}
+
+.banner-text span {
+    color: #666;
+}
+
+.banner-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* Mobile Device Component Styles */
+.component-card.mobile-device {
+    border-left: 4px solid #ff6b35;
+    background: #fffaf8;
+}
+
+.mobile-indicator {
+    margin-left: 8px;
+    font-size: 14px;
+}
+
+.component-type-badge.mobile-badge {
+    background: #ff6b35 !important;
+    color: white !important;
+}
+
+/* Responsive banner */
+@media (max-width: 768px) {
+    .banner-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .banner-actions {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .banner-actions .btn {
+        flex: 1;
+        text-align: center;
+    }
+}
+
+    .script-info {
+    margin: 20px 0;
+    padding: 16px;
+    border: 1px solid #e5e5e7;
+    border-radius: 8px;
+    background: #f8f9fa;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.info-item label {
+    font-weight: 600;
+    color: #666;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.info-item span {
+    color: #1d1d1f;
+    font-size: 14px;
+}
+
+.download-section.success {
+    background: #e8f5e9;
+    border: 1px solid #c8e6c9;
+}
+
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 16px 0;
+    padding: 12px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #dcedc8;
+}
+
+.file-icon {
+    font-size: 24px;
+    background: #4caf50;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.file-details {
+    flex: 1;
+}
+
+.file-name {
+    font-weight: 600;
+    color: #1d1d1f;
+    margin-bottom: 4px;
+}
+
+.file-description {
+    font-size: 13px;
+    color: #666;
+}
+
+.script-message {
+    margin: 16px 0;
+    padding: 12px;
+    background: #e3f2fd;
+    border: 1px solid #bbdefb;
+    border-radius: 8px;
+}
+
+.script-message h4 {
+    margin: 0 0 8px 0;
+    color: #1976d2;
+}
+
+.script-message p {
+    margin: 0;
+    color: #1d1d1f;
+}
+
+/* Loading state for external script */
+.loading-overlay .loading-message {
+    font-size: 16px;
+    color: #1d1d1f;
+}
+
+.loading-overlay .loading-details {
+    margin-top: 8px;
+    font-size: 14px;
+    color: #666;
+}
+        .btn-export {
+    background: #34c759 !important;
+    color: white !important;
+    border-color: #34c759 !important;
+}
+    /* External Script Section Styles */
+.external-script-section {
+    margin: 20px 0;
+    padding: 20px;
+    border: 2px solid #ff6b35;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #fff8f6, #fff0eb);
+    box-shadow: 0 4px 12px rgba(255, 107, 53, 0.1);
+}
+
+.external-script-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.external-script-icon {
+    font-size: 32px;
+    background: #ff6b35;
+    color: white;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.external-script-info h4 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #d35400;
+}
+
+.external-script-info p {
+    margin: 0 0 12px 0;
+    color: #666;
+    line-height: 1.5;
+}
+
+.external-script-count {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+}
+
+.info-badge {
+    background: #ff6b35;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.external-script-products {
+    margin: 20px 0;
+}
+
+.products-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.external-product-item {
+    background: white;
+    border: 1px solid #ffd7c9;
+    border-radius: 8px;
+    padding: 12px;
+    transition: all 0.2s ease;
+}
+
+.external-product-item:hover {
+    border-color: #ff6b35;
+    box-shadow: 0 2px 8px rgba(255, 107, 53, 0.1);
+}
+
+.external-product-item .product-name {
+    font-weight: 600;
+    color: #d35400;
+    margin-bottom: 4px;
+}
+
+.external-product-item .product-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #666;
+}
+
+.external-badge {
+    background: #fff0eb;
+    color: #ff6b35;
+    padding: 2px 6px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.external-script-actions {
+    text-align: center;
+    padding-top: 20px;
+    border-top: 1px solid #ffd7c9;
+}
+
+.btn-external-large {
+    background: #ff6b35 !important;
+    color: white !important;
+    border-color: #ff6b35 !important;
+    padding: 12px 24px !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    margin-bottom: 12px !important;
+}
+
+.btn-external-large:hover {
+    background: #e55a2b !important;
+    border-color: #e55a2b !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+}
+
+.external-script-note {
+    color: #666;
+    font-size: 13px;
+}
+
+/* Stats counter for external products */
+.external-count {
+    color: #ff6b35 !important;
+}
+
+/* Large modal for external script results */
+.large-modal {
+    max-width: 900px !important;
+    width: 95% !important;
+}
+
+.processed-products {
+    margin: 20px 0;
+}
+
+.products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 12px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding: 8px;
+}
+
+.processed-product {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: white;
+    border: 1px solid #e5e5e7;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.processed-product:hover {
+    border-color: #0071e3;
+    box-shadow: 0 2px 8px rgba(0, 113, 227, 0.1);
+}
+
+.processed-product .product-icon {
+    font-size: 20px;
+    background: #f0f7ff;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.processed-product .product-details {
+    flex: 1;
+}
+
+.processed-product .product-name {
+    font-weight: 600;
+    color: #1d1d1f;
+    margin-bottom: 2px;
+}
+
+.processed-product .product-meta {
+    font-size: 12px;
+    color: #86868b;
+}
+
+.processed-product .product-status {
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.processed-product .product-status.success {
+    background: #e8f5e9;
+    color: #1b5e20;
+}
+
+.processed-product .product-status.error {
+    background: #ffebee;
+    color: #b71c1c;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .external-script-header {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .external-script-icon {
+        align-self: center;
+    }
+    
+    .products-list,
+    .products-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .external-script-count {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .large-modal {
+        width: 98% !important;
+        margin: 10px !important;
+    }
+}
+
+.btn-export:hover {
+    background: #2ca84d !important;
+    border-color: #2ca84d !important;
+}
+
+.modal-footer {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding: 24px;
+    border-top: 1px solid #e5e5e7;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+    .modal-footer {
+        flex-direction: column;
+    }
+    
+    .modal-footer .btn {
+        width: 100%;
+        text-align: center;
+    }
+}
+
 
     .loading-spinner {
         background: white;

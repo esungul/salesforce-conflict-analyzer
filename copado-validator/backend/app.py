@@ -127,28 +127,247 @@ except Exception as e:
 # STATUS ENDPOINT
 # ============================================================================
 
-@app.route('/status', methods=['GET'])
-def status():
-    """
-    Service status endpoint
-    GET /status
+
+
+############################# Testing Start
+
+
+import os
+import json
+import logging
+import yaml
+import pandas as pd
+
+from flask import Flask, request, jsonify
+from salesforce_client import sf_login_from_config
+from validate_product_api import (
+    validate_product_by_name,
+    sf_fetch_product_by_name
+)
+
+# =========================
+# Configuration
+# =========================
+
+# Path to pre-parsed YAML matrix (much simpler than CSV!)
+MATRIX_YAML_PATH = os.getenv("MATRIX_YAML_PATH", "./matrix.yaml")
+
+# Supported catalogs
+AVAILABLE_CATALOGS = [
+    "AppleWatch",
+    "PRB2C_Mobile_Phones_catalog",
+    "Tablet"
+]
+
+
+def convert_yaml_to_dataframe(yaml_data):
+    """Convert YAML matrix to DataFrame for validation
     
-    Returns:
-        Service status and available endpoints
+    Handles flat YAML structure (products directly, not nested by catalogs)
     """
-    sf_status = "connected" if sf_client else "disconnected"
+    if not yaml_data:
+        return None
+    
+    rows = []
+    products = yaml_data.get("products", {})
+    
+    # New flat structure: products[product_code][attributes]
+    for product_code, attributes in products.items():
+        for attr in attributes:
+            rows.append({
+                "ProductCode": product_code,
+                "CatalogType": "auto-detect",  # Will be determined from Salesforce
+                "AttributeCode": attr.get("attribute"),
+                "MatrixValues": attr.get("values", [])
+            })
+    
+    if not rows:
+        logger.warning("[CONVERT] No rows to convert from YAML!")
+        logger.warning(f"[CONVERT] YAML keys: {list(yaml_data.keys())}")
+        logger.warning(f"[CONVERT] Products key exists: {'products' in yaml_data}")
+        if "products" in yaml_data:
+            logger.warning(f"[CONVERT] Products count: {len(yaml_data['products'])}")
+        return None
+    
+    df = pd.DataFrame(rows)
+    logger.info(f"[CONVERT] Converted YAML to DataFrame: {df.shape}")
+    logger.info(f"[CONVERT] Unique products: {df['ProductCode'].nunique()}")
+    return df
+
+
+matrix_yaml = None
+_matrix_df = None
+_sf_client = None
+
+def init_globals():
+    """Initialize Salesforce client and matrix data at startup"""
+    global _sf_client, _matrix_yaml, _matrix_df
+    
+    logger.info("[INIT] Loading configuration...")
+    
+    # Initialize Salesforce
+    try:
+        logger.info("[INIT] Connecting to Salesforce...")
+        _sf_client = sf_login_from_config()
+        logger.info("[INIT] ✅ Salesforce connected")
+    except Exception as e:
+        logger.error(f"[INIT] ✗ Salesforce connection failed: {e}")
+        raise
+    
+    # Load matrix YAML and convert to DataFrame
+    try:
+        if not os.path.exists(MATRIX_YAML_PATH):
+            logger.error(f"[INIT] ❌ Matrix YAML not found at {MATRIX_YAML_PATH}")
+            raise FileNotFoundError(f"Matrix YAML not found: {MATRIX_YAML_PATH}")
+        
+        logger.info(f"[INIT] Loading matrix from: {MATRIX_YAML_PATH}")
+        with open(MATRIX_YAML_PATH, 'r') as f:
+            _matrix_yaml = yaml.safe_load(f)
+        
+        if not _matrix_yaml:
+            logger.error(f"[INIT] ❌ Matrix YAML is empty!")
+            raise ValueError("Matrix YAML is empty")
+        
+        # Convert to DataFrame once at startup
+        _matrix_df = convert_yaml_to_dataframe(_matrix_yaml)
+        if _matrix_df is not None:
+            logger.info(f"[INIT] ✅ Matrix DataFrame created: {_matrix_df.shape}")
+        else:
+            logger.error(f"[INIT] ❌ Failed to create Matrix DataFrame")
+        
+        catalogs = _matrix_yaml.get("products", {})
+        logger.info(f"[INIT] ✅ Matrix YAML loaded! Products: {len(catalogs)}")
+        
+    except Exception as e:
+        logger.error(f"[INIT] ❌ Matrix YAML load failed: {e}")
+        raise
+
+# Make globals available to other modules
+def get_matrix_df():
+    return _matrix_df
+
+def get_sf_client():
+    return _sf_client
+
+# =========================
+# Initialize globals at module load time
+# =========================
+init_globals()
+
+# =========================
+# API Endpoints
+# =========================
+
+
+@app.route('/api/validate-device-product', methods=['POST'])
+def validate_device_product_endpoint():
+    """
+    Validate a device product by name
+    
+    Request:
+      {
+        "product_name": "iPhone 17 Pro"
+      }
+    
+    Response:
+      {
+        "status": "SUCCESS|PARTIAL|FAILED",
+        "validation": { ... }
+      }
+    """
+    try:
+        # Debug request
+        logger.info("[API] ========== Request Received ==========")
+        logger.info(f"[API] SF Client initialized: {_sf_client is not None}")
+        logger.info(f"[API] Matrix YAML loaded: {_matrix_yaml is not None}")
+        logger.info("[API] ==========================================")
+        
+        data = request.get_json()
+        if not data:
+            logger.error("[API] ❌ No JSON body in request")
+            return jsonify({"status": "FAILED", "error": "Request body must be JSON"}), 400
+        
+        product_name = data.get("product_name", "").strip()
+        logger.info(f"[API] Product name: '{product_name}'")
+        
+        if not product_name:
+            logger.error("[API] ❌ Missing product_name field")
+            return jsonify({"status": "FAILED", "error": "Missing required field: product_name"}), 400
+        
+        # Check SF client
+        if _sf_client is None:
+            logger.error("[API] ❌ CRITICAL: SF Client is None!")
+            return jsonify({
+                "status": "FAILED",
+                "error": "Salesforce client not initialized"
+            }), 500
+        
+        # Convert YAML to DataFrame for validation
+        logger.info("[API] Converting YAML matrix to DataFrame...")
+        matrix_df = convert_yaml_to_dataframe(_matrix_yaml)
+        
+        if matrix_df is None or matrix_df.empty:
+            logger.error("[API] ❌ Matrix DataFrame is empty!")
+            return jsonify({
+                "status": "FAILED",
+                "error": "Matrix data is empty"
+            }), 500
+        
+        logger.info(f"[API] Matrix DataFrame shape: {matrix_df.shape}")
+        
+        # Validate
+        logger.info("[API] Calling validate_product_by_name()...")
+        result = validate_product_by_name(
+            sf=_sf_client,
+            product_name=product_name,
+            matrix_df=matrix_df
+        )
+        
+        if result['status'] == "FAILED":
+            logger.info(f"[API] ❌ Product not found: {product_name}")
+            return jsonify(result), 404
+        else:
+            catalog_code = result['validation'].get('catalog_code', 'unknown')
+            logger.info(f"[API] ✅ Found in {catalog_code}: {result['status']}")
+            return jsonify(result), 200
+    
+    except Exception as e:
+        logger.error(f"[API] ❌ EXCEPTION: {e}", exc_info=True)
+        return jsonify({"status": "FAILED", "error": str(e)}), 500
+
+@app.route('/api/catalogs', methods=['GET'])
+def list_catalogs():
+    """List available catalogs"""
+    catalogs_info = {}
+    if _matrix_yaml:
+        for cat, products in _matrix_yaml.get("catalogs", {}).items():
+            catalogs_info[cat] = len(products)
     
     return jsonify({
-        "status": "running",
-        "timestamp": datetime.utcnow().isoformat(),
-        "service": "Smart Auto-Detecting Validator",
-        "salesforce": sf_status,
-        "endpoints": {
-            "validate": "/api/validate-product",
-            "health": "/health",
-            "status": "/status"
-        }
+        "available_catalogs": AVAILABLE_CATALOGS,
+        "catalogs_in_matrix": catalogs_info
     }), 200
+
+# =========================
+# Helper Functions
+# =========================
+
+def get_matrix_yaml():
+    return _matrix_yaml
+
+def get_sf_client():
+    return _sf_client
+
+
+
+
+####################. Testing END
+
+
+
+
+
+
 
 
 # ============================================================================
@@ -1394,15 +1613,6 @@ def analyze_stories():
 from flask import request, jsonify
 import component_registry as cr
 from git_client import BitBucketClient
-
-
-
-
-
-
-
-
-
 
 
 
@@ -3834,6 +4044,7 @@ if __name__ == '__main__':
     print("=" * 60)
     print("🚀 Copado Deployment Validator API")
     loader = ConfigLoader('validation_config_conditional.yaml')
+    init_globals()
     print("=" * 60)
     print("Starting server on http://localhost:5000")
     print()

@@ -1,0 +1,6 @@
+{
+  "error": "Script execution failed with return code 1",
+  "stderr": "Traceback (most recent call last):\n  File \"/Users/esungul/Downloads/Scripts/MissingAttribute/run_catalog_matrix_check.py\", line 575, in <module>\n    main()\n  File \"/Users/esungul/Downloads/Scripts/MissingAttribute/run_catalog_matrix_check.py\", line 550, in main\n    matrix_df = parse_matrix_csv(args.matrix_csv)\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/esungul/Downloads/Scripts/MissingAttribute/run_catalog_matrix_check.py\", line 255, in parse_matrix_csv\n    with open(path, newline='', encoding=\"utf-8\") as f:\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: 'PRB2CSelectDeviceMatrixBuyFlow_v118.csv'\n",
+  "stdout": "[*] Loading matrix CSV\u2026\n",
+  "success": false
+}
